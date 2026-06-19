@@ -518,6 +518,13 @@ function TopBar(p: TopBarProps) {
 
   return (
     <div className="nb-topbar relative z-40 flex h-[40px] shrink-0 items-center gap-0.5 border-b border-[#2A2E39] bg-[#131722] px-1.5">
+      {/* ── Trex brand logo ── */}
+      <div className="mr-1 flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-gradient-to-br from-[#f0b90b] to-[#fcd535] shadow-[0_4px_12px_rgba(240,185,11,0.35)]">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="#0b0e11" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3,17 9,11 13,15 21,7" />
+          <polyline points="17,7 21,7 21,11" />
+        </svg>
+      </div>
       {/* ── symbol ── */}
       <div className="relative">
         <button
@@ -2264,6 +2271,29 @@ function BuilderPage(props: {
 const NOOP = () => {};
 
 /**
+ * Stable event bus for cross-chart drawing synchronization.
+ * Each chart registers a handler; when it commits local drawings it
+ * broadcasts to all other handlers that are currently showing the same symbol.
+ */
+class DrawingsSyncBus {
+  private handlers = new Map<string, (sym: string, drawings: Drawing[]) => void>();
+
+  register(chartId: string, handler: (sym: string, drawings: Drawing[]) => void) {
+    this.handlers.set(chartId, handler);
+  }
+
+  unregister(chartId: string) {
+    this.handlers.delete(chartId);
+  }
+
+  broadcast(sourceChartId: string, sym: string, drawings: Drawing[]) {
+    for (const [id, handler] of this.handlers) {
+      if (id !== sourceChartId) handler(sym, drawings);
+    }
+  }
+}
+
+/**
  * A secondary chart panel for multi-chart layouts. In demo mode it runs
  * an independent DemoFeed. In server mode its ChartEngine is registered
  * with the parent App so incoming `chart_snapshot` / `chart_bar` messages
@@ -2289,8 +2319,7 @@ const ComparePanel = memo(function ComparePanel(props: {
   onUnregisterEngine: (chartId: string) => void;
   onNeedHistory: (chartId: string, before: number, count: number, fromTime?: number) => void;
   onSendToServer: (chartId: string, symbol: string, timeframe: string, indicators: string[]) => void;
-  onDrawingsSynced: (chartId: string, symbol: string, drawings: Drawing[]) => void;
-  onSymbolChanged: (chartId: string, symbol: string) => void;
+  drawingsBus: DrawingsSyncBus;
 }) {
   const hostRef   = useRef<HTMLDivElement | null>(null);
   const cEngineRef = useRef<ChartEngine | null>(null);
@@ -2327,7 +2356,6 @@ const ComparePanel = memo(function ComparePanel(props: {
   const changeSym = useCallback((s: string) => {
     setSym(s); symRef2.current = s;
     setSymOpen(false);
-    props.onSymbolChanged(props.chartId, s);
     if (props.mode === "demo") feedRef.current?.start({ symbol: s, timeframe: tfRef2.current });
     else syncServer(s, tfRef2.current, activeKeysRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2383,7 +2411,7 @@ const ComparePanel = memo(function ComparePanel(props: {
       onDrawingsCommit: (e) => {
         const snap = engine.getDrawingsSnapshot();
         if (e.source === "local") {
-          props.onDrawingsSynced(props.chartId, symRef2.current, snap);
+          props.drawingsBus.broadcast(props.chartId, symRef2.current, snap);
         }
         setDrawTick((t) => t + 1);
       },
@@ -2399,7 +2427,13 @@ const ComparePanel = memo(function ComparePanel(props: {
 
     cEngineRef.current = engine;
     props.onRegisterEngine(props.chartId, engine);
-    props.onSymbolChanged(props.chartId, symRef2.current);
+
+    // Register with the drawing sync bus so this chart receives and sends drawings
+    props.drawingsBus.register(props.chartId, (incomingSym, drawings) => {
+      if (incomingSym === symRef2.current && cEngineRef.current) {
+        cEngineRef.current.restoreDrawings(drawings);
+      }
+    });
 
     if (props.mode === "demo") {
       const feed = new DemoFeed((msg) => {
@@ -2421,6 +2455,7 @@ const ComparePanel = memo(function ComparePanel(props: {
     }
 
     return () => {
+      props.drawingsBus.unregister(props.chartId);
       feedRef.current?.stop();
       feedRef.current = null;
       engine.dispose();
@@ -3064,7 +3099,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           redoStackRef.current = [];
           prevSnapRef.current = snap;
           // Sync to all other charts showing the same symbol
-          syncDrawingsForSymbol("main", symbolRef.current, snap);
+          drawingsBusRef.current.broadcast("main", symbolRef.current, snap);
         } else {
           prevSnapRef.current = snap;
         }
@@ -3094,6 +3129,14 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       },
     });
     engineRef.current = engine;
+
+    // Register main chart with the drawing sync bus
+    drawingsBusRef.current.register("main", (incomingSym, drawings) => {
+      if (incomingSym === symbolRef.current && engineRef.current) {
+        engineRef.current.restoreDrawings(drawings);
+      }
+    });
+
     // E2E test hook — only when explicitly enabled via ?e2e=1. Exposes
     // read-only diagnostics for Playwright assertions; never present in
     // a normal production session.
@@ -3116,6 +3159,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     }
 
     return () => {
+      drawingsBusRef.current.unregister("main");
       stopFeeds();
       engine.dispose();
       engineRef.current = null;
@@ -3290,22 +3334,10 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const layoutRef = useRef(layout); layoutRef.current = layout;
   const compareSymbolsRef = useRef(compareSymbols); compareSymbolsRef.current = compareSymbols;
 
-  // Tracks chartId → symbol so cross-chart drawing sync knows who shows what.
-  const chartSymbolsRef = useRef<Map<string, string>>(new Map([["main", symbol]]));
-  // Keep main entry current whenever symbol changes
-  useEffect(() => { chartSymbolsRef.current.set("main", symbol); }, [symbol]);
-
-  // When any chart commits a local drawing, push the snapshot to every other
-  // engine showing the same symbol so lines appear across all linked charts.
-  const syncDrawingsForSymbol = useCallback((sourceChartId: string, sym: string, drawings: Drawing[]) => {
-    for (const [chartId, chartSym] of chartSymbolsRef.current) {
-      if (chartSym !== sym || chartId === sourceChartId) continue;
-      const eng = chartId === "main"
-        ? engineRef.current
-        : chartEnginesRef.current.get(chartId);
-      eng?.restoreDrawings(drawings);
-    }
-  }, []);
+  // Stable bus for cross-chart drawing synchronization.
+  // All charts (main + secondary) register handlers here; broadcasting
+  // to the bus propagates drawings to every other chart showing the same symbol.
+  const drawingsBusRef = useRef(new DrawingsSyncBus());
 
   const changeLayout = useCallback((newLayout: "single" | "split2" | "grid4") => {
     setLayout(newLayout);
@@ -3560,8 +3592,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
                 }
               }}
               onSendToServer={sendChartSymbol}
-              onDrawingsSynced={syncDrawingsForSymbol}
-              onSymbolChanged={(chartId, sym) => { chartSymbolsRef.current.set(chartId, sym); }}
+              drawingsBus={drawingsBusRef.current}
             />
           ))}
         </div>

@@ -262,6 +262,7 @@ export class ChartEngine {
         textColor: "#B2B5BE",
         fontFamily: "'Inter', -apple-system, sans-serif",
         fontSize: 11,
+        attributionLogo: false,
         panes: {
           enableResize: true,
           separatorColor: "#2A2E39",
