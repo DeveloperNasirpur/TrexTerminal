@@ -55,7 +55,6 @@ import {
   type SelectionBox,
   type DrawingsCommit,
   type PaneLayoutEntry,
-  type EngineCallbacks,
 } from "./chartEngine";
 import { WSClient } from "./wsClient";
 import {
@@ -2271,16 +2270,23 @@ const NOOP = () => {};
  * can be routed to it by chartId. It has its own crosshair, time axis,
  * and symbol picker.
  */
-const COMPARE_TOOLS: { tool: DrawingTool; label: string }[] = [
-  { tool: "cursor", label: "▷" },
-  { tool: "trendline", label: "╱" },
-  { tool: "horizontal", label: "—" },
-  { tool: "vertical", label: "│" },
-  { tool: "rectangle", label: "▭" },
-  { tool: "fibRetracement", label: "fib" },
-  { tool: "text", label: "T" },
+const COMPARE_DRAW_TOOLS: { tool: DrawingTool; label: string; tip: string }[] = [
+  { tool: "cursor",        label: "▷",   tip: "Select / Move" },
+  { tool: "trendline",     label: "╱",   tip: "Trend line" },
+  { tool: "horizontal",    label: "—",   tip: "Horizontal line" },
+  { tool: "vertical",      label: "│",   tip: "Vertical line" },
+  { tool: "rectangle",     label: "▭",   tip: "Rectangle" },
+  { tool: "fibRetracement",label: "fib", tip: "Fib Retracement" },
+  { tool: "text",          label: "T",   tip: "Text" },
 ];
 
+/**
+ * Fully independent secondary chart panel.
+ * Has its own symbol, timeframe, active indicators, drawing tools.
+ * In server mode it sends chart_symbol to the server whenever any of
+ * those change; the server replies with chart_snapshot / chart_bar /
+ * chart_history routed back here by chartId.
+ */
 const ComparePanel = memo(function ComparePanel(props: {
   index: number;
   chartId: string;
@@ -2288,33 +2294,84 @@ const ComparePanel = memo(function ComparePanel(props: {
   timeframe: string;
   mode: "demo" | "server";
   serverSymbols: Array<{ symbol: string; name?: string }>;
-  active: boolean;
-  onActivate: () => void;
-  onChangeSymbol: (index: number, s: string) => void;
+  serverAvailableIndicators: SeriesDefinition[];
   onRegisterEngine: (chartId: string, engine: ChartEngine) => void;
   onUnregisterEngine: (chartId: string) => void;
   onNeedHistory: (chartId: string, before: number, count: number, fromTime?: number) => void;
+  onSendToServer: (chartId: string, symbol: string, timeframe: string, indicators: string[]) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const localEngineRef = useRef<ChartEngine | null>(null);
-  const feedRef = useRef<DemoFeed | null>(null);
-  const [symOpen, setSymOpen] = useState(false);
-  const symRef = useOutsideClose(symOpen, () => setSymOpen(false));
-  const [activeTool, setActiveTool] = useState<DrawingTool>("cursor");
+  const engineRef = useRef<ChartEngine | null>(null);
+  const feedRef   = useRef<DemoFeed | null>(null);
 
-  // Crosshair legend refs (written imperatively from engine callback)
+  // Own state — fully independent from parent
+  const [symbol, setSymbol]     = useState(props.symbol);
+  const [timeframe, setTf]      = useState(props.timeframe);
+  const [activeKeys, setActiveKeys] = useState<string[]>([]);
+  const activeKeysRef = useRef<string[]>([]); activeKeysRef.current = activeKeys;
+  const symbolRef   = useRef(symbol);   symbolRef.current = symbol;
+  const tfRef       = useRef(timeframe);tfRef.current = timeframe;
+
+  const [symOpen,    setSymOpen]    = useState(false);
+  const [tfOpen,     setTfOpen]     = useState(false);
+  const [indOpen,    setIndOpen]    = useState(false);
+  const [activeTool, setActiveTool] = useState<DrawingTool>("cursor");
+  const symRef2 = useOutsideClose(symOpen, () => setSymOpen(false));
+  const tfRef2  = useOutsideClose(tfOpen,  () => setTfOpen(false));
+  const indRef  = useOutsideClose(indOpen, () => setIndOpen(false));
+
   const legendRef = useRef<HTMLDivElement | null>(null);
+
+  // Send chart_symbol to server whenever symbol/timeframe/indicators change
+  const syncServer = useCallback((sym: string, tf: string, keys: string[]) => {
+    if (props.mode === "server") {
+      props.onSendToServer(props.chartId, sym, tf, keys);
+    }
+  }, [props.chartId, props.mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickTool = useCallback((t: DrawingTool) => {
     setActiveTool(t);
-    localEngineRef.current?.setTool(t);
+    engineRef.current?.setTool(t);
   }, []);
+
+  const changeSym = useCallback((s: string) => {
+    setSymbol(s);
+    symbolRef.current = s;
+    setSymOpen(false);
+    if (props.mode === "demo") {
+      feedRef.current?.start({ symbol: s, timeframe: tfRef.current });
+    } else {
+      syncServer(s, tfRef.current, activeKeysRef.current);
+    }
+  }, [props.mode, syncServer]);
+
+  const changeTf = useCallback((tf: string) => {
+    setTf(tf);
+    tfRef.current = tf;
+    setTfOpen(false);
+    if (props.mode === "demo") {
+      feedRef.current?.start({ symbol: symbolRef.current, timeframe: tf });
+    } else {
+      syncServer(symbolRef.current, tf, activeKeysRef.current);
+    }
+  }, [props.mode, syncServer]);
+
+  const toggleIndicator = useCallback((key: string) => {
+    setActiveKeys((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      activeKeysRef.current = next;
+      if (props.mode === "server") {
+        syncServer(symbolRef.current, tfRef.current, next);
+      }
+      return next;
+    });
+  }, [props.mode, syncServer]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
-    const callbacks: EngineCallbacks = {
+    const engine = new ChartEngine(host, { ...DEFAULT_SETTINGS }, {
       onCrosshair: (p: CrosshairPayload) => {
         if (!legendRef.current) return;
         if (p.bar) {
@@ -2323,13 +2380,13 @@ const ComparePanel = memo(function ComparePanel(props: {
           legendRef.current.style.color = col;
           legendRef.current.textContent =
             `O:${p.bar.open.toFixed(2)} H:${p.bar.high.toFixed(2)} L:${p.bar.low.toFixed(2)} C:${p.bar.close.toFixed(2)}`;
-        } else if (!p.hovering && legendRef.current) {
+        } else if (!p.hovering) {
           legendRef.current.textContent = "";
         }
       },
+      onDrawingsCommit: NOOP,
       onSelectionChange: NOOP,
       onSelectionBox: NOOP,
-      onDrawingsCommit: () => { /* drawings live locally in each secondary engine */ },
       onNeedHistory: (before, count, fromTime) => {
         if (props.mode === "demo") {
           feedRef.current?.requestHistory(before, count);
@@ -2337,116 +2394,158 @@ const ComparePanel = memo(function ComparePanel(props: {
           props.onNeedHistory(props.chartId, before, count, fromTime);
         }
       },
+      onToolDone: () => { setActiveTool("cursor"); engineRef.current?.setTool("cursor"); },
       onPaneLayout: NOOP, onRealtimeGapChange: NOOP,
-      onContextMenu: NOOP, onDblClickEmpty: NOOP, onEditDrawing: NOOP,
-      onHint: NOOP,
-      onToolDone: () => {
-        setActiveTool("cursor");
-        localEngineRef.current?.setTool("cursor");
-      },
-    };
+      onContextMenu: NOOP, onDblClickEmpty: NOOP, onEditDrawing: NOOP, onHint: NOOP,
+    });
 
-    const engine = new ChartEngine(host, { ...DEFAULT_SETTINGS }, callbacks);
-    localEngineRef.current = engine;
+    engineRef.current = engine;
     props.onRegisterEngine(props.chartId, engine);
 
     if (props.mode === "demo") {
       const feed = new DemoFeed((msg) => {
         if (msg.type === "snapshot" || msg.type === "init") {
           if (Array.isArray(msg.data)) engine.setCandles(sanitizeCandles(msg.data));
+          if (msg.definitions) engine.setDefinitions(sanitizeDefinitions(msg.definitions as SeriesDefinition[]));
+          if (msg.points) {
+            for (const [k, raw] of Object.entries(msg.points as Record<string, unknown>))
+              engine.setSeriesData(k, sanitizePoints(raw));
+          }
         } else if (msg.type === "bar" || msg.type === "tick" || msg.type === "update") {
           if (msg.bar && isValidBar(msg.bar)) engine.applyBar(msg.bar as OHLC);
         }
       });
       feedRef.current = feed;
-      feed.start({ symbol: props.symbol, timeframe: props.timeframe });
+      feed.start({ symbol: symbolRef.current, timeframe: tfRef.current });
+    } else {
+      // In server mode: request initial data immediately
+      syncServer(symbolRef.current, tfRef.current, activeKeysRef.current);
     }
 
     return () => {
       feedRef.current?.stop();
       feedRef.current = null;
       engine.dispose();
-      localEngineRef.current = null;
+      engineRef.current = null;
       props.onUnregisterEngine(props.chartId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // In demo mode: restart feed when symbol changes
-  useEffect(() => {
-    if (props.mode === "demo") {
-      feedRef.current?.start({ symbol: props.symbol, timeframe: props.timeframe });
-    }
-  }, [props.symbol, props.timeframe, props.mode]);
-
   const symbolPool = props.mode === "server" && props.serverSymbols.length > 0
-    ? props.serverSymbols
-    : DEMO_SYMBOLS;
+    ? props.serverSymbols : DEMO_SYMBOLS;
 
   return (
-    <div
-      onMouseDown={props.onActivate}
-      className={cn(
-        "relative min-w-0 overflow-hidden rounded-[2px] bg-[#131722]",
-        props.active ? "ring-1 ring-[#2962FF]" : "ring-1 ring-transparent"
-      )}
-    >
+    <div className="relative min-w-0 overflow-hidden rounded-[2px] bg-[#131722] ring-1 ring-[#2A2E39]">
       <div ref={hostRef} className="absolute inset-0" />
 
-      {/* Symbol + timeframe header */}
-      <div className="absolute left-2 top-2 z-10 flex items-start gap-2" ref={symRef}>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setSymOpen((v) => !v); }}
-          className="flex items-center gap-1 rounded bg-[rgba(30,34,45,0.85)] px-2 py-1 text-[12px] font-bold text-[#D1D4DC] hover:bg-[#2A2E39]"
-        >
-          {props.symbol}
-          <span className="ml-1 text-[10px] font-normal text-[#787B86]">{props.timeframe}</span>
-          <IconChevronDown />
-        </button>
-        {symOpen && (
-          <div className="trex-menu absolute left-0 mt-8 max-h-[240px] w-[200px] overflow-y-auto rounded-md border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
-            {symbolPool.map((s) => (
-              <button
-                key={s.symbol}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  props.onChangeSymbol(props.index, s.symbol);
-                  setSymOpen(false);
-                }}
-                className={cn(
-                  "flex w-full items-center justify-between px-3 py-1.5 text-left text-[12px] hover:bg-[#2A2E39]",
-                  s.symbol === props.symbol ? "text-[#2962FF]" : "text-[#D1D4DC]"
-                )}
-              >
-                <span className="font-semibold">{s.symbol}</span>
-                {(s as any).name && <span className="text-[10px] text-[#787B86]">{(s as any).name}</span>}
-              </button>
-            ))}
+      {/* ── top bar: symbol / timeframe / indicators ── */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-8 items-center gap-1 px-1">
+
+        {/* Symbol picker */}
+        <div className="pointer-events-auto relative" ref={symRef2}>
+          <button
+            type="button"
+            onClick={() => setSymOpen((v) => !v)}
+            className="flex items-center gap-1 rounded bg-[rgba(19,23,34,0.85)] px-2 py-0.5 text-[11px] font-bold text-[#D1D4DC] hover:bg-[#2A2E39]"
+          >
+            {symbol}<IconChevronDown />
+          </button>
+          {symOpen && (
+            <div className="absolute left-0 top-7 z-20 max-h-[220px] w-[180px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+              {symbolPool.map((s) => (
+                <button key={s.symbol} type="button"
+                  onClick={() => changeSym(s.symbol)}
+                  className={cn("flex w-full items-center justify-between px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
+                    s.symbol === symbol ? "text-[#2962FF]" : "text-[#D1D4DC]")}
+                >
+                  <span className="font-semibold">{s.symbol}</span>
+                  {(s as any).name && <span className="text-[10px] text-[#787B86]">{(s as any).name}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Timeframe picker */}
+        <div className="pointer-events-auto relative" ref={tfRef2}>
+          <button
+            type="button"
+            onClick={() => setTfOpen((v) => !v)}
+            className="flex items-center gap-1 rounded bg-[rgba(19,23,34,0.85)] px-2 py-0.5 text-[11px] text-[#787B86] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
+          >
+            {timeframe}<IconChevronDown />
+          </button>
+          {tfOpen && (
+            <div className="absolute left-0 top-7 z-20 w-[100px] rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+              {TIMEFRAMES.map((t) => (
+                <button key={t.value} type="button"
+                  onClick={() => changeTf(t.value)}
+                  className={cn("flex w-full px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
+                    t.value === timeframe ? "text-[#2962FF]" : "text-[#D1D4DC]")}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Indicators button */}
+        {props.serverAvailableIndicators.length > 0 && (
+          <div className="pointer-events-auto relative" ref={indRef}>
+            <button
+              type="button"
+              onClick={() => setIndOpen((v) => !v)}
+              className={cn(
+                "flex items-center gap-1 rounded px-2 py-0.5 text-[11px] hover:bg-[#2A2E39]",
+                activeKeys.length > 0 ? "bg-[rgba(41,98,255,0.2)] text-[#2962FF]" : "bg-[rgba(19,23,34,0.85)] text-[#787B86] hover:text-[#D1D4DC]"
+              )}
+            >
+              {activeKeys.length > 0 ? `Indicators (${activeKeys.length})` : "Indicators"}
+            </button>
+            {indOpen && (
+              <div className="absolute left-0 top-7 z-20 max-h-[260px] w-[220px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+                {props.serverAvailableIndicators.map((def) => (
+                  <label key={def.key}
+                    className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-[11px] text-[#D1D4DC] hover:bg-[#2A2E39]"
+                  >
+                    <input type="checkbox"
+                      checked={activeKeys.includes(def.key)}
+                      onChange={() => toggleIndicator(def.key)}
+                      className="accent-[#2962FF]"
+                    />
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: def.color ?? "#2962FF" }}
+                    />
+                    {def.label}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Crosshair OHLC legend */}
-      <div
-        ref={legendRef}
-        className="pointer-events-none absolute left-2 top-10 z-10 font-mono text-[10px] text-[#D1D4DC] select-none"
+      <div ref={legendRef}
+        className="pointer-events-none absolute left-1 top-9 z-10 font-mono text-[10px] text-[#D1D4DC] select-none"
       />
 
-      {/* Mini drawing toolbar */}
-      <div className="absolute right-1 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-0.5">
-        {COMPARE_TOOLS.map(({ tool, label }) => (
+      {/* Drawing toolbar (vertical, right side) */}
+      <div className="pointer-events-auto absolute right-1 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-0.5">
+        {COMPARE_DRAW_TOOLS.map(({ tool, label, tip }) => (
           <button
             key={tool}
             type="button"
-            title={tool}
-            onClick={(e) => { e.stopPropagation(); pickTool(tool); }}
+            title={tip}
+            onPointerDown={(e) => { e.stopPropagation(); pickTool(tool); }}
             className={cn(
               "flex h-6 w-6 items-center justify-center rounded text-[10px] font-mono",
               activeTool === tool
                 ? "bg-[#2962FF] text-white"
-                : "bg-[rgba(30,34,45,0.85)] text-[#787B86] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
+                : "bg-[rgba(19,23,34,0.85)] text-[#787B86] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
             )}
           >
             {label}
@@ -2513,9 +2612,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   // Secondary panels are independent compare charts; the main chart stays
   // the editable one with all the drawing tools.
   const [layout, setLayout] = useState<"single" | "split2" | "grid4">(saved.layout ?? "single");
-  const [compareSymbols, setCompareSymbols] = useState<string[]>(saved.compareSymbols ?? ["ETHUSDT", "SOLUSDT", "BNBUSDT"]);
-  const [compareTimeframes, setCompareTimeframes] = useState<string[]>(["1m", "1m", "1m"]);
-  void setCompareTimeframes; // reserved for future per-panel timeframe picker
+  const [compareSymbols] = useState<string[]>(saved.compareSymbols ?? ["ETHUSDT", "SOLUSDT", "BNBUSDT"]);
 
   // Persist workspace preferences (debounced) whenever they change. UI
   // state only — never market data, which always comes fresh from the feed.
@@ -2843,7 +2940,15 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       case "chart_bar": {
         const cm = msg as any;
         const childEng = chartEnginesRef.current.get(cm.chartId);
-        if (childEng && cm.bar && isValidBar(cm.bar)) childEng.applyBar(cm.bar as OHLC);
+        if (childEng && cm.bar && isValidBar(cm.bar)) {
+          childEng.applyBar(cm.bar as OHLC);
+          // optional realtime indicator points bundled with bar
+          if (cm.points && typeof cm.points === "object") {
+            for (const [key, raw] of Object.entries(cm.points as Record<string, unknown>)) {
+              childEng.setSeriesData(key, sanitizePoints(raw));
+            }
+          }
+        }
         break;
       }
 
@@ -3200,20 +3305,18 @@ export default function App({ initialMode }: { initialMode: string | null }) {
 
   const layoutRef = useRef(layout); layoutRef.current = layout;
   const compareSymbolsRef = useRef(compareSymbols); compareSymbolsRef.current = compareSymbols;
-  const compareTimeframesRef = useRef(compareTimeframes); compareTimeframesRef.current = compareTimeframes;
 
   const changeLayout = useCallback((newLayout: "single" | "split2" | "grid4") => {
     setLayout(newLayout);
     if (modeRef.current === "server" && wsRef.current) {
       const count = newLayout === "split2" ? 1 : newLayout === "grid4" ? 3 : 0;
       const syms = compareSymbolsRef.current;
-      const tfs = compareTimeframesRef.current;
       const charts = [
         { chartId: "main", symbol: symbolRef.current, timeframe: tfRef.current, indicators: serverDefsRef.current.map((d) => d.key) },
         ...Array.from({ length: count }, (_, i) => ({
           chartId: `chart_${i}`,
           symbol: syms[i] ?? symbolRef.current,
-          timeframe: tfs[i] ?? "1m",
+          timeframe: "1m",
           indicators: [] as string[],
         })),
       ];
@@ -3221,14 +3324,10 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     }
   }, []);
 
-  const changeCompareSymbol = useCallback((i: number, s: string) => {
-    setCompareSymbols((xs) => { const n = [...xs]; n[i] = s; return n; });
+  // Called by each ComparePanel whenever symbol/timeframe/indicators change.
+  const sendChartSymbol = useCallback((chartId: string, symbol: string, timeframe: string, indicators: string[]) => {
     if (modeRef.current === "server" && wsRef.current) {
-      const chartId = `chart_${i}`;
-      const tf = compareTimeframesRef.current[i] ?? "1m";
-      const indicators = Array.from(chartEnginesRef.current.get(chartId)
-        ? [] : []);
-      wsRef.current.send({ type: "chart_symbol", chartId, symbol: s, timeframe: tf, indicators });
+      wsRef.current.send({ type: "chart_symbol", chartId, symbol, timeframe, indicators });
     }
   }, []);
 
@@ -3448,12 +3547,10 @@ export default function App({ initialMode }: { initialMode: string | null }) {
               index={i}
               chartId={`chart_${i}`}
               symbol={sym}
-              timeframe={compareTimeframes[i] ?? "1m"}
+              timeframe="1m"
               mode={mode}
               serverSymbols={serverSymbols}
-              active={false}
-              onActivate={NOOP}
-              onChangeSymbol={changeCompareSymbol}
+              serverAvailableIndicators={serverAvailableIndicators}
               onRegisterEngine={(chartId, engine) => { chartEnginesRef.current.set(chartId, engine); }}
               onUnregisterEngine={(chartId) => { chartEnginesRef.current.delete(chartId); }}
               onNeedHistory={(chartId, before, count, fromTime) => {
@@ -3461,6 +3558,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
                   wsRef.current.send({ type: "history", before, count, from: fromTime, to: before, chartId });
                 }
               }}
+              onSendToServer={sendChartSymbol}
             />
           ))}
         </div>
