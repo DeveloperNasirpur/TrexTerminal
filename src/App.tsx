@@ -2271,6 +2271,16 @@ const NOOP = () => {};
  * can be routed to it by chartId. It has its own crosshair, time axis,
  * and symbol picker.
  */
+const COMPARE_TOOLS: { tool: DrawingTool; label: string }[] = [
+  { tool: "cursor", label: "▷" },
+  { tool: "trendline", label: "╱" },
+  { tool: "horizontal", label: "—" },
+  { tool: "vertical", label: "│" },
+  { tool: "rectangle", label: "▭" },
+  { tool: "fibRetracement", label: "fib" },
+  { tool: "text", label: "T" },
+];
+
 const ComparePanel = memo(function ComparePanel(props: {
   index: number;
   chartId: string;
@@ -2290,9 +2300,15 @@ const ComparePanel = memo(function ComparePanel(props: {
   const feedRef = useRef<DemoFeed | null>(null);
   const [symOpen, setSymOpen] = useState(false);
   const symRef = useOutsideClose(symOpen, () => setSymOpen(false));
+  const [activeTool, setActiveTool] = useState<DrawingTool>("cursor");
 
   // Crosshair legend refs (written imperatively from engine callback)
   const legendRef = useRef<HTMLDivElement | null>(null);
+
+  const pickTool = useCallback((t: DrawingTool) => {
+    setActiveTool(t);
+    localEngineRef.current?.setTool(t);
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -2311,7 +2327,9 @@ const ComparePanel = memo(function ComparePanel(props: {
           legendRef.current.textContent = "";
         }
       },
-      onSelectionChange: NOOP, onSelectionBox: NOOP, onDrawingsCommit: NOOP,
+      onSelectionChange: NOOP,
+      onSelectionBox: NOOP,
+      onDrawingsCommit: () => { /* drawings live locally in each secondary engine */ },
       onNeedHistory: (before, count, fromTime) => {
         if (props.mode === "demo") {
           feedRef.current?.requestHistory(before, count);
@@ -2321,7 +2339,11 @@ const ComparePanel = memo(function ComparePanel(props: {
       },
       onPaneLayout: NOOP, onRealtimeGapChange: NOOP,
       onContextMenu: NOOP, onDblClickEmpty: NOOP, onEditDrawing: NOOP,
-      onHint: NOOP, onToolDone: NOOP,
+      onHint: NOOP,
+      onToolDone: () => {
+        setActiveTool("cursor");
+        localEngineRef.current?.setTool("cursor");
+      },
     };
 
     const engine = new ChartEngine(host, { ...DEFAULT_SETTINGS }, callbacks);
@@ -2411,6 +2433,26 @@ const ComparePanel = memo(function ComparePanel(props: {
         ref={legendRef}
         className="pointer-events-none absolute left-2 top-10 z-10 font-mono text-[10px] text-[#D1D4DC] select-none"
       />
+
+      {/* Mini drawing toolbar */}
+      <div className="absolute right-1 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-0.5">
+        {COMPARE_TOOLS.map(({ tool, label }) => (
+          <button
+            key={tool}
+            type="button"
+            title={tool}
+            onClick={(e) => { e.stopPropagation(); pickTool(tool); }}
+            className={cn(
+              "flex h-6 w-6 items-center justify-center rounded text-[10px] font-mono",
+              activeTool === tool
+                ? "bg-[#2962FF] text-white"
+                : "bg-[rgba(30,34,45,0.85)] text-[#787B86] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 });
