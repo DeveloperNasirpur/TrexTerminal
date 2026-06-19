@@ -3496,8 +3496,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         <div
           className={cn(
             "grid min-w-0 flex-1 gap-px bg-[#2A2E39]",
-            layout === "single" && "grid-cols-1",
-            layout === "split2" && "grid-cols-2",
+            layout === "single" && "grid-cols-1 grid-rows-1",
+            layout === "split2" && "grid-cols-2 grid-rows-1",
             layout === "grid4" && "grid-cols-2 grid-rows-2"
           )}
         >
