@@ -2270,22 +2270,12 @@ const NOOP = () => {};
  * can be routed to it by chartId. It has its own crosshair, time axis,
  * and symbol picker.
  */
-const COMPARE_DRAW_TOOLS: { tool: DrawingTool; label: string; tip: string }[] = [
-  { tool: "cursor",        label: "▷",   tip: "Select / Move" },
-  { tool: "trendline",     label: "╱",   tip: "Trend line" },
-  { tool: "horizontal",    label: "—",   tip: "Horizontal line" },
-  { tool: "vertical",      label: "│",   tip: "Vertical line" },
-  { tool: "rectangle",     label: "▭",   tip: "Rectangle" },
-  { tool: "fibRetracement",label: "fib", tip: "Fib Retracement" },
-  { tool: "text",          label: "T",   tip: "Text" },
-];
-
 /**
- * Fully independent secondary chart panel.
- * Has its own symbol, timeframe, active indicators, drawing tools.
- * In server mode it sends chart_symbol to the server whenever any of
- * those change; the server replies with chart_snapshot / chart_bar /
- * chart_history routed back here by chartId.
+ * Fully independent secondary chart panel — each one behaves exactly
+ * like the main chart: own symbol, timeframe, active indicators, full
+ * LeftBar drawing toolbar, magnet, lock/hide/clear, and cross-chart
+ * drawing sync (drawings propagate to every other chart showing the
+ * same symbol).
  */
 const ComparePanel = memo(function ComparePanel(props: {
   index: number;
@@ -2299,73 +2289,80 @@ const ComparePanel = memo(function ComparePanel(props: {
   onUnregisterEngine: (chartId: string) => void;
   onNeedHistory: (chartId: string, before: number, count: number, fromTime?: number) => void;
   onSendToServer: (chartId: string, symbol: string, timeframe: string, indicators: string[]) => void;
+  onDrawingsSynced: (chartId: string, symbol: string, drawings: Drawing[]) => void;
+  onSymbolChanged: (chartId: string, symbol: string) => void;
 }) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const engineRef = useRef<ChartEngine | null>(null);
+  const hostRef   = useRef<HTMLDivElement | null>(null);
+  const cEngineRef = useRef<ChartEngine | null>(null);
   const feedRef   = useRef<DemoFeed | null>(null);
 
-  // Own state — fully independent from parent
-  const [symbol, setSymbol]     = useState(props.symbol);
-  const [timeframe, setTf]      = useState(props.timeframe);
+  // Independent state
+  const [sym,  setSym]  = useState(props.symbol);
+  const [tf,   setTf]   = useState(props.timeframe);
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
-  const activeKeysRef = useRef<string[]>([]); activeKeysRef.current = activeKeys;
-  const symbolRef   = useRef(symbol);   symbolRef.current = symbol;
-  const tfRef       = useRef(timeframe);tfRef.current = timeframe;
-
-  const [symOpen,    setSymOpen]    = useState(false);
-  const [tfOpen,     setTfOpen]     = useState(false);
-  const [indOpen,    setIndOpen]    = useState(false);
   const [activeTool, setActiveTool] = useState<DrawingTool>("cursor");
-  const symRef2 = useOutsideClose(symOpen, () => setSymOpen(false));
-  const tfRef2  = useOutsideClose(tfOpen,  () => setTfOpen(false));
-  const indRef  = useOutsideClose(indOpen, () => setIndOpen(false));
+  const [magnet,     setMagnet]     = useState(false);
+  const [drawTick,   setDrawTick]   = useState(0); // triggers re-render for hasDrawings
+  const [favorites,  setFavorites]  = useState<DrawingTool[]>([]);
 
-  const legendRef = useRef<HTMLDivElement | null>(null);
+  const [symOpen, setSymOpen] = useState(false);
+  const [tfOpen,  setTfOpen]  = useState(false);
+  const [indOpen, setIndOpen] = useState(false);
 
-  // Send chart_symbol to server whenever symbol/timeframe/indicators change
-  const syncServer = useCallback((sym: string, tf: string, keys: string[]) => {
-    if (props.mode === "server") {
-      props.onSendToServer(props.chartId, sym, tf, keys);
-    }
-  }, [props.chartId, props.mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const symMenuRef = useOutsideClose(symOpen, () => setSymOpen(false));
+  const tfMenuRef  = useOutsideClose(tfOpen,  () => setTfOpen(false));
+  const indMenuRef = useOutsideClose(indOpen, () => setIndOpen(false));
+  const legendRef  = useRef<HTMLDivElement | null>(null);
 
-  const pickTool = useCallback((t: DrawingTool) => {
-    setActiveTool(t);
-    engineRef.current?.setTool(t);
-  }, []);
+  // Keep refs in sync for use inside callbacks
+  const symRef2       = useRef(sym);       symRef2.current       = sym;
+  const tfRef2        = useRef(tf);        tfRef2.current        = tf;
+  const activeKeysRef = useRef(activeKeys);activeKeysRef.current = activeKeys;
+
+  const syncServer = useCallback((s: string, t: string, keys: string[]) => {
+    if (props.mode === "server") props.onSendToServer(props.chartId, s, t, keys);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.chartId, props.mode]);
 
   const changeSym = useCallback((s: string) => {
-    setSymbol(s);
-    symbolRef.current = s;
+    setSym(s); symRef2.current = s;
     setSymOpen(false);
-    if (props.mode === "demo") {
-      feedRef.current?.start({ symbol: s, timeframe: tfRef.current });
-    } else {
-      syncServer(s, tfRef.current, activeKeysRef.current);
-    }
+    props.onSymbolChanged(props.chartId, s);
+    if (props.mode === "demo") feedRef.current?.start({ symbol: s, timeframe: tfRef2.current });
+    else syncServer(s, tfRef2.current, activeKeysRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.mode, syncServer]);
 
-  const changeTf = useCallback((tf: string) => {
-    setTf(tf);
-    tfRef.current = tf;
+  const changeTf = useCallback((t: string) => {
+    setTf(t); tfRef2.current = t;
     setTfOpen(false);
-    if (props.mode === "demo") {
-      feedRef.current?.start({ symbol: symbolRef.current, timeframe: tf });
-    } else {
-      syncServer(symbolRef.current, tf, activeKeysRef.current);
-    }
+    if (props.mode === "demo") feedRef.current?.start({ symbol: symRef2.current, timeframe: t });
+    else syncServer(symRef2.current, t, activeKeysRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.mode, syncServer]);
 
   const toggleIndicator = useCallback((key: string) => {
     setActiveKeys((prev) => {
       const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
       activeKeysRef.current = next;
-      if (props.mode === "server") {
-        syncServer(symbolRef.current, tfRef.current, next);
-      }
+      if (props.mode === "server") syncServer(symRef2.current, tfRef2.current, next);
       return next;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.mode, syncServer]);
+
+  const pickTool = useCallback((t: DrawingTool) => {
+    setActiveTool(t);
+    cEngineRef.current?.setTool(t);
+  }, []);
+
+  const toggleMagnet = useCallback(() => {
+    setMagnet((m) => { cEngineRef.current?.setMagnet(!m); return !m; });
+  }, []);
+
+  const toggleFav = useCallback((t: DrawingTool) => {
+    setFavorites((f) => f.includes(t) ? f.filter((x) => x !== t) : [...f, t]);
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -2376,31 +2373,33 @@ const ComparePanel = memo(function ComparePanel(props: {
         if (!legendRef.current) return;
         if (p.bar) {
           const up = p.bar.close >= p.bar.open;
-          const col = up ? "#089981" : "#F23645";
-          legendRef.current.style.color = col;
+          legendRef.current.style.color = up ? "#089981" : "#F23645";
           legendRef.current.textContent =
             `O:${p.bar.open.toFixed(2)} H:${p.bar.high.toFixed(2)} L:${p.bar.low.toFixed(2)} C:${p.bar.close.toFixed(2)}`;
         } else if (!p.hovering) {
           legendRef.current.textContent = "";
         }
       },
-      onDrawingsCommit: NOOP,
-      onSelectionChange: NOOP,
-      onSelectionBox: NOOP,
-      onNeedHistory: (before, count, fromTime) => {
-        if (props.mode === "demo") {
-          feedRef.current?.requestHistory(before, count);
-        } else {
-          props.onNeedHistory(props.chartId, before, count, fromTime);
+      onDrawingsCommit: (e) => {
+        const snap = engine.getDrawingsSnapshot();
+        if (e.source === "local") {
+          props.onDrawingsSynced(props.chartId, symRef2.current, snap);
         }
+        setDrawTick((t) => t + 1);
       },
-      onToolDone: () => { setActiveTool("cursor"); engineRef.current?.setTool("cursor"); },
+      onSelectionChange: NOOP, onSelectionBox: NOOP,
+      onNeedHistory: (before, count, fromTime) => {
+        if (props.mode === "demo") feedRef.current?.requestHistory(before, count);
+        else props.onNeedHistory(props.chartId, before, count, fromTime);
+      },
+      onToolDone: () => { setActiveTool("cursor"); engine.setTool("cursor"); },
       onPaneLayout: NOOP, onRealtimeGapChange: NOOP,
       onContextMenu: NOOP, onDblClickEmpty: NOOP, onEditDrawing: NOOP, onHint: NOOP,
     });
 
-    engineRef.current = engine;
+    cEngineRef.current = engine;
     props.onRegisterEngine(props.chartId, engine);
+    props.onSymbolChanged(props.chartId, symRef2.current);
 
     if (props.mode === "demo") {
       const feed = new DemoFeed((msg) => {
@@ -2416,141 +2415,130 @@ const ComparePanel = memo(function ComparePanel(props: {
         }
       });
       feedRef.current = feed;
-      feed.start({ symbol: symbolRef.current, timeframe: tfRef.current });
+      feed.start({ symbol: symRef2.current, timeframe: tfRef2.current });
     } else {
-      // In server mode: request initial data immediately
-      syncServer(symbolRef.current, tfRef.current, activeKeysRef.current);
+      syncServer(symRef2.current, tfRef2.current, activeKeysRef.current);
     }
 
     return () => {
       feedRef.current?.stop();
       feedRef.current = null;
       engine.dispose();
-      engineRef.current = null;
+      cEngineRef.current = null;
       props.onUnregisterEngine(props.chartId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const symbolPool = props.mode === "server" && props.serverSymbols.length > 0
     ? props.serverSymbols : DEMO_SYMBOLS;
 
+  const eng = cEngineRef.current;
+  // drawTick is read so that hasDrawings/allLocked/allHidden recompute after each commit
+  void drawTick;
+  const hasDrawings = eng?.hasDrawings() ?? false;
+  const allLocked   = eng?.allLocked()   ?? false;
+  const allHidden   = eng?.allHidden()   ?? false;
+
   return (
-    <div className="relative min-w-0 overflow-hidden rounded-[2px] bg-[#131722] ring-1 ring-[#2A2E39]">
-      <div ref={hostRef} className="absolute inset-0" />
+    <div className="flex min-w-0 overflow-hidden rounded-[2px] bg-[#131722] ring-1 ring-[#2A2E39]">
+      {/* ── Full LeftBar (identical to main chart) ── */}
+      <LeftBar
+        tool={activeTool}
+        magnet={magnet}
+        hasDrawings={hasDrawings}
+        allLocked={allLocked}
+        allHidden={allHidden}
+        favorites={favorites}
+        onToggleFavorite={toggleFav}
+        onTool={pickTool}
+        onToggleMagnet={toggleMagnet}
+        onLockAll={() => { eng?.setAllLocked(!allLocked); setDrawTick((t) => t + 1); }}
+        onHideAll={() => { eng?.setAllHidden(!allHidden); setDrawTick((t) => t + 1); }}
+        onClearAll={() => eng?.clearDrawings()}
+      />
 
-      {/* ── top bar: symbol / timeframe / indicators ── */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-8 items-center gap-1 px-1">
+      {/* ── Chart area ── */}
+      <div className="relative flex-1 overflow-hidden">
+        <div ref={hostRef} className="absolute inset-0" />
 
-        {/* Symbol picker */}
-        <div className="pointer-events-auto relative" ref={symRef2}>
-          <button
-            type="button"
-            onClick={() => setSymOpen((v) => !v)}
-            className="flex items-center gap-1 rounded bg-[rgba(19,23,34,0.85)] px-2 py-0.5 text-[11px] font-bold text-[#D1D4DC] hover:bg-[#2A2E39]"
-          >
-            {symbol}<IconChevronDown />
-          </button>
-          {symOpen && (
-            <div className="absolute left-0 top-7 z-20 max-h-[220px] w-[180px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
-              {symbolPool.map((s) => (
-                <button key={s.symbol} type="button"
-                  onClick={() => changeSym(s.symbol)}
-                  className={cn("flex w-full items-center justify-between px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
-                    s.symbol === symbol ? "text-[#2962FF]" : "text-[#D1D4DC]")}
-                >
-                  <span className="font-semibold">{s.symbol}</span>
-                  {(s as any).name && <span className="text-[10px] text-[#787B86]">{(s as any).name}</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Top bar: symbol / timeframe / indicators */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-8 items-center gap-1 px-1">
 
-        {/* Timeframe picker */}
-        <div className="pointer-events-auto relative" ref={tfRef2}>
-          <button
-            type="button"
-            onClick={() => setTfOpen((v) => !v)}
-            className="flex items-center gap-1 rounded bg-[rgba(19,23,34,0.85)] px-2 py-0.5 text-[11px] text-[#787B86] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
-          >
-            {timeframe}<IconChevronDown />
-          </button>
-          {tfOpen && (
-            <div className="absolute left-0 top-7 z-20 w-[100px] rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
-              {TIMEFRAMES.map((t) => (
-                <button key={t.value} type="button"
-                  onClick={() => changeTf(t.value)}
-                  className={cn("flex w-full px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
-                    t.value === timeframe ? "text-[#2962FF]" : "text-[#D1D4DC]")}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Indicators button */}
-        {props.serverAvailableIndicators.length > 0 && (
-          <div className="pointer-events-auto relative" ref={indRef}>
-            <button
-              type="button"
-              onClick={() => setIndOpen((v) => !v)}
-              className={cn(
-                "flex items-center gap-1 rounded px-2 py-0.5 text-[11px] hover:bg-[#2A2E39]",
-                activeKeys.length > 0 ? "bg-[rgba(41,98,255,0.2)] text-[#2962FF]" : "bg-[rgba(19,23,34,0.85)] text-[#787B86] hover:text-[#D1D4DC]"
-              )}
-            >
-              {activeKeys.length > 0 ? `Indicators (${activeKeys.length})` : "Indicators"}
+          <div className="pointer-events-auto relative" ref={symMenuRef}>
+            <button type="button" onClick={() => setSymOpen((v) => !v)}
+              className="flex items-center gap-1 rounded bg-[rgba(19,23,34,0.85)] px-2 py-0.5 text-[11px] font-bold text-[#D1D4DC] hover:bg-[#2A2E39]">
+              {sym}<IconChevronDown />
             </button>
-            {indOpen && (
-              <div className="absolute left-0 top-7 z-20 max-h-[260px] w-[220px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
-                {props.serverAvailableIndicators.map((def) => (
-                  <label key={def.key}
-                    className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-[11px] text-[#D1D4DC] hover:bg-[#2A2E39]"
-                  >
-                    <input type="checkbox"
-                      checked={activeKeys.includes(def.key)}
-                      onChange={() => toggleIndicator(def.key)}
-                      className="accent-[#2962FF]"
-                    />
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: def.color ?? "#2962FF" }}
-                    />
-                    {def.label}
-                  </label>
+            {symOpen && (
+              <div className="absolute left-0 top-7 z-20 max-h-[220px] w-[180px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+                {symbolPool.map((s) => (
+                  <button key={s.symbol} type="button" onClick={() => changeSym(s.symbol)}
+                    className={cn("flex w-full items-center justify-between px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
+                      s.symbol === sym ? "text-[#2962FF]" : "text-[#D1D4DC]")}>
+                    <span className="font-semibold">{s.symbol}</span>
+                    {(s as any).name && <span className="text-[10px] text-[#787B86]">{(s as any).name}</span>}
+                  </button>
                 ))}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Crosshair OHLC legend */}
-      <div ref={legendRef}
-        className="pointer-events-none absolute left-1 top-9 z-10 font-mono text-[10px] text-[#D1D4DC] select-none"
-      />
-
-      {/* Drawing toolbar (vertical, right side) */}
-      <div className="pointer-events-auto absolute right-1 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-0.5">
-        {COMPARE_DRAW_TOOLS.map(({ tool, label, tip }) => (
-          <button
-            key={tool}
-            type="button"
-            title={tip}
-            onPointerDown={(e) => { e.stopPropagation(); pickTool(tool); }}
-            className={cn(
-              "flex h-6 w-6 items-center justify-center rounded text-[10px] font-mono",
-              activeTool === tool
-                ? "bg-[#2962FF] text-white"
-                : "bg-[rgba(19,23,34,0.85)] text-[#787B86] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
+          <div className="pointer-events-auto relative" ref={tfMenuRef}>
+            <button type="button" onClick={() => setTfOpen((v) => !v)}
+              className="flex items-center gap-1 rounded bg-[rgba(19,23,34,0.85)] px-2 py-0.5 text-[11px] text-[#787B86] hover:bg-[#2A2E39] hover:text-[#D1D4DC]">
+              {tf}<IconChevronDown />
+            </button>
+            {tfOpen && (
+              <div className="absolute left-0 top-7 z-20 w-[100px] rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+                {TIMEFRAMES.map((t) => (
+                  <button key={t.value} type="button" onClick={() => changeTf(t.value)}
+                    className={cn("flex w-full px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
+                      t.value === tf ? "text-[#2962FF]" : "text-[#D1D4DC]")}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             )}
-          >
-            {label}
-          </button>
-        ))}
+          </div>
+
+          {props.serverAvailableIndicators.length > 0 && (
+            <div className="pointer-events-auto relative" ref={indMenuRef}>
+              <button type="button" onClick={() => setIndOpen((v) => !v)}
+                className={cn("flex items-center gap-1 rounded px-2 py-0.5 text-[11px] hover:bg-[#2A2E39]",
+                  activeKeys.length > 0 ? "bg-[rgba(41,98,255,0.2)] text-[#2962FF]"
+                                        : "bg-[rgba(19,23,34,0.85)] text-[#787B86] hover:text-[#D1D4DC]")}>
+                {activeKeys.length > 0 ? `Indicators (${activeKeys.length})` : "Indicators"}
+              </button>
+              {indOpen && (
+                <div className="absolute left-0 top-7 z-20 max-h-[260px] w-[220px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+                  {props.serverAvailableIndicators.map((def) => (
+                    <label key={def.key}
+                      className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-[11px] text-[#D1D4DC] hover:bg-[#2A2E39]">
+                      <input type="checkbox" checked={activeKeys.includes(def.key)}
+                        onChange={() => toggleIndicator(def.key)} className="accent-[#2962FF]" />
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: def.color ?? "#2962FF" }} />
+                      {def.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Crosshair OHLC legend */}
+        <div ref={legendRef}
+          className="pointer-events-none absolute left-1 top-9 z-10 font-mono text-[10px] text-[#D1D4DC] select-none"
+        />
+
+        {/* Floating favorites toolbar */}
+        <FloatingFavorites
+          favorites={favorites}
+          tool={activeTool}
+          onTool={pickTool}
+          onUnstar={(t) => setFavorites((f) => f.filter((x) => x !== t))}
+        />
       </div>
     </div>
   );
@@ -3075,12 +3063,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           if (undoStackRef.current.length > 100) undoStackRef.current.shift();
           redoStackRef.current = [];
           prevSnapRef.current = snap;
-          // NOTE: the client is display-only and never sends anything the
-          // user draws back to the server. A user's manual drawings live
-          // purely on the client (for display + undo/redo). Objects that
-          // carry real data arrive FROM the server, exactly like indicator
-          // series — see the "drawings"/"drawing_set"/"drawing_upsert"
-          // handlers in the message pipeline.
+          // Sync to all other charts showing the same symbol
+          syncDrawingsForSymbol("main", symbolRef.current, snap);
         } else {
           prevSnapRef.current = snap;
         }
@@ -3305,6 +3289,23 @@ export default function App({ initialMode }: { initialMode: string | null }) {
 
   const layoutRef = useRef(layout); layoutRef.current = layout;
   const compareSymbolsRef = useRef(compareSymbols); compareSymbolsRef.current = compareSymbols;
+
+  // Tracks chartId → symbol so cross-chart drawing sync knows who shows what.
+  const chartSymbolsRef = useRef<Map<string, string>>(new Map([["main", symbol]]));
+  // Keep main entry current whenever symbol changes
+  useEffect(() => { chartSymbolsRef.current.set("main", symbol); }, [symbol]);
+
+  // When any chart commits a local drawing, push the snapshot to every other
+  // engine showing the same symbol so lines appear across all linked charts.
+  const syncDrawingsForSymbol = useCallback((sourceChartId: string, sym: string, drawings: Drawing[]) => {
+    for (const [chartId, chartSym] of chartSymbolsRef.current) {
+      if (chartSym !== sym || chartId === sourceChartId) continue;
+      const eng = chartId === "main"
+        ? engineRef.current
+        : chartEnginesRef.current.get(chartId);
+      eng?.restoreDrawings(drawings);
+    }
+  }, []);
 
   const changeLayout = useCallback((newLayout: "single" | "split2" | "grid4") => {
     setLayout(newLayout);
@@ -3559,6 +3560,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
                 }
               }}
               onSendToServer={sendChartSymbol}
+              onDrawingsSynced={syncDrawingsForSymbol}
+              onSymbolChanged={(chartId, sym) => { chartSymbolsRef.current.set(chartId, sym); }}
             />
           ))}
         </div>
