@@ -1,0 +1,462 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Trex Terminal — global styles
+   ───────────────────────────────────────────────────────────────────
+   Tailwind v4 provides the utility layer; everything below is the
+   hand-rolled chrome: the exact TradingView dark palette as CSS
+   variables, the app-shell classes main.tsx expects, pure-CSS delayed
+   tooltips, thin scrollbars, and the micro-animations used by menus,
+   toasts and overlays.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@import "tailwindcss";
+
+/* Map Tailwind's font utilities to the fonts index.html preloads. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ── TradingView dark palette ───────────────────────────────────── */
+:root {
+  color-scheme: dark; /* native selects / scrollbars / pickers go dark */
+
+  /* ── palette (matches TradingView's dark theme) ────────────────── */
+  --tv-bg: #131722;        /* chart + app background        */
+  --tv-panel: #1E222D;     /* menus, dialogs, toolbars      */
+  --tv-panel-2: #2A2E39;   /* hover fills                   */
+  --tv-border: #2A2E39;    /* hairline separators           */
+  --tv-border-2: #363A45;  /* raised borders (menus)        */
+  --tv-text: #D1D4DC;      /* primary text                  */
+  --tv-text-2: #B2B5BE;    /* secondary text                */
+  --tv-muted: #787B86;     /* labels, captions              */
+  --tv-muted-2: #9598A1;   /* slightly brighter captions    */
+  --tv-accent: #2962FF;    /* TV blue                       */
+  --tv-accent-hover: #1E53E5;
+  --tv-accent-soft: rgba(41, 98, 255, 0.16); /* active fill */
+  --tv-up: #089981;        /* bullish                       */
+  --tv-down: #F23645;      /* bearish                       */
+  --tv-gold: #FCD535;      /* warnings / favorites          */
+
+  /* ── corner radii ──────────────────────────────────────────────── */
+  --tv-radius-sm: 3px;     /* buttons, tabs, pills          */
+  --tv-radius: 4px;        /* tool buttons, inputs          */
+  --tv-radius-md: 6px;     /* menus, popovers               */
+  --tv-radius-lg: 8px;     /* dialogs                       */
+
+  /* ════════════════════════════════════════════════════════════════
+     NEOBRUTALISM UI LAYER (applies to chrome: toolbars, menus, panels,
+     Docs page) — NOT to the chart canvas, which keeps the dark trading
+     theme + bullish/bearish colors above for readability. Inspired by
+     the reference: warm charcoal panels, an orange accent, chunky
+     rounded corners, and bold visible shadows. */
+  --nb-panel: #34373F;       /* warm charcoal panel surface     */
+  --nb-panel-2: #3A3D45;     /* secondary panel surface         */
+  --nb-panel-hi: #43464F;    /* hover / raised surface          */
+  --nb-panel-lo: #2C2E35;    /* inset / track surface           */
+  --nb-edge: #4A4E59;        /* panel border                    */
+  --nb-accent: #F5A623;      /* signature orange                */
+  --nb-accent-hi: #FFB733;   /* orange hover                    */
+  --nb-accent-soft: rgba(245, 166, 35, 0.16);
+  --nb-text: #ECEDF0;        /* bright panel text               */
+  --nb-text-2: #B6B9C2;      /* secondary panel text            */
+
+  /* chunky neobrutalist radii for chrome panels */
+  --nb-radius: 12px;         /* floating panels, menus          */
+  --nb-radius-sm: 8px;       /* buttons, tool cells             */
+  --nb-radius-lg: 16px;      /* large dialogs / Docs cards      */
+
+  /* bold, slightly-offset shadows (the neobrutalist "lift") */
+  --nb-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --nb-shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.55);
+
+  /* ── elevation (soft dark shadows like TV's popovers) ──────────── */
+  --tv-shadow-menu: var(--nb-shadow);
+  --tv-shadow-dialog: var(--nb-shadow-lg);
+
+  /* ── typography scale ──────────────────────────────────────────── */
+  --tv-fs-xs: 10px;        /* badges, axis labels           */
+  --tv-fs-sm: 11px;        /* status bar, captions          */
+  --tv-fs-base: 12px;      /* menus, controls               */
+  --tv-fs-md: 13px;        /* symbol, prominent labels      */
+}
+
+/* ── document shell ─────────────────────────────────────────────── */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--tv-bg);
+  color: var(--tv-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none; /* no rubber-banding behind the chart */
+}
+
+/* main.tsx wraps the terminal in this. */
+.trex-app-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--tv-bg);
+  overflow: hidden;
+}
+
+/* Floating "API Docs" pill rendered by main.tsx (bottom-right, just
+   above the 26 px status bar). */
+.trex-docs-btn {
+  position: fixed;
+  right: 12px;
+  bottom: 34px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--tv-border-2);
+  background: var(--tv-panel);
+  color: var(--tv-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+.trex-docs-btn:hover {
+  color: var(--tv-text);
+  border-color: var(--tv-accent);
+  transform: translateY(-1px);
+}
+.trex-docs-btn:active {
+  transform: translateY(0);
+}
+
+/* ── thin scrollbars (opt-in via .trex-scroll) ──────────────────── */
+.trex-scroll {
+  scrollbar-width: thin;                       /* Firefox */
+  scrollbar-color: var(--tv-border-2) transparent;
+}
+.trex-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.trex-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.trex-scroll::-webkit-scrollbar-thumb {
+  background: var(--tv-border-2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.trex-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #4a4e59;
+  background-clip: padding-box;
+}
+
+/* ── pure-CSS tooltips ──────────────────────────────────────────────
+   Usage: <button data-tip="Zoom in">…       → appears below
+          <button data-tip="…" data-tip-pos="right">  → appears right
+   Shown after a 450 ms hover delay, exactly like TradingView.       */
+[data-tip] {
+  position: relative;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  background: var(--tv-border-2);
+  color: var(--tv-text);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+[data-tip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 0.45s;
+}
+/* right-side placement for the left tool rail */
+[data-tip][data-tip-pos="right"]::after {
+  top: 50%;
+  left: calc(100% + 9px);
+  transform: translateY(-50%) translateX(-2px);
+}
+[data-tip][data-tip-pos="right"]:hover::after {
+  transform: translateY(-50%) translateX(0);
+}
+/* never show an empty bubble */
+[data-tip=""]::after {
+  display: none;
+}
+
+/* ── micro-animations ───────────────────────────────────────────── */
+@keyframes trex-toast-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.trex-toast {
+  animation: trex-toast-in 0.18s ease-out;
+}
+
+@keyframes trex-menu-pop {
+  from { opacity: 0; transform: scale(0.97) translateY(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+.trex-menu {
+  animation: trex-menu-pop 0.12s ease-out;
+  transform-origin: top center;
+  /* ── Neobrutalism chrome (reference-inspired) ──────────────────────
+     Every popover/menu/flyout shares this surface: warm charcoal,
+     chunky rounded corners and a bold lifted shadow. We override the
+     inline Tailwind bg/border/radius so all menus restyle at once. */
+  background-color: var(--nb-panel) !important;
+  border: 1.5px solid var(--nb-edge) !important;
+  border-radius: var(--nb-radius) !important;
+  box-shadow: var(--nb-shadow) !important;
+  overflow: hidden; /* keep children inside the rounded corners */
+}
+/* menu rows read on the warmer charcoal surface */
+.trex-menu button:hover {
+  background-color: var(--nb-panel-hi) !important;
+}
+
+@keyframes trex-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.trex-fade {
+  animation: trex-fade-in 0.15s ease-out;
+}
+
+/* ── form-control polish ────────────────────────────────────────── */
+::selection {
+  background: rgba(41, 98, 255, 0.35);
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--tv-accent);
+  outline-offset: 1px;
+}
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+input[type="checkbox"],
+input[type="range"] {
+  accent-color: var(--tv-accent);
+}
+
+/* strip the number-input spinners — the terminal uses its own steppers */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* compact, borderless color swatches */
+input[type="color"] {
+  padding: 2px;
+  background: transparent;
+}
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 3px;
+}
+input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 3px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* ── accessibility ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   NEOBRUTALISM CHROME — toolbars, status bar, floating panels.
+   Reference-inspired: warm charcoal surfaces, orange accent, chunky
+   corners. The chart canvas itself is untouched (keeps the dark trading
+   theme for candle/indicator readability).
+   ════════════════════════════════════════════════════════════════════ */
+
+/* top toolbar + left rail share the warm charcoal surface */
+.nb-topbar,
+.nb-leftbar {
+  background-color: var(--nb-panel) !important;
+  border-color: var(--nb-edge) !important;
+}
+.nb-topbar { border-bottom-width: 1.5px !important; }
+.nb-leftbar { border-right-width: 1.5px !important; }
+
+/* left-rail tool buttons: chunky rounded cells, orange active state */
+.nb-leftbar button {
+  border-radius: var(--nb-radius-sm) !important;
+}
+/* active tool — the blue TV accent becomes the signature orange */
+.nb-leftbar button.bg-\[rgba\(41\,98\,255\,0\.16\)\],
+.nb-topbar button.bg-\[rgba\(41\,98\,255\,0\.16\)\] {
+  background-color: var(--nb-accent-soft) !important;
+  color: var(--nb-accent) !important;
+}
+
+/* the floating favourites toolbar = a neobrutalist pill bar */
+.trex-menu.nb-floating,
+.nb-floating {
+  background-color: var(--nb-panel) !important;
+  border: 1.5px solid var(--nb-edge) !important;
+  border-radius: 999px !important;
+  box-shadow: var(--nb-shadow) !important;
+}
+
+/* status bar at the bottom */
+.nb-statusbar {
+  background-color: var(--nb-panel) !important;
+  border-top: 1.5px solid var(--nb-edge) !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ACCENT REMAP — the TradingView blue (#2962FF) becomes the signature
+   orange across all CHROME controls (tabs, menu items, toggles, active
+   states). These class selectors only ever appear on UI chrome, never on
+   the chart canvas, so candle/indicator colors stay intact.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* blue text accent → orange */
+.text-\[\#2962FF\] { color: var(--nb-accent) !important; }
+
+/* blue soft fills (active tabs, selected rows) → orange tint */
+.bg-\[rgba\(41\,98\,255\,0\.18\)\],
+.bg-\[rgba\(41\,98\,255\,0\.24\)\],
+.bg-\[rgba\(41\,98\,255\,0\.16\)\],
+.bg-\[rgba\(41\,98\,255\,0\.12\)\] {
+  background-color: var(--nb-accent-soft) !important;
+}
+
+/* solid blue (primary buttons like "Apply to chart") → solid orange */
+.bg-\[\#2962FF\] { background-color: var(--nb-accent) !important; }
+.bg-\[\#2962FF\]:hover,
+.hover\:bg-\[\#1E53E5\]:hover { background-color: var(--nb-accent-hi) !important; }
+
+/* blue borders / rings on active chrome → orange */
+.border-\[\#2962FF\] { border-color: var(--nb-accent) !important; }
+.ring-\[\#2962FF\] { --tw-ring-color: var(--nb-accent) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Docs page — bright, modern (Stripe/Linear-inspired) aesthetic
+   ═══════════════════════════════════════════════════════════════════ */
+
+.docs-root {
+  /* deep near-black with a faint cool cast */
+  --d-bg: #07090C;
+  --d-surface: #14171F;
+  --d-surface-2: #1B1F28;
+  --d-border: #262B36;
+  --d-border-hi: #333947;
+  --d-text: #F2F4F8;
+  --d-text-2: #9197A4;
+  --d-text-3: #5A5F6B;
+  --d-accent: #F5A623;
+  --d-accent-2: #FF7847;
+  background: var(--d-bg);
+}
+
+/* signature radial glow behind the hero */
+.docs-hero-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 120% at 50% -10%, rgba(245, 166, 35, 0.18) 0%, rgba(255, 120, 71, 0.08) 35%, transparent 70%);
+}
+
+/* subtle grid texture overlay on the hero */
+.docs-hero-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(70% 90% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(70% 90% at 50% 0%, #000 0%, transparent 75%);
+}
+
+/* gradient text for the hero headline */
+.docs-gradient-text {
+  background: linear-gradient(120deg, #FFFFFF 0%, #FFE6C7 40%, var(--d-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* nav-card hover glow */
+.docs-card {
+  background: var(--d-surface);
+  border: 1px solid var(--d-border);
+  border-radius: 14px;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.docs-card:hover {
+  border-color: rgba(245, 166, 35, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px -12px rgba(245, 166, 35, 0.25);
+}
+
+/* accent pill / chip */
+.docs-chip {
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  color: var(--d-accent);
+}
+
+/* sidebar active item: gradient left bar */
+.docs-nav-active {
+  background: linear-gradient(90deg, rgba(245, 166, 35, 0.12), transparent);
+  color: var(--d-accent);
+  font-weight: 600;
+}
+
+/* code window chrome */
+.docs-code-window {
+  background: #0A0D12;
+  border: 1px solid var(--d-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+}
