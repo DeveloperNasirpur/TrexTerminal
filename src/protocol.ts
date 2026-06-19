@@ -45,6 +45,7 @@ export interface HelloMessage {
   client: string;          // e.g. "trex-terminal"
   version: string;         // client app version
   protocol: string;        // PROTOCOL_VERSION
+  initialCount?: number;   // how many candles the client wants in the first snapshot (default 5000)
 }
 
 /** Keep-alive; the server must answer with {@link PongMessage}. */
@@ -57,8 +58,42 @@ export interface PingMessage {
 /** Request older candles when the view nears the left edge. */
 export interface HistoryRequestMessage {
   type: "history";
-  before: number;          // unix-seconds; return bars strictly older
-  count: number;           // page size hint
+  before: number;          // unix-seconds; return bars strictly older than this
+  count: number;           // page size hint (default 5000)
+  from?: number;           // optional: earliest unix-second wanted (range lower bound)
+  to?: number;             // optional: latest unix-second wanted  (range upper bound)
+  chartId?: string;        // present for secondary charts in multi-chart layouts
+}
+
+/** Request the list of symbols available on the server. Sent once on connect. */
+export interface GetSymbolsMessage {
+  type: "get_symbols";
+}
+
+/** Request the list of indicator definitions available on the server. Sent once on connect. */
+export interface GetIndicatorsMessage {
+  type: "get_indicators";
+}
+
+/** Notify server of chart layout change; server should subscribe data feeds for every listed chart. */
+export interface LayoutMessage {
+  type: "layout";
+  layout: "single" | "split2" | "grid4";
+  charts: Array<{
+    chartId: string;
+    symbol: string;
+    timeframe: string;
+    indicators: string[];   // SeriesDefinition keys currently active
+  }>;
+}
+
+/** Change symbol (and optionally timeframe) for a specific secondary chart. */
+export interface ChartSymbolMessage {
+  type: "chart_symbol";
+  chartId: string;
+  symbol: string;
+  timeframe?: string;
+  indicators: string[];    // SeriesDefinition keys currently active in that chart
 }
 
 /** User changed the symbol — server should answer with a fresh snapshot. */
@@ -107,6 +142,10 @@ export type ClientMessage =
   | HelloMessage
   | PingMessage
   | HistoryRequestMessage
+  | GetSymbolsMessage
+  | GetIndicatorsMessage
+  | LayoutMessage
+  | ChartSymbolMessage
   | SymbolRequestMessage
   | TimeframeRequestMessage
   | ChartTypeRequestMessage
@@ -214,6 +253,48 @@ export interface DrawingDeleteFromServer {
 }
 export interface DrawingsClearFromServer { type: "drawings_clear" }
 
+/** Response to get_symbols — list of tradeable symbols. */
+export interface SymbolsListMessage {
+  type: "symbols_list";
+  symbols: Array<{ symbol: string; name?: string; type?: string }>;
+}
+
+/** Response to get_indicators — available indicator definitions the server can stream. */
+export interface IndicatorsListMessage {
+  type: "indicators_list";
+  indicators: SeriesDefinition[];
+}
+
+/**
+ * Snapshot for a specific secondary chart (multi-chart layouts).
+ * Same shape as SnapshotMessage but carries an explicit chartId.
+ */
+export interface ChartSnapshotMessage {
+  type: "chart_snapshot";
+  chartId: string;
+  data: OHLC[];
+  symbol?: string;
+  timeframe?: string;
+  digits?: number;
+  definitions?: SeriesDefinition[];
+  points?: Record<string, PointData[]>;
+}
+
+/** Realtime bar update for a specific secondary chart. */
+export interface ChartBarMessage {
+  type: "chart_bar";
+  chartId: string;
+  bar: OHLC;
+}
+
+/** History page reply for a specific secondary chart. */
+export interface ChartHistoryMessage {
+  type: "chart_history";
+  chartId: string;
+  data: OHLC[];
+  noMoreHistory?: boolean;
+}
+
 /** A toast notification raised by the server. */
 export interface ToastMessage {
   type: "toast";
@@ -253,6 +334,11 @@ export type ServerMessage =
   | DrawingUpsertFromServer
   | DrawingDeleteFromServer
   | DrawingsClearFromServer
+  | SymbolsListMessage
+  | IndicatorsListMessage
+  | ChartSnapshotMessage
+  | ChartBarMessage
+  | ChartHistoryMessage
   | ToastMessage
   | ErrorMessage
   | PongMessage;
@@ -282,12 +368,15 @@ export const SERVER_MESSAGE_TYPES: ReadonlySet<string> = new Set([
   "settings", "magnet", "fitContent", "scrollToEnd", "zoomRange",
   "drawings", "drawing_set", "drawing", "drawing_upsert", "drawing_delete",
   "drawings_clear", "toast", "error", "pong",
+  "symbols_list", "indicators_list",
+  "chart_snapshot", "chart_bar", "chart_history",
 ]);
 
 /** The complete set of client→server message type strings. */
 export const CLIENT_MESSAGE_TYPES: ReadonlySet<string> = new Set([
   "hello", "ping", "history", "symbol", "timeframe", "chartType",
   "drawing_upsert", "drawing_delete", "drawings_clear", "drawings",
+  "get_symbols", "get_indicators", "layout", "chart_symbol",
 ]);
 
 /** True when `type` is a recognised server→client message. */
@@ -296,8 +385,8 @@ export function isKnownServerType(type: string): boolean {
 }
 
 /** Build the standard handshake frame. */
-export function makeHello(client: string, version: string): HelloMessage {
-  return { type: "hello", client, version, protocol: PROTOCOL_VERSION };
+export function makeHello(client: string, version: string, initialCount = 5000): HelloMessage {
+  return { type: "hello", client, version, protocol: PROTOCOL_VERSION, initialCount };
 }
 
 /**

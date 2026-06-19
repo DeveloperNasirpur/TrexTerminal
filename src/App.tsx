@@ -477,6 +477,7 @@ interface TopBarProps {
   latency: number | null;
   mode: "demo" | "server";
   wsUrl: string;
+  serverSymbols: Array<{ symbol: string; name?: string }>;
   onSymbol: (s: string) => void;
   onTimeframe: (tf: string) => void;
   onChartType: (t: ChartType) => void;
@@ -508,7 +509,11 @@ function TopBar(p: TopBarProps) {
 
   useEffect(() => setUrlDraft(p.wsUrl), [p.wsUrl]);
 
-  const filteredSyms = DEMO_SYMBOLS.filter((s) =>
+  // In server mode use symbols received from server; fall back to demo symbols
+  const symbolPool = p.mode === "server" && p.serverSymbols.length > 0
+    ? p.serverSymbols
+    : DEMO_SYMBOLS;
+  const filteredSyms = symbolPool.filter((s) =>
     s.symbol.toLowerCase().includes(symQuery.trim().toLowerCase())
   );
 
@@ -548,7 +553,8 @@ function TopBar(p: TopBarProps) {
               onClick={() => { p.onSymbol(s.symbol); setSymbolOpen(false); setSymQuery(""); }}
               right={s.symbol === p.symbol ? <IconCheck /> : undefined}
             >
-              {s.symbol}
+              <span className="flex-1">{s.symbol}</span>
+              {(s as any).name && <span className="ml-2 text-[10px] text-[#787B86] truncate max-w-[80px]">{(s as any).name}</span>}
             </MenuItem>
           ))}
           {symQuery.trim() && !filteredSyms.some((s) => s.symbol === symQuery.trim().toUpperCase()) && (
@@ -1483,10 +1489,12 @@ function IndicatorsModal(props: {
   activeIds: string[];
   serverDefs: SeriesDefinition[];
   serverVis: Record<string, boolean>;
+  serverAvailableIndicators: SeriesDefinition[];
   customDefs: SeriesDefinition[];
   onClose: () => void;
   onToggleId: (id: string) => void;
   onToggleServer: (key: string) => void;
+  onToggleAvailable: (def: SeriesDefinition) => void;
   onRemoveCustom: (key: string) => void;
   onToggleCustom: (key: string) => void;
   onOpenBuilder: () => void;
@@ -1552,9 +1560,38 @@ function IndicatorsModal(props: {
         );
       })}
 
+      {props.mode === "server" && props.serverAvailableIndicators.length > 0 && (
+        <div className="mb-2 border-t border-[#2A2E39] pt-2">
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Available from server</div>
+          {props.serverAvailableIndicators
+            .filter((d) => !query || d.label.toLowerCase().includes(query) || d.key.toLowerCase().includes(query))
+            .map((d) => {
+              const isActive = props.serverDefs.some((sd) => sd.key === d.key);
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  onClick={() => props.onToggleAvailable(d)}
+                  className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-[12.5px] text-[#D1D4DC] hover:bg-[#2A2E39]"
+                >
+                  <span className={cn(
+                    "flex h-4 w-4 items-center justify-center rounded-[4px] border",
+                    isActive ? "border-[#2962FF] bg-[#2962FF] text-white" : "border-[#4a4e59]"
+                  )}>
+                    {isActive && <IconCheck />}
+                  </span>
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                  <span className="flex-1 truncate">{d.label}</span>
+                </button>
+              );
+            })
+          }
+        </div>
+      )}
+
       {props.mode === "server" && serverMatches.length > 0 && (
         <div className="mb-2 border-t border-[#2A2E39] pt-2">
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">From server</div>
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Active from server</div>
           {serverMatches.map((d) => {
             const vis = props.serverVis[d.key] ?? d.visible;
             return (
@@ -2226,92 +2263,154 @@ function BuilderPage(props: {
 /* ═══════════════════ Compare panel (multi-chart) ══════════════════ */
 
 const NOOP = () => {};
-/** Callbacks a read-only secondary chart needs — all no-ops. */
-const COMPARE_CALLBACKS: EngineCallbacks = {
-  onCrosshair: NOOP, onSelectionChange: NOOP, onSelectionBox: NOOP,
-  onDrawingsCommit: NOOP, onNeedHistory: NOOP, onPaneLayout: NOOP,
-  onRealtimeGapChange: NOOP, onContextMenu: NOOP, onDblClickEmpty: NOOP,
-  onEditDrawing: NOOP, onHint: NOOP, onToolDone: NOOP,
-};
 
 /**
- * A self-contained secondary chart for the multi-chart workspace. Each
- * panel runs its own ChartEngine + demo feed for its own symbol, fully
- * independent of the main chart. Read-only (no drawing tools) — the main
- * chart remains the editable one. Click a panel to make it active.
+ * A secondary chart panel for multi-chart layouts. In demo mode it runs
+ * an independent DemoFeed. In server mode its ChartEngine is registered
+ * with the parent App so incoming `chart_snapshot` / `chart_bar` messages
+ * can be routed to it by chartId. It has its own crosshair, time axis,
+ * and symbol picker.
  */
 const ComparePanel = memo(function ComparePanel(props: {
   index: number;
+  chartId: string;
   symbol: string;
+  timeframe: string;
+  mode: "demo" | "server";
+  serverSymbols: Array<{ symbol: string; name?: string }>;
   active: boolean;
   onActivate: () => void;
   onChangeSymbol: (index: number, s: string) => void;
+  onRegisterEngine: (chartId: string, engine: ChartEngine) => void;
+  onUnregisterEngine: (chartId: string) => void;
+  onNeedHistory: (chartId: string, before: number, count: number, fromTime?: number) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const engineRef = useRef<ChartEngine | null>(null);
+  const localEngineRef = useRef<ChartEngine | null>(null);
   const feedRef = useRef<DemoFeed | null>(null);
   const [symOpen, setSymOpen] = useState(false);
   const symRef = useOutsideClose(symOpen, () => setSymOpen(false));
 
+  // Crosshair legend refs (written imperatively from engine callback)
+  const legendRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    const engine = new ChartEngine(host, { ...DEFAULT_SETTINGS }, COMPARE_CALLBACKS);
-    engineRef.current = engine;
-    const feed = new DemoFeed((msg) => {
-      if (msg.type === "snapshot" || msg.type === "init") {
-        if (Array.isArray(msg.data)) engine.setCandles(sanitizeCandles(msg.data));
-      } else if (msg.type === "bar" || msg.type === "tick" || msg.type === "update") {
-        if (msg.bar && isValidBar(msg.bar)) engine.applyBar(msg.bar as OHLC);
-      }
-    });
-    feedRef.current = feed;
-    feed.start({ symbol: props.symbol, timeframe: "1m" });
-    return () => { feed.stop(); engine.dispose(); engineRef.current = null; };
+
+    const callbacks: EngineCallbacks = {
+      onCrosshair: (p: CrosshairPayload) => {
+        if (!legendRef.current) return;
+        if (p.bar) {
+          const up = p.bar.close >= p.bar.open;
+          const col = up ? "#089981" : "#F23645";
+          legendRef.current.style.color = col;
+          legendRef.current.textContent =
+            `O:${p.bar.open.toFixed(2)} H:${p.bar.high.toFixed(2)} L:${p.bar.low.toFixed(2)} C:${p.bar.close.toFixed(2)}`;
+        } else if (!p.hovering && legendRef.current) {
+          legendRef.current.textContent = "";
+        }
+      },
+      onSelectionChange: NOOP, onSelectionBox: NOOP, onDrawingsCommit: NOOP,
+      onNeedHistory: (before, count, fromTime) => {
+        if (props.mode === "demo") {
+          feedRef.current?.requestHistory(before, count);
+        } else {
+          props.onNeedHistory(props.chartId, before, count, fromTime);
+        }
+      },
+      onPaneLayout: NOOP, onRealtimeGapChange: NOOP,
+      onContextMenu: NOOP, onDblClickEmpty: NOOP, onEditDrawing: NOOP,
+      onHint: NOOP, onToolDone: NOOP,
+    };
+
+    const engine = new ChartEngine(host, { ...DEFAULT_SETTINGS }, callbacks);
+    localEngineRef.current = engine;
+    props.onRegisterEngine(props.chartId, engine);
+
+    if (props.mode === "demo") {
+      const feed = new DemoFeed((msg) => {
+        if (msg.type === "snapshot" || msg.type === "init") {
+          if (Array.isArray(msg.data)) engine.setCandles(sanitizeCandles(msg.data));
+        } else if (msg.type === "bar" || msg.type === "tick" || msg.type === "update") {
+          if (msg.bar && isValidBar(msg.bar)) engine.applyBar(msg.bar as OHLC);
+        }
+      });
+      feedRef.current = feed;
+      feed.start({ symbol: props.symbol, timeframe: props.timeframe });
+    }
+
+    return () => {
+      feedRef.current?.stop();
+      feedRef.current = null;
+      engine.dispose();
+      localEngineRef.current = null;
+      props.onUnregisterEngine(props.chartId);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // restart the feed when this panel's symbol changes
+  // In demo mode: restart feed when symbol changes
   useEffect(() => {
-    feedRef.current?.start({ symbol: props.symbol, timeframe: "1m" });
-  }, [props.symbol]);
+    if (props.mode === "demo") {
+      feedRef.current?.start({ symbol: props.symbol, timeframe: props.timeframe });
+    }
+  }, [props.symbol, props.timeframe, props.mode]);
+
+  const symbolPool = props.mode === "server" && props.serverSymbols.length > 0
+    ? props.serverSymbols
+    : DEMO_SYMBOLS;
 
   return (
     <div
       onMouseDown={props.onActivate}
       className={cn(
-        "relative min-w-0 overflow-hidden rounded-[2px]",
+        "relative min-w-0 overflow-hidden rounded-[2px] bg-[#131722]",
         props.active ? "ring-1 ring-[#2962FF]" : "ring-1 ring-transparent"
       )}
     >
       <div ref={hostRef} className="absolute inset-0" />
-      <div className="absolute left-2 top-2 z-10" ref={symRef}>
+
+      {/* Symbol + timeframe header */}
+      <div className="absolute left-2 top-2 z-10 flex items-start gap-2" ref={symRef}>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setSymOpen((v) => !v); }}
           className="flex items-center gap-1 rounded bg-[rgba(30,34,45,0.85)] px-2 py-1 text-[12px] font-bold text-[#D1D4DC] hover:bg-[#2A2E39]"
         >
-          {props.symbol}<IconChevronDown />
+          {props.symbol}
+          <span className="ml-1 text-[10px] font-normal text-[#787B86]">{props.timeframe}</span>
+          <IconChevronDown />
         </button>
         {symOpen && (
-          <div className="trex-menu absolute left-0 mt-1 max-h-[240px] w-[180px] overflow-y-auto rounded-md border border-[#363A45] bg-[#1E222D] py-1">
-            {DEMO_SYMBOLS.map((s) => (
+          <div className="trex-menu absolute left-0 mt-8 max-h-[240px] w-[200px] overflow-y-auto rounded-md border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+            {symbolPool.map((s) => (
               <button
                 key={s.symbol}
                 type="button"
-                onClick={(e) => { e.stopPropagation(); props.onChangeSymbol(props.index, s.symbol); setSymOpen(false); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  props.onChangeSymbol(props.index, s.symbol);
+                  setSymOpen(false);
+                }}
                 className={cn(
                   "flex w-full items-center justify-between px-3 py-1.5 text-left text-[12px] hover:bg-[#2A2E39]",
                   s.symbol === props.symbol ? "text-[#2962FF]" : "text-[#D1D4DC]"
                 )}
               >
                 <span className="font-semibold">{s.symbol}</span>
-                <span className="text-[10px] text-[#787B86]">${s.base.toLocaleString()}</span>
+                {(s as any).name && <span className="text-[10px] text-[#787B86]">{(s as any).name}</span>}
               </button>
             ))}
           </div>
         )}
       </div>
+
+      {/* Crosshair OHLC legend */}
+      <div
+        ref={legendRef}
+        className="pointer-events-none absolute left-2 top-10 z-10 font-mono text-[10px] text-[#D1D4DC] select-none"
+      />
     </div>
   );
 });
@@ -2373,9 +2472,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   // the editable one with all the drawing tools.
   const [layout, setLayout] = useState<"single" | "split2" | "grid4">(saved.layout ?? "single");
   const [compareSymbols, setCompareSymbols] = useState<string[]>(saved.compareSymbols ?? ["ETHUSDT", "SOLUSDT", "BNBUSDT"]);
-  const setCompareSymbol = useCallback((i: number, s: string) => {
-    setCompareSymbols((xs) => { const n = [...xs]; n[i] = s; return n; });
-  }, []);
+  const [compareTimeframes, setCompareTimeframes] = useState<string[]>(["1m", "1m", "1m"]);
+  void setCompareTimeframes; // reserved for future per-panel timeframe picker
 
   // Persist workspace preferences (debounced) whenever they change. UI
   // state only — never market data, which always comes fresh from the feed.
@@ -2399,6 +2497,13 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const [serverVis, setServerVis] = useState<Record<string, boolean>>({});
   const [customDefs, setCustomDefs] = useState<SeriesDefinition[]>([]);
   const [appliedDefs, setAppliedDefs] = useState<SeriesDefinition[]>([]);
+
+  // Symbols and indicator definitions fetched from the server on connect
+  const [serverSymbols, setServerSymbols] = useState<Array<{ symbol: string; name?: string; type?: string }>>([]);
+  const [serverAvailableIndicators, setServerAvailableIndicators] = useState<SeriesDefinition[]>([]);
+  // Per-chart data for multi-chart server mode (keyed by chartId)
+  const chartEnginesRef = useRef<Map<string, ChartEngine>>(new Map());
+  const chartTimeframesRef = useRef<Map<string, string>>(new Map());
 
   const [indicatorsOpen, setIndicatorsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -2660,6 +2765,56 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         if (msg.message) showToast(msg.message, "error");
         break;
 
+      /* ── server symbol / indicator catalogues ── */
+      case "symbols_list":
+        if (Array.isArray((msg as any).symbols)) {
+          setServerSymbols((msg as any).symbols);
+        }
+        break;
+
+      case "indicators_list":
+        if (Array.isArray((msg as any).indicators)) {
+          const defs = sanitizeDefinitions((msg as any).indicators);
+          setServerAvailableIndicators(defs);
+        }
+        break;
+
+      /* ── secondary-chart messages for multi-chart layouts ── */
+      case "chart_snapshot": {
+        const cm = msg as any;
+        const childEng = chartEnginesRef.current.get(cm.chartId);
+        if (!childEng) break;
+        if (Array.isArray(cm.data)) childEng.setCandles(sanitizeCandles(cm.data));
+        if (cm.timeframe) {
+          chartTimeframesRef.current.set(cm.chartId, cm.timeframe);
+          childEng.setTimeframeSeconds(timeframeToSeconds(cm.timeframe));
+        }
+        if (cm.definitions) childEng.setDefinitions(sanitizeDefinitions(cm.definitions));
+        if (cm.points) {
+          for (const [key, raw] of Object.entries(cm.points as Record<string, unknown>)) {
+            childEng.setSeriesData(key, sanitizePoints(raw));
+          }
+        }
+        break;
+      }
+
+      case "chart_bar": {
+        const cm = msg as any;
+        const childEng = chartEnginesRef.current.get(cm.chartId);
+        if (childEng && cm.bar && isValidBar(cm.bar)) childEng.applyBar(cm.bar as OHLC);
+        break;
+      }
+
+      case "chart_history": {
+        const cm = msg as any;
+        const childEng = chartEnginesRef.current.get(cm.chartId);
+        if (childEng && Array.isArray(cm.data)) {
+          const page = sanitizeHistory(cm.data, cm.noMoreHistory);
+          childEng.prependHistory(page.noMoreHistory ? [] : page.data);
+        }
+        break;
+      }
+
       default:
         break;
     }
@@ -2708,7 +2863,12 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     ws.connect();
     // Versioned handshake — carries PROTOCOL_VERSION so the server can
     // detect an incompatible client before streaming data.
-    ws.send(makeHello("trex-terminal", APP_VERSION));
+    // initialCount: 5000 tells server how many candles to send in the first snapshot.
+    ws.send(makeHello("trex-terminal", APP_VERSION, 5000));
+    // Ask server for available symbols and indicators so the UI can
+    // populate dropdowns without hardcoding anything client-side.
+    ws.send({ type: "get_symbols" });
+    ws.send({ type: "get_indicators" });
   }, [stopFeeds]);
 
   /* ═══════════════════════ engine bootstrap ════════════════════════ */
@@ -2779,9 +2939,17 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         }
         setDrawTick((t) => t + 1);
       },
-      onNeedHistory: (before, count) => {
+      onNeedHistory: (before, count, fromTime) => {
         if (modeRef.current === "demo") feedRef.current?.requestHistory(before, count);
-        else wsRef.current?.send({ type: "history", before, count });
+        else {
+          // Send from/to range so server can serve exact window of 5000 candles
+          const msg: { type: "history"; before: number; count: number; from?: number; to?: number } = {
+            type: "history", before, count,
+          };
+          if (fromTime !== undefined) msg.from = fromTime;
+          msg.to = before;
+          wsRef.current?.send(msg);
+        }
       },
       onPaneLayout: (layout) => setPaneLayout(layout),
       onRealtimeGapChange: (b) => setBehind(b),
@@ -2988,6 +3156,40 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     setServerVis((v) => ({ ...v, [def.key]: false }));
   }, []);
 
+  const layoutRef = useRef(layout); layoutRef.current = layout;
+  const compareSymbolsRef = useRef(compareSymbols); compareSymbolsRef.current = compareSymbols;
+  const compareTimeframesRef = useRef(compareTimeframes); compareTimeframesRef.current = compareTimeframes;
+
+  const changeLayout = useCallback((newLayout: "single" | "split2" | "grid4") => {
+    setLayout(newLayout);
+    if (modeRef.current === "server" && wsRef.current) {
+      const count = newLayout === "split2" ? 1 : newLayout === "grid4" ? 3 : 0;
+      const syms = compareSymbolsRef.current;
+      const tfs = compareTimeframesRef.current;
+      const charts = [
+        { chartId: "main", symbol: symbolRef.current, timeframe: tfRef.current, indicators: serverDefsRef.current.map((d) => d.key) },
+        ...Array.from({ length: count }, (_, i) => ({
+          chartId: `chart_${i}`,
+          symbol: syms[i] ?? symbolRef.current,
+          timeframe: tfs[i] ?? "1m",
+          indicators: [] as string[],
+        })),
+      ];
+      wsRef.current.send({ type: "layout", layout: newLayout, charts });
+    }
+  }, []);
+
+  const changeCompareSymbol = useCallback((i: number, s: string) => {
+    setCompareSymbols((xs) => { const n = [...xs]; n[i] = s; return n; });
+    if (modeRef.current === "server" && wsRef.current) {
+      const chartId = `chart_${i}`;
+      const tf = compareTimeframesRef.current[i] ?? "1m";
+      const indicators = Array.from(chartEnginesRef.current.get(chartId)
+        ? [] : []);
+      wsRef.current.send({ type: "chart_symbol", chartId, symbol: s, timeframe: tf, indicators });
+    }
+  }, []);
+
   const switchMode = useCallback((m: "demo" | "server", url?: string) => {
     if (m === "demo") { startDemo(); showToast("Switched to demo simulation", "info"); }
     else {
@@ -3080,6 +3282,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         latency={mode === "server" ? latency : null}
         mode={mode}
         wsUrl={settings.wsUrl}
+        serverSymbols={serverSymbols}
         onSymbol={changeSymbol}
         onTimeframe={changeTimeframe}
         onChartType={changeChartType}
@@ -3092,7 +3295,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         onScreenshot={doScreenshot}
         onFullscreen={toggleFullscreen}
         layout={layout}
-        onLayout={setLayout}
+        onLayout={changeLayout}
         onZoomIn={() => engineRef.current?.zoomIn()}
         onZoomOut={() => engineRef.current?.zoomOut()}
         onFit={() => engineRef.current?.fitContent()}
@@ -3201,10 +3404,21 @@ export default function App({ initialMode }: { initialMode: string | null }) {
             <ComparePanel
               key={`cmp-${i}`}
               index={i}
+              chartId={`chart_${i}`}
               symbol={sym}
+              timeframe={compareTimeframes[i] ?? "1m"}
+              mode={mode}
+              serverSymbols={serverSymbols}
               active={false}
               onActivate={NOOP}
-              onChangeSymbol={setCompareSymbol}
+              onChangeSymbol={changeCompareSymbol}
+              onRegisterEngine={(chartId, engine) => { chartEnginesRef.current.set(chartId, engine); }}
+              onUnregisterEngine={(chartId) => { chartEnginesRef.current.delete(chartId); }}
+              onNeedHistory={(chartId, before, count, fromTime) => {
+                if (mode === "server" && wsRef.current) {
+                  wsRef.current.send({ type: "history", before, count, from: fromTime, to: before, chartId });
+                }
+              }}
             />
           ))}
         </div>
@@ -3238,10 +3452,25 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         activeIds={activeIds}
         serverDefs={serverDefs}
         serverVis={serverVis}
+        serverAvailableIndicators={serverAvailableIndicators}
         customDefs={customDefs}
         onClose={() => setIndicatorsOpen(false)}
         onToggleId={(id) => setActiveIds((ids) => ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id])}
         onToggleServer={(key) => setServerVis((v) => ({ ...v, [key]: !(v[key] ?? true) }))}
+        onToggleAvailable={(def) => {
+          // If this def is already active (in serverDefs), remove it; otherwise request it
+          const isActive = serverDefs.some((d) => d.key === def.key);
+          if (isActive) {
+            setServerDefs((ds) => ds.filter((d) => d.key !== def.key));
+          } else {
+            const newDefs = [...serverDefs, def];
+            setServerDefs(newDefs);
+            // Notify server that we want this indicator's data
+            if (wsRef.current) {
+              wsRef.current.send({ type: "chart_symbol", chartId: "main", symbol: symbolRef.current, timeframe: tfRef.current, indicators: newDefs.map((d) => d.key) });
+            }
+          }
+        }}
         onRemoveCustom={(key) => setCustomDefs((ds) => ds.filter((d) => d.key !== key))}
         onToggleCustom={(key) => setCustomDefs((ds) => ds.map((d) => d.key === key ? { ...d, visible: !(d.visible !== false) } : d))}
         onOpenBuilder={() => { setIndicatorsOpen(false); setPage("builder"); }}

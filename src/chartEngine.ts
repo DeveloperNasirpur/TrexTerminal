@@ -118,7 +118,7 @@ export interface EngineCallbacks {
   onSelectionChange: (meta: SelectionMeta | null) => void;
   onSelectionBox: (box: SelectionBox | null) => void;
   onDrawingsCommit: (e: DrawingsCommit) => void;
-  onNeedHistory: (beforeTime: number, count: number) => void;
+  onNeedHistory: (beforeTime: number, count: number, fromTime?: number) => void;
   onPaneLayout: (layout: PaneLayoutEntry[]) => void;
   onRealtimeGapChange: (behind: boolean) => void;
   onContextMenu: (x: number, y: number, drawingId: string | null) => void;
@@ -177,10 +177,10 @@ interface PaneInfo {
 const HIT_TOLERANCE = 6;   // px distance for line hit
 const HANDLE_RADIUS = 8;   // px distance for grabbing a point handle
 const MAGNET_RANGE = 18;   // px — snap radius for OHLC magnet
-const HISTORY_TRIGGER = 150; // bars from the left edge that trigger lazy load
-const HISTORY_CHUNK = 600;
-const MAX_CACHE = 7000;    // hard cap of in-memory candles
-const TRIM_TO = 6000;      // trim down to this when cap exceeded
+const HISTORY_TRIGGER = 500; // bars from the left edge that trigger lazy load
+const HISTORY_CHUNK = 5000;
+const MAX_CACHE = 12000;   // hard cap of in-memory candles
+const TRIM_TO = 10000;     // trim down to this when cap exceeded
 
 const genId = () =>
   `dw_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -2082,7 +2082,9 @@ export class ChartEngine {
       // into history while keeping the load eager.
       requestAnimationFrame(() => {
         if (this.disposed) return;
-        this.cb.onNeedHistory(before, HISTORY_CHUNK);
+        // pass oldest candle time so caller can send a proper [from, before] range to server
+        const oldest = this.candles.length > 0 ? num(this.candles[0].time) : undefined;
+        this.cb.onNeedHistory(before, HISTORY_CHUNK, oldest);
       });
       /* safety valve — don't deadlock if the server never answers */
       this.historyTimeout = setTimeout(() => { this.historyPending = false; }, 8000);
