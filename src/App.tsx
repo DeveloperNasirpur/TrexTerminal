@@ -3026,19 +3026,22 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     const ws = new WSClient(
       url,
       (m) => handleMessageRef.current(m),
-      (ok) => setConnStatus(ok ? "online" : "offline"),
+      (ok) => {
+        setConnStatus(ok ? "online" : "offline");
+        if (ok) {
+          // Re-send handshake on every (re)connect so the server session gets
+          // the current symbol/timeframe even after a reconnect.
+          ws.send(makeHello("trex-terminal", APP_VERSION, 5000));
+          ws.send({ type: "symbol", symbol: symbolRef.current });
+          ws.send({ type: "timeframe", timeframe: tfRef.current });
+          ws.send({ type: "get_symbols" });
+          ws.send({ type: "get_indicators" });
+        }
+      },
       (rtt) => setLatency(rtt)
     );
     wsRef.current = ws;
     ws.connect();
-    // Versioned handshake — carries PROTOCOL_VERSION so the server can
-    // detect an incompatible client before streaming data.
-    // initialCount: 5000 tells server how many candles to send in the first snapshot.
-    ws.send(makeHello("trex-terminal", APP_VERSION, 5000));
-    // Ask server for available symbols and indicators so the UI can
-    // populate dropdowns without hardcoding anything client-side.
-    ws.send({ type: "get_symbols" });
-    ws.send({ type: "get_indicators" });
   }, [stopFeeds]);
 
   /* ═══════════════════════ engine bootstrap ════════════════════════ */
