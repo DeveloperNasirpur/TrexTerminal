@@ -3,21 +3,105 @@ import { IconArrowLeft } from "./icons";
 
 type Lang = "fa" | "en";
 
+/* ══ Syntax highlight — GitHub dark theme ══ */
+const GH = { kw:"#ff7b72", str:"#a5d6ff", cmt:"#8b949e", num:"#79c0ff", fn:"#d2a8ff", cls:"#ffa657", dec:"#ffa657", plain:"#e6edf3" };
+type Tok = { t: string; v: string };
+interface HRule { re: RegExp; type: string }
+
+function mkRules(defs: [RegExp, string][]): HRule[] {
+  return defs.map(([re, t]) => ({ re: new RegExp(re.source, "y" + re.flags.replace(/[gy]/g, "")), type: t }));
+}
+
+const PY_RULES = mkRules([
+  [/"""[\s\S]*?"""|'''[\s\S]*?'''/, "str"],
+  [/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/, "str"],
+  [/#[^\n]*/, "cmt"],
+  [/@\w+/, "dec"],
+  [/\b(?:def|class)\s+\w+/, "defname"],
+  [/\b[A-Z]\w*\b/, "cls"],
+  [/\b\d+\.?\d*(?:[eE][+-]?\d+)?/, "num"],
+  [/\b\w+(?=\s*\()/, "fn"],
+  [/\b(?:return|import|from|if|elif|else|for|while|try|except|finally|with|as|in|not|and|or|is|None|True|False|pass|break|continue|raise|yield|lambda|async|await|self|super|print|len|range|isinstance|staticmethod|classmethod|property)\b/, "kw"],
+]);
+
+const TS_RULES = mkRules([
+  [/`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/, "str"],
+  [/\/\/[^\n]*|\/\*[\s\S]*?\*\//, "cmt"],
+  [/\b[A-Z]\w*\b/, "cls"],
+  [/\b\d+\.?\d*/, "num"],
+  [/\b\w+(?=\s*[(<])/, "fn"],
+  [/\b(?:const|let|var|function|return|if|else|for|while|interface|type|import|export|from|extends|class|new|typeof|keyof|null|undefined|true|false|async|await|void|string|number|boolean|any|readonly)\b/, "kw"],
+]);
+
+const JSON_RULES = mkRules([
+  [/"(?:\\.|[^"\\])*"/, "str"],
+  [/\b(?:true|false|null)\b/, "kw"],
+  [/-?\d+\.?\d*(?:[eE][+-]?\d+)?/, "num"],
+]);
+
+const SH_RULES = mkRules([
+  [/#[^\n]*/, "cmt"],
+  [/"(?:\\.|[^"\\])*"|'[^']*'/, "str"],
+  [/\b(?:pip3?|python3?|npm|npx|git|cd|mkdir|echo|export|source|chmod|curl|wget)\b/, "kw"],
+  [/--?[\w-]+/, "fn"],
+]);
+
+function tokenStream(code: string, rules: HRule[]): Tok[] {
+  const out: Tok[] = [];
+  let i = 0;
+  while (i < code.length) {
+    let hit = false;
+    for (const rule of rules) {
+      rule.re.lastIndex = i;
+      const m = rule.re.exec(code);
+      if (m) { out.push({ t: rule.type, v: m[0] }); i += m[0].length; hit = true; break; }
+    }
+    if (!hit) {
+      if (out.length && out[out.length - 1].t === "plain") out[out.length - 1].v += code[i];
+      else out.push({ t: "plain", v: code[i] });
+      i++;
+    }
+  }
+  return out;
+}
+
+function renderTokens(tokens: Tok[]): ReactNode {
+  const C: Record<string, string> = { kw: GH.kw, str: GH.str, cmt: GH.cmt, num: GH.num, fn: GH.fn, cls: GH.cls, dec: GH.dec };
+  return tokens.map((tok, i) => {
+    if (tok.t === "defname") {
+      const m = tok.v.match(/^(\S+)(\s+)(\w+)$/);
+      if (m) return <span key={i}><span style={{ color: GH.kw }}>{m[1]}</span>{m[2]}<span style={{ color: GH.fn }}>{m[3]}</span></span>;
+    }
+    const c = C[tok.t];
+    return c ? <span key={i} style={{ color: c }}>{tok.v}</span> : <span key={i}>{tok.v}</span>;
+  });
+}
+
+function highlight(code: string, lang?: string): ReactNode {
+  const rules = lang === "python" ? PY_RULES
+    : (lang === "typescript" || lang === "tsx") ? TS_RULES
+    : lang === "json" ? JSON_RULES
+    : (lang === "bash" || lang === "shell") ? SH_RULES
+    : null;
+  return rules ? renderTokens(tokenStream(code, rules)) : code;
+}
+
 function Code({ children, lang }: { children: string; lang?: string }) {
   return (
-    <div dir="ltr" className="my-4 overflow-hidden" style={{ background: "#141720", border: "1px solid #2a2d36", borderRadius: 8 }}>
+    <div dir="ltr" className="my-4 overflow-hidden" style={{ background: "#0d1117", border: "1px solid #30363d", borderRadius: 8 }}>
       {lang && (
-        <div className="flex items-center gap-1.5 px-3.5 py-2" style={{ borderBottom: "1px solid #2a2d36", background: "#141720" }}>
+        <div className="flex items-center gap-1.5 px-3.5 py-2" style={{ borderBottom: "1px solid #30363d", background: "#161b22" }}>
           <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-          <span className="ms-2 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: "#5c6070" }}>{lang}</span>
+          <span className="ms-2 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: "#8b949e" }}>{lang}</span>
         </div>
       )}
-      <pre className="trex-scroll overflow-x-auto p-4 text-left font-mono text-[11.5px] leading-relaxed" style={{ color: "#c8d0dc" }}>{children}</pre>
+      <pre className="trex-scroll overflow-x-auto p-4 text-left font-mono text-[11.5px] leading-relaxed" style={{ color: GH.plain }}>{highlight(children, lang)}</pre>
     </div>
   );
 }
+
 
 function K({ children }: { children: ReactNode }) {
   return (
