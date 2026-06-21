@@ -378,6 +378,12 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
   useEffect(() => {
     if (!result && tab === "results") setTab("positions");
   }, [result, tab]);
+
+  const prevResultRef = useRef<BtResult | null | undefined>(undefined);
+  useEffect(() => {
+    if (result && prevResultRef.current == null) setTab("results");
+    prevResultRef.current = result;
+  }, [result]);
   const startY              = useRef(0);
   const startH              = useRef(0);
 
