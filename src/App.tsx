@@ -2608,6 +2608,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const [mode, setMode] = useState<"demo" | "server">(initialMode === "server" ? "server" : "demo");
   const [connStatus, setConnStatus] = useState<ConnStatus>(initialMode === "server" ? "connecting" : "demo");
   const [latency, setLatency] = useState<number | null>(null);
+  const [btPlayback, setBtPlayback] = useState<{ active: boolean; paused: boolean; speed: number } | null>(null);
   // One-time load of the saved workspace (UI prefs only — never market data).
   const savedRef = useRef<Partial<WorkspaceState> | null>(null);
   if (savedRef.current === null) savedRef.current = loadWorkspace() ?? {};
@@ -2931,6 +2932,16 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           showToast(msg.message, kind);
         }
         break;
+
+      case "bt_playback_state": {
+        const m = msg as any;
+        if (m.active === false) {
+          setBtPlayback(null);
+        } else {
+          setBtPlayback({ active: true, paused: !!m.paused, speed: typeof m.speed === "number" ? m.speed : 1 });
+        }
+        break;
+      }
 
       case "error":
         if (msg.message) showToast(msg.message, "error");
@@ -3489,6 +3500,48 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         onFit={() => engineRef.current?.fitContent()}
         onSwitchMode={switchMode}
       />
+
+      {/* ── Backtest Playback Bar ── */}
+      {btPlayback && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 14px", background: "#1a1d27", borderBottom: "1px solid #2a2d3a", height: 36, flexShrink: 0 }}>
+          {/* badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: 4, padding: "2px 8px", fontSize: 10.5, fontWeight: 700, color: "#f5a623", letterSpacing: "0.04em" }}>
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: btPlayback.paused ? "#6b7280" : "#22c55e", display: "inline-block" }} />
+            BACKTEST
+          </div>
+          {/* play / pause */}
+          <button
+            type="button"
+            onClick={() => wsRef.current?.send({ type: "bt_playback", action: btPlayback.paused ? "play" : "pause" })}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 4, border: "1px solid #3a3f4b", background: "#22252d", cursor: "pointer", color: "#e2e4eb", flexShrink: 0 }}
+            title={btPlayback.paused ? "Resume" : "Pause"}
+          >
+            {btPlayback.paused
+              ? <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><path d="M0 0l10 6-10 6z"/></svg>
+              : <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3.5" height="12"/><rect x="6.5" y="0" width="3.5" height="12"/></svg>
+            }
+          </button>
+          {/* speed buttons */}
+          <div style={{ display: "flex", gap: 3 }}>
+            {[0.5, 1, 2, 5, 10, 30, 0].map(s => {
+              const label = s === 0 ? "MAX" : `${s}×`;
+              const active = Math.abs(btPlayback.speed - s) < 0.01;
+              return (
+                <button key={s} type="button"
+                  onClick={() => wsRef.current?.send({ type: "bt_playback", action: "speed", value: s })}
+                  style={{ padding: "1px 7px", fontSize: 11, fontWeight: active ? 700 : 500, borderRadius: 3, border: `1px solid ${active ? "#f5a623" : "#3a3f4b"}`, background: active ? "rgba(245,166,35,0.15)" : "#22252d", color: active ? "#f5a623" : "#9da3b0", cursor: "pointer", lineHeight: "20px" }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {/* status text */}
+          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 4 }}>
+            {btPlayback.paused ? "Paused" : btPlayback.speed === 0 ? "Max speed" : `${btPlayback.speed}× speed`}
+          </span>
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1">
         <LeftBar
