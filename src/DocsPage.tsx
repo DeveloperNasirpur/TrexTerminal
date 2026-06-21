@@ -5,9 +5,9 @@
 // Trex packages: TrexTerminal (WebSocket protocol), Trex Engine
 // (indicator engine), and BackTest (backtesting framework).
 //
-// Layout: a sticky left table-of-contents (scroll-spy highlighted)
-// beside a scrollable article column. Persian renders right-to-left
-// while code blocks and protocol tables stay LTR for readability.
+// Layout: GitBook-style fixed sidebar + fixed right TOC + scrollable
+// content area. Persian renders right-to-left while code blocks and
+// protocol tables stay LTR for readability.
 // ═══════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
@@ -19,16 +19,28 @@ type Lang = "fa" | "en";
 
 function Code({ children, lang }: { children: string; lang?: string }) {
   return (
-    <div dir="ltr" className="docs-code-window my-4 overflow-hidden">
+    <div
+      dir="ltr"
+      className="my-4 overflow-hidden"
+      style={{ background: "#141720", border: "1px solid #2a2d36", borderRadius: 8 }}
+    >
       {lang && (
-        <div className="flex items-center gap-1.5 border-b border-[var(--d-border)] bg-[var(--d-surface)] px-3.5 py-2">
+        <div
+          className="flex items-center gap-1.5 px-3.5 py-2"
+          style={{ borderBottom: "1px solid #2a2d36", background: "#141720" }}
+        >
           <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-          <span className="ms-2 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--d-text-3)]">{lang}</span>
+          <span className="ms-2 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: "#5c6070" }}>
+            {lang}
+          </span>
         </div>
       )}
-      <pre className="trex-scroll overflow-x-auto p-4 text-left font-mono text-[11.5px] leading-relaxed text-[#C8D0DC]">
+      <pre
+        className="trex-scroll overflow-x-auto p-4 text-left font-mono text-[11.5px] leading-relaxed"
+        style={{ color: "#c8d0dc" }}
+      >
         {children}
       </pre>
     </div>
@@ -37,7 +49,11 @@ function Code({ children, lang }: { children: string; lang?: string }) {
 
 function K({ children }: { children: ReactNode }) {
   return (
-    <code dir="ltr" className="rounded-[5px] border border-[var(--d-border)] bg-[var(--d-surface-2)] px-1.5 py-px font-mono text-[11px] text-[var(--d-accent)]">
+    <code
+      dir="ltr"
+      className="rounded-[5px] px-1.5 py-px font-mono text-[11px]"
+      style={{ border: "1px solid #2d3139", background: "#1e2128", color: "#f5a623" }}
+    >
       {children}
     </code>
   );
@@ -45,14 +61,22 @@ function K({ children }: { children: ReactNode }) {
 
 function Note({ kind = "note", children }: { kind?: "note" | "warn" | "tip"; children: ReactNode }) {
   const tone = {
-    note: { bar: "var(--d-accent)", bg: "rgba(245,166,35,0.07)", ring: "rgba(245,166,35,0.2)" },
+    note: { bar: "#f5a623", bg: "rgba(245,166,35,0.07)", ring: "rgba(245,166,35,0.2)" },
     warn: { bar: "#F23645", bg: "rgba(242,54,69,0.07)", ring: "rgba(242,54,69,0.2)" },
     tip:  { bar: "#1FBF8F", bg: "rgba(31,191,143,0.07)", ring: "rgba(31,191,143,0.2)" },
   }[kind];
   return (
     <div
-      className="my-4 rounded-[12px] px-4 py-3.5 text-[12.5px] leading-relaxed text-[#C2C5CE]"
-      style={{ borderInlineStartWidth: 3, borderInlineStartColor: tone.bar, background: tone.bg, border: `1px solid ${tone.ring}` }}
+      className="my-4 rounded-[8px] px-4 py-3.5 text-[12.5px] leading-relaxed"
+      style={{
+        borderInlineStartWidth: 3,
+        borderInlineStartStyle: "solid",
+        borderInlineStartColor: tone.bar,
+        background: tone.bg,
+        border: `1px solid ${tone.ring}`,
+        borderLeftColor: tone.bar,
+        color: "#9da3b0",
+      }}
     >
       {children}
     </div>
@@ -61,13 +85,27 @@ function Note({ kind = "note", children }: { kind?: "note" | "warn" | "tip"; chi
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section id={id} className="mb-6 scroll-mt-6 rounded-[16px] border border-[var(--d-border)] bg-[var(--d-surface)] p-6 lg:p-7">
-      <h2 className="mb-4 flex items-center gap-2.5 text-start text-[21px] font-bold leading-tight text-[var(--d-text)]">
-        <span className="inline-block h-[18px] w-[3px] shrink-0 rounded-full bg-[var(--d-accent)]" />
-        <span dir="auto">{title}</span>
-      </h2>
-      <div className="space-y-3 text-start text-[13.5px] leading-[1.75] text-[var(--d-text-2)]">{children}</div>
-    </section>
+    <>
+      <section id={id} className="scroll-mt-[68px]">
+        <h2
+          className="mb-4 flex items-center gap-3 text-start font-bold leading-tight"
+          style={{ fontSize: 22, color: "#e2e4eb", paddingTop: 32, marginBottom: 16 }}
+        >
+          <span
+            className="inline-block shrink-0 rounded-full"
+            style={{ width: 3, height: 20, background: "#f5a623" }}
+          />
+          <span dir="auto">{title}</span>
+        </h2>
+        <div
+          className="space-y-3 text-start leading-[1.8]"
+          style={{ fontSize: 13.5, color: "#9da3b0" }}
+        >
+          {children}
+        </div>
+      </section>
+      <hr style={{ borderColor: "#2d3139", margin: "32px 0 0 0" }} />
+    </>
   );
 }
 
@@ -75,10 +113,17 @@ interface MsgRow { type: string; payload: string; desc: string }
 
 function MsgTable({ rows, headers, fa }: { rows: MsgRow[]; headers: [string, string, string]; fa: boolean }) {
   return (
-    <div dir="ltr" className="trex-scroll my-4 overflow-x-auto rounded-[10px] border border-[#272B35]">
+    <div
+      dir="ltr"
+      className="trex-scroll my-4 overflow-x-auto"
+      style={{ borderRadius: 10, border: "1px solid #272B35" }}
+    >
       <table className="w-full border-collapse text-left text-[12px]">
         <thead>
-          <tr className="border-b-2 border-[#323743] bg-[#191D24] text-[10.5px] uppercase tracking-wider text-[#8A8F9C]">
+          <tr
+            className="text-[10.5px] uppercase tracking-wider"
+            style={{ borderBottom: "2px solid #323743", background: "#191D24", color: "#8A8F9C" }}
+          >
             <th className="px-3.5 py-2.5 font-semibold">{headers[0]}</th>
             <th className="px-3.5 py-2.5 font-semibold">{headers[1]}</th>
             <th className="px-3.5 py-2.5 font-semibold">{headers[2]}</th>
@@ -88,11 +133,12 @@ function MsgTable({ rows, headers, fa }: { rows: MsgRow[]; headers: [string, str
           {rows.map((r, i) => (
             <tr
               key={r.type + r.payload}
-              className={"border-t border-[#21252E] align-top " + (i % 2 ? "bg-[#15181F]" : "bg-transparent")}
+              className="align-top"
+              style={{ borderTop: "1px solid #21252E", background: i % 2 ? "#15181F" : "transparent" }}
             >
-              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium text-[var(--nb-accent)]">{r.type}</td>
-              <td className="px-3.5 py-2.5 font-mono text-[11px] text-[#9598A1]">{r.payload}</td>
-              <td className="px-3.5 py-2.5 text-[#B7BAC4]" dir={fa ? "rtl" : "ltr"}>{r.desc}</td>
+              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#f5a623" }}>{r.type}</td>
+              <td className="px-3.5 py-2.5 font-mono text-[11px]" style={{ color: "#9598A1" }}>{r.payload}</td>
+              <td className="px-3.5 py-2.5" style={{ color: "#B7BAC4" }} dir={fa ? "rtl" : "ltr"}>{r.desc}</td>
             </tr>
           ))}
         </tbody>
@@ -103,16 +149,20 @@ function MsgTable({ rows, headers, fa }: { rows: MsgRow[]; headers: [string, str
 
 function KVTable({ rows, fa }: { rows: [string, string][]; fa: boolean }) {
   return (
-    <div dir="ltr" className="trex-scroll my-4 overflow-x-auto rounded-[10px] border border-[#272B35]">
+    <div
+      dir="ltr"
+      className="trex-scroll my-4 overflow-x-auto"
+      style={{ borderRadius: 10, border: "1px solid #272B35" }}
+    >
       <table className="w-full border-collapse text-left text-[12px]">
         <tbody>
           {rows.map(([k, d], i) => (
             <tr
               key={k}
-              className={"border-t border-[#21252E] first:border-t-0 " + (i % 2 ? "bg-[#15181F]" : "bg-transparent")}
+              style={{ borderTop: i === 0 ? "none" : "1px solid #21252E", background: i % 2 ? "#15181F" : "transparent" }}
             >
-              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium text-[var(--nb-accent)]">{k}</td>
-              <td className="px-3.5 py-2.5 text-[#B7BAC4]" dir={fa ? "rtl" : "ltr"}>{d}</td>
+              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#f5a623" }}>{k}</td>
+              <td className="px-3.5 py-2.5" style={{ color: "#B7BAC4" }} dir={fa ? "rtl" : "ltr"}>{d}</td>
             </tr>
           ))}
         </tbody>
@@ -878,22 +928,31 @@ const ALL_IDS = (fa: boolean): string[] => TOC_GROUPS(fa).flatMap((g) => g.items
 
 /* ═══════════════════════════ component ════════════════════════════ */
 
+const NAVBAR_H = 52;
+const SIDEBAR_W = 260;
+const RIGHT_TOC_W = 200;
+
 export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack: () => void }) {
   const [l, setL] = useState<Lang>(lang);
   const fa = l === "fa";
   const [active, setActive] = useState<string>("intro");
-  const [query, setQuery] = useState("");
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
+  // Scroll-spy: watch the main content scroller
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const ids = ALL_IDS(fa);
     const onScroll = () => {
+      const offset = NAVBAR_H + 16;
       let current = ids[0];
       for (const id of ids) {
         const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= 120) current = id;
+        if (el) {
+          // el.offsetTop is relative to its offsetParent inside the scroller
+          const elTop = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+          if (elTop <= offset) current = id;
+        }
       }
       setActive(current);
     };
@@ -902,43 +961,176 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
     return () => scroller.removeEventListener("scroll", onScroll);
   }, [fa]);
 
-  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const go = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el || !scrollerRef.current) return;
+    const scroller = scrollerRef.current;
+    const elTop = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    scroller.scrollTo({ top: elTop - NAVBAR_H - 8, behavior: "smooth" });
+  };
+
+  // Sidebar nav item style
+  const navItemStyle = (id: string) =>
+    active === id
+      ? {
+          borderInlineStartWidth: 3,
+          borderInlineStartStyle: "solid" as const,
+          borderInlineStartColor: "#f5a623",
+          background: "rgba(245,166,35,0.08)",
+          color: "#ffffff",
+          paddingInlineStart: 13,
+        }
+      : {
+          borderInlineStartWidth: 3,
+          borderInlineStartStyle: "solid" as const,
+          borderInlineStartColor: "transparent",
+          color: "#8a8f9c",
+          paddingInlineStart: 13,
+        };
 
   return (
-    <div className="docs-root flex h-screen flex-col text-[var(--d-text)]">
-      {/* ── top bar ── */}
-      <header className="z-20 flex h-14 shrink-0 items-center gap-3 border-b border-[var(--d-border)] bg-[rgba(10,12,16,0.8)] px-4 backdrop-blur-md">
+    <div
+      style={{ background: "#0f1117", color: "#e2e4eb", fontFamily: "inherit", height: "100vh", overflow: "hidden" }}
+      dir={fa ? "rtl" : "ltr"}
+    >
+      {/* ════ Fixed top navbar ════ */}
+      <header
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: NAVBAR_H,
+          background: "#1a1d23",
+          borderBottom: "1px solid #2d3139",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "0 20px",
+          zIndex: 50,
+        }}
+      >
+        {/* Back button */}
         <button
           type="button"
           onClick={onBack}
-          className="flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[12.5px] font-medium text-[var(--d-text-2)] transition-colors hover:bg-[var(--d-surface-2)] hover:text-[var(--d-text)]"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#9da3b0",
+            fontSize: 12,
+            padding: "4px 8px",
+            borderRadius: 6,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#e2e4eb"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9da3b0"; (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
         >
           <IconArrowLeft />
-          {fa ? "بازگشت به نمودار" : "Back to chart"}
+          {fa ? "بازگشت" : "Back"}
         </button>
-        <div className="mx-1 h-5 w-px bg-[var(--d-border)]" />
-        <div className="flex items-center gap-2">
+
+        <div style={{ width: 1, height: 20, background: "#2d3139", flexShrink: 0 }} />
+
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <span
-            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-[14px] font-black text-[#1a1206]"
-            style={{ background: "linear-gradient(135deg, #FFB733, #FF7847)" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 28,
+              height: 28,
+              borderRadius: 7,
+              background: "linear-gradient(135deg, #FFB733, #FF7847)",
+              fontWeight: 900,
+              fontSize: 14,
+              color: "#1a1206",
+            }}
           >
             T
           </span>
-          <span className="text-[15px] font-bold text-[var(--d-text)]">{fa ? "مستندات Trex" : "Trex Docs"}</span>
-          <span className="docs-chip rounded-full px-2 py-0.5 text-[10px] font-semibold">v2.0</span>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Trex</span>
+          <span
+            style={{
+              background: "rgba(245,166,35,0.15)",
+              color: "#f5a623",
+              fontSize: 10,
+              fontWeight: 600,
+              padding: "2px 7px",
+              borderRadius: 20,
+              border: "1px solid rgba(245,166,35,0.3)",
+            }}
+          >
+            Docs
+          </span>
         </div>
-        <div className="flex-1" />
-        <div className="flex overflow-hidden rounded-[8px] border border-[var(--d-border-hi)]">
+
+        {/* Center search */}
+        <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "#0f1117",
+              border: "1px solid #2d3139",
+              borderRadius: 8,
+              padding: "0 12px",
+              height: 34,
+              width: "min(320px, 40vw)",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5c6070" strokeWidth="2">
+              <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span style={{ fontSize: 12.5, color: "#5c6070" }}>
+              {fa ? "جستجو…" : "Search..."}
+            </span>
+            <div style={{ flex: 1 }} />
+            <kbd
+              style={{
+                fontSize: 10,
+                color: "#5c6070",
+                background: "#1a1d23",
+                border: "1px solid #2d3139",
+                borderRadius: 4,
+                padding: "1px 5px",
+              }}
+            >
+              /
+            </kbd>
+          </div>
+        </div>
+
+        {/* Language toggle */}
+        <div
+          style={{
+            display: "flex",
+            border: "1px solid #2d3139",
+            borderRadius: 8,
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
           {(["fa", "en"] as Lang[]).map((x) => (
             <button
               key={x}
               type="button"
               onClick={() => setL(x)}
-              className={
-                "px-3 py-1.5 text-[12px] font-semibold transition-colors " +
-                (l === x ? "text-[#1a1206]" : "bg-transparent text-[var(--d-text-2)] hover:bg-[var(--d-surface-2)]")
-              }
-              style={l === x ? { background: "linear-gradient(135deg, #FFB733, #FF7847)" } : undefined}
+              style={{
+                padding: "5px 14px",
+                fontSize: 12,
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                transition: "background 0.15s, color 0.15s",
+                background: l === x ? "linear-gradient(135deg, #FFB733, #FF7847)" : "transparent",
+                color: l === x ? "#1a1206" : "#9da3b0",
+              }}
             >
               {x === "fa" ? "فارسی" : "English"}
             </button>
@@ -946,447 +1138,611 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
         </div>
       </header>
 
-      {/* ── body ── */}
-      <div dir={fa ? "rtl" : "ltr"} className="flex min-h-0 flex-1">
-
-        {/* ── sidebar ── */}
-        <aside className="hidden w-[260px] shrink-0 flex-col border-e border-[var(--d-border)] bg-[rgba(13,16,22,0.6)] md:flex">
-          <div className="shrink-0 p-3">
-            <div className="flex items-center gap-2 rounded-[8px] border border-[var(--d-border)] bg-[var(--d-bg)] px-3 py-2 transition-colors focus-within:border-[var(--d-accent)]">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#787B86" strokeWidth="2">
-                <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={fa ? "جستجو در مستندات…" : "Search docs…"}
-                className="w-full bg-transparent text-[12.5px] text-[var(--d-text)] placeholder:text-[var(--d-text-3)] focus:outline-none"
-              />
-              {query && (
-                <button type="button" onClick={() => setQuery("")} className="text-[var(--d-text-2)] hover:text-[var(--d-text)]">×</button>
-              )}
-            </div>
-          </div>
-
-          <nav className="trex-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-6">
-            {TOC_GROUPS(fa).map((grp) => {
-              const items = grp.items.filter((t) => t.label.toLowerCase().includes(query.toLowerCase()));
-              if (items.length === 0) return null;
-              return (
-                <div key={grp.group} className="mb-4">
-                  <div className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--d-text-3)]">
-                    {grp.group}
-                  </div>
-                  {items.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => go(t.id)}
-                      className={
-                        "block w-full rounded-[8px] px-3 py-1.5 text-start text-[12.5px] transition-colors " +
-                        (active === t.id
-                          ? "docs-nav-active"
-                          : "text-[var(--d-text-2)] hover:bg-[var(--d-surface-2)] hover:text-[var(--d-text)]")
-                      }
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              );
-            })}
-          </nav>
-        </aside>
-
-        {/* ── content ── */}
-        <div ref={scrollerRef} className="trex-scroll min-h-0 flex-1 overflow-y-auto">
-          {/* hero */}
-          <div className="relative overflow-hidden border-b border-[var(--d-border)]">
-            <div className="docs-hero-glow" />
-            <div className="docs-hero-grid" />
-            <div className="relative mx-auto max-w-[820px] px-6 py-16 text-start lg:px-12">
-              <div className="docs-chip mb-5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--d-accent)]" />
-                {fa ? "نسخه ۲.۰ · سه پکیج یکپارچه" : "v2.0 · Three integrated packages"}
+      {/* ════ Fixed left sidebar ════ */}
+      <aside
+        className="trex-scroll"
+        style={{
+          position: "fixed",
+          top: NAVBAR_H,
+          [fa ? "right" : "left"]: 0,
+          width: SIDEBAR_W,
+          height: `calc(100vh - ${NAVBAR_H}px)`,
+          background: "#1a1d23",
+          borderInlineEnd: "1px solid #2d3139",
+          overflowY: "auto",
+          zIndex: 40,
+          paddingBottom: 32,
+        }}
+      >
+        <nav style={{ paddingTop: 16 }}>
+          {TOC_GROUPS(fa).map((grp) => (
+            <div key={grp.group} style={{ marginBottom: 20 }}>
+              {/* Group label */}
+              <div
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#5c6070",
+                  padding: "0 16px",
+                  marginBottom: 4,
+                }}
+              >
+                {grp.group}
               </div>
-              <h1 className="mb-4 text-[44px] font-extrabold leading-[1.08] tracking-tight">
-                <span className="docs-gradient-text" dir="auto">
-                  {fa ? "مستندات Trex" : "Trex Docs"}
-                </span>
-              </h1>
-              <p className="max-w-[560px] text-[15px] leading-relaxed text-[var(--d-text-2)]">
-                {fa
-                  ? "مستندات کامل سه پکیج Trex: ترمینال نموداری ریل‌تایم، موتور اندیکاتور با ۱۱۰+ اندیکاتور، و فریم‌ورک بک‌تست حرفه‌ای."
-                  : "Complete reference for all three Trex packages: the realtime charting terminal, a 110+ indicator engine, and a professional backtesting framework."}
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
+              {/* Items */}
+              {grp.items.map((t) => (
                 <button
+                  key={t.id}
                   type="button"
-                  onClick={() => go("quickstart")}
-                  className="rounded-[10px] px-5 py-2.5 text-[13px] font-bold text-[#1a1206] transition-transform hover:scale-[1.03]"
-                  style={{ background: "linear-gradient(135deg, #FFB733, #FF7847)" }}
+                  onClick={() => go(t.id)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: fa ? "right" : "left",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    height: 32,
+                    lineHeight: "32px",
+                    paddingInlineEnd: 16,
+                    transition: "color 0.12s, background 0.12s",
+                    ...navItemStyle(t.id),
+                  }}
+                  onMouseEnter={(e) => {
+                    if (active !== t.id) {
+                      (e.currentTarget as HTMLButtonElement).style.color = "#e2e4eb";
+                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (active !== t.id) {
+                      (e.currentTarget as HTMLButtonElement).style.color = "#8a8f9c";
+                      (e.currentTarget as HTMLButtonElement).style.background = "none";
+                    }
+                  }}
                 >
-                  {fa ? "شروع سریع ترمینال" : "Terminal quick start"}
+                  {t.label}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => go("eng-quickstart")}
-                  className="rounded-[10px] border border-[var(--d-border-hi)] bg-[var(--d-surface)] px-5 py-2.5 text-[13px] font-bold text-[var(--d-text)] transition-colors hover:border-[var(--d-accent)]"
-                >
-                  {fa ? "موتور اندیکاتور" : "Indicator Engine"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => go("bt-quickstart")}
-                  className="rounded-[10px] border border-[var(--d-border-hi)] bg-[var(--d-surface)] px-5 py-2.5 text-[13px] font-bold text-[var(--d-text)] transition-colors hover:border-[var(--d-accent)]"
-                >
-                  {fa ? "بک‌تست" : "BackTest"}
-                </button>
-              </div>
+              ))}
             </div>
-          </div>
+          ))}
+        </nav>
+      </aside>
 
-          <article className="mx-auto max-w-[820px] px-6 py-12 lg:px-12">
-
-            {/* ══════════ TrexTerminal sections ══════════ */}
-
-            <Section id="intro" title={fa ? "معرفی" : "Introduction"}>
-              <p>
-                {fa
-                  ? "Trex Terminal یک ترمینال نموداری ریل‌تایم در سبک TradingView است که در یک فایل HTML مستقل بسته‌بندی می‌شود. دیتا یا از شبیه‌ساز داخلی (حالت Demo) می‌آید یا از سرور WebSocket شما — هر دو دقیقاً از یک پروتکل استفاده می‌کنند."
-                  : "Trex Terminal is a realtime, TradingView-style charting terminal packaged as a single self-contained HTML file. Data comes either from the built-in simulator (Demo mode) or from your own WebSocket server — both speak exactly the same protocol."}
-              </p>
-              <p className="mt-2">
-                {fa ? "هر پیام یک JSON با فیلد " : "Every message is JSON carrying a "}
-                <K>type</K>
-                {fa ? " است؛ بقیه‌ی فیلدها به نوع پیام بستگی دارند." : " field; the remaining fields depend on the message type."}
-              </p>
-            </Section>
-
-            <Section id="architecture" title={fa ? "معماری (مهم)" : "Architecture (important)"}>
-              <p>
-                {fa
-                  ? "Trex یک کلاینت «فقط‌نمایشی» است. هیچ محاسبه‌ای انجام نمی‌دهد و جز درخواست داده هیچ‌چیز به سرور نمی‌فرستد."
-                  : "Trex is a display-only client. It performs no computation and sends nothing to the server except data requests."}
-              </p>
-              <Note kind="warn">
-                {fa
-                  ? "کلاینت هیچ‌وقت ترسیم‌های کاربر را به سرور نمی‌فرستد. دو مسیر مجزا: (۱) ترسیم‌های دستی کاربر (محلی و قابل‌ویرایش) و (۲) اشیای سروری که از طریق پیام‌های drawing می‌آیند و فقط‌خواندنی رندر می‌شوند."
-                  : "The client never sends user drawings to the server. Two separate paths: (1) user's manual drawings — local-only, editable, and (2) server objects — arrive via drawing messages, render read-only exactly like indicators."}
-              </Note>
-            </Section>
-
-            <Section id="quickstart" title={fa ? "شروع سریع" : "Quick start"}>
-              <p>
-                {fa
-                  ? "فایل trex-terminal.html را در مرورگر باز کنید. در صفحه‌ی لودر، «Demo» شبیه‌ساز داخلی را اجرا می‌کند و «Connect» به آدرس WebSocket واردشده وصل می‌شود (پیش‌فرض: "
-                  : "Open trex-terminal.html in a browser. On the loader screen, “Demo” runs the built-in simulator while “Connect” attaches to the WebSocket URL you enter (default: "}
-                <K>ws://localhost:8765</K>
-                {fa ? ")." : ")."}
-              </p>
-              <p className="mt-2">
-                {fa
-                  ? "ترتیب معمول یک سشن: کلاینت hello می‌فرستد → سرور snapshot می‌دهد → سرور با bar استریم می‌کند → کلاینت هنگام اسکرول به چپ history می‌خواهد."
-                  : "A typical session: client sends hello → server replies with snapshot → server streams bar updates → client requests history when panning left."}
-              </p>
-            </Section>
-
-            <Section id="connection" title={fa ? "اتصال و پایداری" : "Connection & resilience"}>
-              <ul className="list-disc space-y-1 ps-5">
-                <li>{fa ? "اتصال مجدد خودکار با backoff نمایی." : "Automatic reconnect with exponential backoff."}</li>
-                <li>{fa ? "keepalive با ping/pong هر ۱۵ ثانیه؛ تأخیر RTT در نوار وضعیت." : "ping/pong keepalive every 15s; RTT shown in status bar."}</li>
-                <li>{fa ? "پیام‌ها هنگام قطعی در صف می‌مانند." : "Messages queued while disconnected, flushed on reconnect."}</li>
-                <li>{fa ? "فریم‌های نامعتبر/ناشناخته بی‌صدا دور انداخته می‌شوند." : "Malformed / unknown frames dropped silently."}</li>
-              </ul>
-              <Note kind="tip">
-                {fa
-                  ? "همه‌ی دیتای ورودی پاک‌سازی می‌شود: کندل‌ها مرتب و یکتاسازی می‌شوند؛ اشیای ترسیمی با ابزار ناشناخته دور انداخته می‌شوند."
-                  : "All inbound data is sanitized: candles are sorted and de-duped; drawing objects with an unknown tool are dropped."}
-              </Note>
-            </Section>
-
-            <Section id="c2s" title={fa ? "پیام‌ها: کلاینت ← سرور" : "Messages: client → server"}>
-              <p>{fa ? "کلاینت فقط «درخواست» می‌فرستد — هیچ‌وقت داده‌ی کاربر را push نمی‌کند." : "The client only sends requests — it never pushes user data."}</p>
-              <MsgTable fa={fa} headers={["type", "payload", fa ? "توضیح" : "Description"]} rows={clientRows(fa)} />
-            </Section>
-
-            <Section id="s2c" title={fa ? "پیام‌ها: سرور ← کلاینت" : "Messages: server → client"}>
-              <MsgTable fa={fa} headers={["type", "payload", fa ? "توضیح" : "Description"]} rows={serverRows(fa)} />
-              <Note kind="tip">
-                {fa
-                  ? "برای آپدیت ریل‌تایم اندیکاتور، در indicators برای هر کلید فقط یک نقطه بفرستید تا مسیر سریع O(1) فعال شود."
-                  : "For realtime indicator updates, send a single point per key in indicators to hit the O(1) fast path; longer arrays replace the whole series."}
-              </Note>
-            </Section>
-
-            <Section id="ohlc" title={fa ? "OHLC و PointData" : "OHLC & PointData"}>
-              <p>
-                {fa
-                  ? "واحد زمان همه‌جا «ثانیه‌ی یونیکس» است (نه میلی‌ثانیه). کندل‌ها باید دامنه‌ی زمانی اکیداً صعودی و یکتا داشته باشند."
-                  : "Time is unix SECONDS everywhere (not milliseconds). Candles must form a strictly-increasing, unique time domain."}
-              </p>
-              <Code lang="json">{OHLC_SCHEMA}</Code>
-            </Section>
-
-            <Section id="defschema" title={fa ? "اسکیمای SeriesDefinition" : "SeriesDefinition schema"}>
-              <p>
-                {fa
-                  ? "هر سری اندیکاتور با این آبجکت تعریف می‌شود. سری‌های pane: \"sub\" به‌صورت خودکار پنل جداگانه با اسکیل مستقل می‌گیرند."
-                  : "Every indicator series is described by this object. Series with pane: \"sub\" automatically get their own pane with an independent scale."}
-              </p>
-              <Code lang="json">{DEF_SCHEMA}</Code>
-            </Section>
-
-            <Section id="drawschema" title={fa ? "اشیای ترسیمی (سروری)" : "Drawing objects (server-side)"}>
-              <p>
-                {fa
-                  ? "اشیا با مختصات داده (time, price) ذخیره می‌شوند، پس با زوم/پن لنگر می‌مانند. اشیایی که از سرور می‌آیند با locked: true و فقط‌خواندنی رندر می‌شوند."
-                  : "Objects are stored in data coordinates (time, price), anchored through zoom/pan. Objects pushed from the server render read-only with locked: true."}
-              </p>
-              <Code lang="json">{DRAWING_SCHEMA}</Code>
-            </Section>
-
-            <Section id="tools" title={fa ? "ابزارهای ترسیم" : "Drawing tools"}>
-              <p>{fa ? "۱۶ ابزار ترسیم پشتیبانی می‌شود:" : "Sixteen drawing tools are supported:"}</p>
-              <KVTable rows={drawingTools(fa)} fa={fa} />
-            </Section>
-
-            <Section id="builder" title={fa ? "طراح اندیکاتور (Indicator Builder)" : "Indicator Builder"}>
-              <p>
-                {fa
-                  ? "طراح اندیکاتور یک محیط drag & drop است که ظاهر اندیکاتور را طراحی می‌کنید (نه محاسبه‌اش). خروجی یک قالب JSON است که به سرور می‌گوید چه داده‌ای بفرستد:"
-                  : "A drag-and-drop environment where you design an indicator's appearance (not its math). It exports a JSON template that tells the server what data to send:"}
-              </p>
-              <Code lang="json">{TEMPLATE_SCHEMA}</Code>
-              <Note>
-                {fa
-                  ? "بخش definitions ظاهر را تعریف می‌کند و dataRequest به سرور می‌گوید برای هر کلید چه چیزی محاسبه و بفرستد. کلاینت هیچ محاسبه‌ای نمی‌کند."
-                  : "definitions defines appearance; dataRequest tells the server what to compute and stream per key. The client computes nothing."}
-              </Note>
-            </Section>
-
-            <Section id="workspace" title={fa ? "میزکار و ماندگاری" : "Workspace & persistence"}>
-              <ul className="list-disc space-y-1 ps-5">
-                <li>{fa ? "چیدمان چند-نموداری: تک، دوتایی کنار هم، یا شبکه‌ی ۲×۲." : "Multi-chart layouts: single, side-by-side, or a 2×2 grid."}</li>
-                <li>{fa ? "نوار شناور علاقه‌مندی‌ها: ابزارهای ستاره‌دار." : "Floating favorites bar: starred tools appear in a draggable bar."}</li>
-                <li>{fa ? "ماندگاری در localStorage: نماد، تایم‌فریم، نوع نمایش، تنظیمات ظاهری، چیدمان." : "localStorage persistence: symbol, timeframe, display type, appearance settings, layout."}</li>
-              </ul>
-              <Note kind="warn">
-                {fa
-                  ? "فقط ترجیحات UI ذخیره می‌شوند — هیچ داده‌ی بازاری کش نمی‌شود."
-                  : "Only UI preferences are stored — no market data is cached."}
-              </Note>
-            </Section>
-
-            <Section id="keys" title={fa ? "میان‌برهای صفحه‌کلید" : "Keyboard shortcuts"}>
-              <KVTable rows={shortcuts(fa)} fa={fa} />
-            </Section>
-
-            {/* ══════════ Trex Engine sections ══════════ */}
-
-            <Section id="eng-intro" title={fa ? "موتور اندیکاتور Trex Engine" : "Trex Engine — Indicator Engine"}>
-              <p>
-                {fa
-                  ? "Trex Engine یک موتور اندیکاتور ریل‌تایم برای پایتون است با بیش از ۱۱۰ اندیکاتور آماده. هر اندیکاتور در یک context (نماد × تایم‌فریم) زندگی می‌کند. موتور بارگذاری تدریجی تاریخچه، CTF (تبدیل تایم‌فریم) خودکار، ذخیره/بازیابی وضعیت، و پخش زنده به TrexTerminal را پشتیبانی می‌کند."
-                  : "Trex Engine is a realtime Python indicator engine with 110+ ready-made indicators. Each indicator lives in a context (symbol × timeframe). The engine supports lazy history loading, automatic CTF (ConvertTimeFrame) aggregation, state save/restore, and live broadcast to TrexTerminal."}
-              </p>
-              <ul className="mt-2 list-disc space-y-1 ps-5">
-                <li>{fa ? "Trend: ۲۳ اندیکاتور (SMA, EMA, HMA, VWAP, Ichimoku, SuperTrend, …)" : "Trend: 23 indicators (SMA, EMA, HMA, VWAP, Ichimoku, SuperTrend, …)"}</li>
-                <li>{fa ? "Volatility: ۹ (BB, Keltner, ATR, HV, Ulcer, …)" : "Volatility: 9 (BB, Keltner, ATR, HV, Ulcer, …)"}</li>
-                <li>{fa ? "Momentum: ۱۵ (RSI, MACD, Stoch RSI, Squeeze, …)" : "Momentum: 15 (RSI, MACD, Stoch RSI, Squeeze, …)"}</li>
-                <li>{fa ? "Oscillators: ۱۴ (Stoch, CCI, Williams %R, ADX, DMI, …)" : "Oscillators: 14 (Stoch, CCI, Williams %R, ADX, DMI, …)"}</li>
-                <li>{fa ? "Volume: ۹ (OBV, MFI, CMF, A/D, …)" : "Volume: 9 (OBV, MFI, CMF, A/D, …)"}</li>
-                <li>{fa ? "Statistics: ۵ (StdDev, Z-Score, Percentile, Correlation, …)" : "Statistics: 5 (StdDev, Z-Score, Percentile, Correlation, …)"}</li>
-                <li>{fa ? "Hybrid: ۴ (Pivot, Fib Pivot, Camarilla, Woodie)" : "Hybrid: 4 (Pivot, Fib Pivot, Camarilla, Woodie)"}</li>
-                <li>{fa ? "Candlestick Patterns: ۳۵ الگو" : "Candlestick Patterns: 35 patterns"}</li>
-              </ul>
-            </Section>
-
-            <Section id="eng-install" title={fa ? "نصب Trex Engine" : "Installing Trex Engine"}>
-              <Code lang="bash">{TREX_INSTALL}</Code>
-            </Section>
-
-            <Section id="eng-quickstart" title={fa ? "شروع سریع — Trex Engine" : "Trex Engine quick start"}>
-              <Code lang="python">{TREX_QUICKSTART}</Code>
-              <Note kind="tip">
-                {fa
-                  ? "اگر source_timeframe=\"1m\" باشد و شما rsi برای \"4h\" رجیستر کنید، موتور به‌صورت خودکار کندل‌های ۱ دقیقه را به ۴ ساعته تبدیل می‌کند — بدون کد اضافه."
-                  : "If source_timeframe=\"1m\" and you register rsi for \"4h\", the engine auto-aggregates 1m candles to 4h — no extra code needed."}
-              </Note>
-            </Section>
-
-            <Section id="eng-api" title={fa ? "API اصلی" : "Core API"}>
-              <Code lang="python">{TREX_CORE_API}</Code>
-              <p className="mt-2">
-                {fa
-                  ? "هر فراخوانی اندیکاتور یک " : "Each indicator call returns a "}
-                <K>ListenerKey</K>
-                {fa ? " برمی‌گرداند که می‌توانید با آن listener را بعداً حذف کنید." : " you can use later to de-register the listener."}
-              </p>
-            </Section>
-
-            <Section id="eng-trend" title={fa ? "اندیکاتورهای روند (۲۳ اندیکاتور)" : "Trend indicators (23)"}>
-              <Code lang="python">{TREX_INDICATORS_TREND}</Code>
-            </Section>
-
-            <Section id="eng-rest" title={fa ? "سایر اندیکاتورها (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)" : "Other indicators (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)"}>
-              <Code lang="python">{TREX_INDICATORS_REST}</Code>
-            </Section>
-
-            <Section id="eng-multisym" title={fa ? "چند نماد و CTF خودکار" : "Multi-symbol & automatic CTF"}>
-              <p>
-                {fa
-                  ? "هر ترکیب (نماد × تایم‌فریم) یک context مستقل است. CTF (ConvertTimeFrame) وقتی تایم‌فریم اندیکاتور از source_timeframe بزرگ‌تر است به‌صورت خودکار فعال می‌شود."
-                  : "Every (symbol × timeframe) pair is an independent context. CTF (ConvertTimeFrame) activates automatically when the requested timeframe is larger than source_timeframe."}
-              </p>
-              <Code lang="python">{TREX_MULTISYM}</Code>
-            </Section>
-
-            <Section id="eng-db" title={fa ? "PostgreSQL و DbConfig" : "PostgreSQL & DbConfig"}>
-              <p>
-                {fa
-                  ? "برای ذخیره‌ی وضعیت اندیکاتورها در پایگاه داده و شروع سریع بدون نیاز به بازسازی تاریخچه، از DbConfig استفاده کنید:"
-                  : "Use DbConfig to persist indicator states to PostgreSQL for fast restarts without replaying history:"}
-              </p>
-              <Code lang="python">{TREX_DB}</Code>
-            </Section>
-
-            <Section id="eng-state" title={fa ? "ماندگاری وضعیت" : "State persistence"}>
-              <p>
-                {fa
-                  ? "با فعال‌بودن db_config، ماندگاری وضعیت به‌صورت خودکار فعال می‌شود. همچنین می‌توانید دستی snapshot بگیرید:"
-                  : "With db_config active, state persistence is enabled automatically. You can also snapshot manually:"}
-              </p>
-              <Code lang="python">{TREX_STATE}</Code>
-            </Section>
-
-            <Section id="eng-plugin" title={fa ? "اندیکاتور اختصاصی — سیستم Plugin" : "Custom indicators — Plugin system"}>
-              <p>
-                {fa
-                  ? "با سیستم plugin می‌توانید اندیکاتور اختصاصی بسازید و بدون تغییر در سورس کتابخانه آن را به‌صورت یک citizen درجه‌ی اول در اختیار بگیرید — در هر دو namespace سطح بالا ("
-                  : "The plugin system lets you register a custom indicator as a first-class citizen without touching the library source — available in both the top-level "}
-                <K>trex</K>
-                {fa ? ") و ContextApi (" : " namespace and "}
-                <K>api</K>
-                {fa ? ")." : " inside init_depends)."}
-              </p>
-              <Code lang="python">{TREX_PLUGIN}</Code>
-              <Note kind="tip">
-                {fa
-                  ? "کلید context ساخته‌شده به‌صورت trex.plugin.{IndName}|sym=...|tf=...|params خواهد بود — مستقل از مسیر ماژول کاربر و کاملاً سازگار با کلیدهای اندیکاتورهای داخلی."
-                  : "The context key is trex.plugin.{IndName}|sym=...|tf=...|params — stable regardless of the user's module path and fully compatible with built-in indicator keys."}
-              </Note>
-            </Section>
-
-            <Section id="eng-plugin-composite" title={fa ? "Plugin ترکیبی (با sub-indicator)" : "Composite plugin (with sub-indicators)"}>
-              <p>
-                {fa
-                  ? "اگر اندیکاتور شما نیاز به اندیکاتورهای دیگر دارد، آن‌ها را داخل init_depends از طریق "
-                  : "If your indicator depends on other indicators, register them inside init_depends via "}
-                <K>self._ctx.api</K>
-                {fa ? " رجیستر کنید. هرگز مستقیم add_input_value را به sub-indicator فوروارد نکنید (double-feed bug)." : ". Never forward add_input_value directly to sub-indicators (double-feed bug)."}
-              </p>
-              <Code lang="python">{TREX_PLUGIN_COMPOSITE}</Code>
-            </Section>
-
-            {/* ══════════ BackTest sections ══════════ */}
-
-            <Section id="bt-intro" title={fa ? "فریم‌ورک بک‌تست (BackTest)" : "BackTest Framework"}>
-              <p>
-                {fa
-                  ? "BackTest یک فریم‌ورک بک‌تست حرفه‌ای است که با Trex Engine یکپارچه می‌شود. شما یک کلاس Strategy می‌نویسید، اندیکاتورها را در indicators() رجیستر می‌کنید، و منطق معامله را در on_kline() می‌نویسید. موتور به‌صورت خودکار Exchange (صرافی شبیه‌سازی‌شده) را مدیریت می‌کند."
-                  : "BackTest is a professional backtesting framework integrated with Trex Engine. You write a Strategy class, register indicators in indicators(), and implement trading logic in on_kline(). The engine automatically manages a simulated Exchange."}
-              </p>
-              <p className="mt-2">
-                {fa ? "ترتیب اجرا برای هر کندل:" : "Execution order per bar:"}
-              </p>
-              <ol className="mt-1 list-decimal space-y-1 ps-5">
-                <li><K>trex.push(bar)</K> {fa ? "← اندیکاتورها محاسبه می‌شوند، listenerها اجرا می‌شوند" : "← indicators recomputed, listeners fired"}</li>
-                <li><K>exchange.kline(bar)</K> {fa ? "← سفارشات لیمیت بررسی می‌شوند، موقعیت‌ها به‌روز می‌شوند" : "← limit orders checked, positions updated"}</li>
-                <li><K>strategy.on_kline(bar)</K> {fa ? "← منطق کاربر اجرا می‌شود، سفارشات جدید ثبت می‌شوند" : "← user logic runs, new orders placed"}</li>
-              </ol>
-              <Note>
-                {fa
-                  ? "سفارشات مارکت که در on_kline() ثبت می‌شوند با قیمت close همان کندل اجرا می‌شوند. سفارشات لیمیت از کندل بعدی بررسی می‌شوند."
-                  : "Market orders placed in on_kline() execute at the current bar's close. Limit orders are evaluated from the next bar."}
-              </Note>
-            </Section>
-
-            <Section id="bt-install" title={fa ? "نصب BackTest" : "Installing BackTest"}>
-              <Code lang="bash">{BT_INSTALL}</Code>
-            </Section>
-
-            <Section id="bt-quickstart" title={fa ? "شروع سریع — BackTest" : "BackTest quick start"}>
-              <Code lang="python">{BT_QUICKSTART}</Code>
-            </Section>
-
-            <Section id="bt-strategy" title={fa ? "کلاس Strategy — تنظیمات" : "Strategy class — configuration"}>
-              <p>
-                {fa
-                  ? "تمام تنظیمات به‌صورت class attribute تعریف می‌شوند و می‌توانند در Backtest() در زمان اجرا override شوند:"
-                  : "All settings are defined as class attributes and can be overridden at runtime in Backtest():"}
-              </p>
-              <Code lang="python">{BT_STRATEGY_ATTRS}</Code>
-              <Code lang="python">{`# Runtime override example:
-result = Backtest(MyStrategy, deposit=50_000, leverage=10, fee=0.0002).run(candles)`}</Code>
-            </Section>
-
-            <Section id="bt-commands" title={fa ? "دستورات معامله" : "Trading commands"}>
-              <Code lang="python">{BT_COMMANDS}</Code>
-            </Section>
-
-            <Section id="bt-events" title={fa ? "رویدادها (Event Hooks)" : "Event hooks"}>
-              <p>
-                {fa
-                  ? "این متدها را در کلاس Strategy خود override کنید تا رویدادهای Exchange را دریافت کنید:"
-                  : "Override these methods in your Strategy to receive Exchange events:"}
-              </p>
-              <Code lang="python">{BT_EVENTS}</Code>
-            </Section>
-
-            <Section id="bt-position" title={fa ? "فیلدهای Position" : "Position fields"}>
-              <Code lang="python">{BT_POSITION_FIELDS}</Code>
-            </Section>
-
-            <Section id="bt-candles" title={fa ? "بارگذاری کندل" : "Loading candles"}>
-              <Code lang="python">{BT_CANDLES}</Code>
-            </Section>
-
-            <Section id="bt-result" title={fa ? "نتایج — BacktestResult" : "BacktestResult"}>
-              <Code lang="python">{BT_RESULT}</Code>
-            </Section>
-
-            <Section id="bt-broadcast" title={fa ? "پخش زنده روی TrexTerminal" : "Live chart replay on TrexTerminal"}>
-              <p>
-                {fa
-                  ? "با فعال‌کردن broadcast=True در Strategy، هر کندل به‌صورت زنده به TrexTerminal broadcast می‌شود و می‌توانید بک‌تست را روی چارت واقعی تماشا کنید:"
-                  : "Set broadcast=True in your Strategy to stream each bar to TrexTerminal in realtime — watch the backtest replay on a live chart:"}
-              </p>
-              <Code lang="python">{BT_BROADCAST}</Code>
-              <Note kind="tip">
-                {fa
-                  ? "هنگام پخش زنده، اندیکاتورهایی که در indicators() رجیستر شده‌اند به‌صورت خودکار با definitions و points به ترمینال ارسال می‌شوند."
-                  : "During broadcast, indicators registered in indicators() are automatically pushed to the terminal as definitions and points."}
-              </Note>
-            </Section>
-
-            {/* ══════════ Raw WebSocket section ══════════ */}
-
-            <Section id="python" title={fa ? "بدون SDK — سرور خام" : "Without the SDK — raw server"}>
-              <p>
-                {fa
-                  ? "اگر نمی‌خواهید از هیچ SDK استفاده کنید، این یک سرور خام کمینه اما کامل است که snapshot می‌فرستد، تیک زنده استریم می‌کند و به ping/history پاسخ می‌دهد:"
-                  : "If you'd rather not use any SDK, here's a minimal but complete raw WebSocket server that sends a snapshot, streams live ticks, and answers ping/history:"}
-              </p>
-              <Code lang="python">{PY_EXAMPLE}</Code>
-            </Section>
-
-            <div className="pb-10 pt-2 text-center text-[11px] text-[var(--d-text-3)]">
-              Trex · {fa ? "ساخته‌شده با React 19، lightweight-charts v5، Trex Engine، و BackTest" : "Built with React 19, lightweight-charts v5, Trex Engine & BackTest"}
-            </div>
-          </article>
+      {/* ════ Fixed right TOC ════ */}
+      <div
+        className="trex-scroll hidden lg:block"
+        style={{
+          position: "fixed",
+          top: NAVBAR_H,
+          [fa ? "left" : "right"]: 0,
+          width: RIGHT_TOC_W,
+          height: `calc(100vh - ${NAVBAR_H}px)`,
+          borderInlineStart: "1px solid #2d3139",
+          overflowY: "auto",
+          zIndex: 40,
+          padding: "20px 0",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10.5,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#5c6070",
+            padding: "0 16px",
+            marginBottom: 8,
+          }}
+        >
+          {fa ? "در این صفحه" : "On this page"}
         </div>
+        {TOC_GROUPS(fa).map((grp) =>
+          grp.items.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => go(t.id)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: fa ? "right" : "left",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 12,
+                height: 28,
+                lineHeight: "28px",
+                paddingInlineEnd: 16,
+                transition: "color 0.12s",
+                borderInlineStartWidth: 2,
+                borderInlineStartStyle: "solid",
+                borderInlineStartColor: active === t.id ? "#f5a623" : "transparent",
+                color: active === t.id ? "#e2e4eb" : "#5c6070",
+                paddingInlineStart: 14,
+              }}
+              onMouseEnter={(e) => {
+                if (active !== t.id) (e.currentTarget as HTMLButtonElement).style.color = "#9da3b0";
+              }}
+              onMouseLeave={(e) => {
+                if (active !== t.id) (e.currentTarget as HTMLButtonElement).style.color = "#5c6070";
+              }}
+            >
+              {t.label}
+            </button>
+          ))
+        )}
       </div>
+
+      {/* ════ Main content area ════ */}
+      <main
+        ref={scrollerRef}
+        className="trex-scroll"
+        style={{
+          position: "fixed",
+          top: NAVBAR_H,
+          [fa ? "right" : "left"]: SIDEBAR_W,
+          [fa ? "left" : "right"]: 0,
+          height: `calc(100vh - ${NAVBAR_H}px)`,
+          overflowY: "auto",
+          background: "#0f1117",
+        }}
+      >
+        {/* Inner content — max width centered */}
+        <div
+          style={{
+            maxWidth: 760 + RIGHT_TOC_W,
+            margin: "0 auto",
+            padding: "48px 40px 48px calc(40px)",
+            paddingInlineEnd: `calc(${RIGHT_TOC_W}px + 40px)`,
+          }}
+        >
+          {/* Page title / hero (compact, GitBook-style) */}
+          <div style={{ marginBottom: 40 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "rgba(245,166,35,0.1)",
+                border: "1px solid rgba(245,166,35,0.25)",
+                borderRadius: 20,
+                padding: "3px 12px",
+                fontSize: 11,
+                fontWeight: 600,
+                color: "#f5a623",
+                marginBottom: 16,
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f5a623", display: "inline-block" }} />
+              {fa ? "نسخه ۲.۰ · سه پکیج یکپارچه" : "v2.0 · Three integrated packages"}
+            </div>
+            <h1
+              style={{
+                fontSize: 36,
+                fontWeight: 800,
+                color: "#ffffff",
+                lineHeight: 1.1,
+                marginBottom: 12,
+                letterSpacing: "-0.02em",
+              }}
+              dir="auto"
+            >
+              {fa ? "مستندات Trex" : "Trex Docs"}
+            </h1>
+            <p style={{ fontSize: 14.5, color: "#9da3b0", lineHeight: 1.7, maxWidth: 560 }}>
+              {fa
+                ? "مستندات کامل سه پکیج Trex: ترمینال نموداری ریل‌تایم، موتور اندیکاتور با ۱۱۰+ اندیکاتور، و فریم‌ورک بک‌تست حرفه‌ای."
+                : "Complete reference for all three Trex packages: the realtime charting terminal, a 110+ indicator engine, and a professional backtesting framework."}
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => go("quickstart")}
+                style={{
+                  borderRadius: 8,
+                  padding: "8px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                  background: "linear-gradient(135deg, #FFB733, #FF7847)",
+                  color: "#1a1206",
+                }}
+              >
+                {fa ? "شروع سریع ترمینال" : "Terminal quick start"}
+              </button>
+              <button
+                type="button"
+                onClick={() => go("eng-quickstart")}
+                style={{
+                  borderRadius: 8,
+                  padding: "8px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "1px solid #2d3139",
+                  cursor: "pointer",
+                  background: "#1a1d23",
+                  color: "#e2e4eb",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#f5a623"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2d3139"; }}
+              >
+                {fa ? "موتور اندیکاتور" : "Indicator Engine"}
+              </button>
+              <button
+                type="button"
+                onClick={() => go("bt-quickstart")}
+                style={{
+                  borderRadius: 8,
+                  padding: "8px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "1px solid #2d3139",
+                  cursor: "pointer",
+                  background: "#1a1d23",
+                  color: "#e2e4eb",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#f5a623"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2d3139"; }}
+              >
+                {fa ? "بک‌تست" : "BackTest"}
+              </button>
+            </div>
+          </div>
+
+          <hr style={{ borderColor: "#2d3139", margin: "0 0 0 0" }} />
+
+          {/* ══════════ TrexTerminal sections ══════════ */}
+
+          <Section id="intro" title={fa ? "معرفی" : "Introduction"}>
+            <p>
+              {fa
+                ? "Trex Terminal یک ترمینال نموداری ریل‌تایم در سبک TradingView است که در یک فایل HTML مستقل بسته‌بندی می‌شود. دیتا یا از شبیه‌ساز داخلی (حالت Demo) می‌آید یا از سرور WebSocket شما — هر دو دقیقاً از یک پروتکل استفاده می‌کنند."
+                : "Trex Terminal is a realtime, TradingView-style charting terminal packaged as a single self-contained HTML file. Data comes either from the built-in simulator (Demo mode) or from your own WebSocket server — both speak exactly the same protocol."}
+            </p>
+            <p className="mt-2">
+              {fa ? "هر پیام یک JSON با فیلد " : "Every message is JSON carrying a "}
+              <K>type</K>
+              {fa ? " است؛ بقیه‌ی فیلدها به نوع پیام بستگی دارند." : " field; the remaining fields depend on the message type."}
+            </p>
+          </Section>
+
+          <Section id="architecture" title={fa ? "معماری (مهم)" : "Architecture (important)"}>
+            <p>
+              {fa
+                ? "Trex یک کلاینت «فقط‌نمایشی» است. هیچ محاسبه‌ای انجام نمی‌دهد و جز درخواست داده هیچ‌چیز به سرور نمی‌فرستد."
+                : "Trex is a display-only client. It performs no computation and sends nothing to the server except data requests."}
+            </p>
+            <Note kind="warn">
+              {fa
+                ? "کلاینت هیچ‌وقت ترسیم‌های کاربر را به سرور نمی‌فرستد. دو مسیر مجزا: (۱) ترسیم‌های دستی کاربر (محلی و قابل‌ویرایش) و (۲) اشیای سروری که از طریق پیام‌های drawing می‌آیند و فقط‌خواندنی رندر می‌شوند."
+                : "The client never sends user drawings to the server. Two separate paths: (1) user's manual drawings — local-only, editable, and (2) server objects — arrive via drawing messages, render read-only exactly like indicators."}
+            </Note>
+          </Section>
+
+          <Section id="quickstart" title={fa ? "شروع سریع" : "Quick start"}>
+            <p>
+              {fa
+                ? "فایل trex-terminal.html را در مرورگر باز کنید. در صفحه‌ی لودر، «Demo» شبیه‌ساز داخلی را اجرا می‌کند و «Connect» به آدرس WebSocket واردشده وصل می‌شود (پیش‌فرض: "
+                : 'Open trex-terminal.html in a browser. On the loader screen, "Demo" runs the built-in simulator while "Connect" attaches to the WebSocket URL you enter (default: '}
+              <K>ws://localhost:8765</K>
+              {fa ? ")." : ")."}
+            </p>
+            <p className="mt-2">
+              {fa
+                ? "ترتیب معمول یک سشن: کلاینت hello می‌فرستد → سرور snapshot می‌دهد → سرور با bar استریم می‌کند → کلاینت هنگام اسکرول به چپ history می‌خواهد."
+                : "A typical session: client sends hello → server replies with snapshot → server streams bar updates → client requests history when panning left."}
+            </p>
+          </Section>
+
+          <Section id="connection" title={fa ? "اتصال و پایداری" : "Connection & resilience"}>
+            <ul className="list-disc space-y-1 ps-5">
+              <li>{fa ? "اتصال مجدد خودکار با backoff نمایی." : "Automatic reconnect with exponential backoff."}</li>
+              <li>{fa ? "keepalive با ping/pong هر ۱۵ ثانیه؛ تأخیر RTT در نوار وضعیت." : "ping/pong keepalive every 15s; RTT shown in status bar."}</li>
+              <li>{fa ? "پیام‌ها هنگام قطعی در صف می‌مانند." : "Messages queued while disconnected, flushed on reconnect."}</li>
+              <li>{fa ? "فریم‌های نامعتبر/ناشناخته بی‌صدا دور انداخته می‌شوند." : "Malformed / unknown frames dropped silently."}</li>
+            </ul>
+            <Note kind="tip">
+              {fa
+                ? "همه‌ی دیتای ورودی پاک‌سازی می‌شود: کندل‌ها مرتب و یکتاسازی می‌شوند؛ اشیای ترسیمی با ابزار ناشناخته دور انداخته می‌شوند."
+                : "All inbound data is sanitized: candles are sorted and de-duped; drawing objects with an unknown tool are dropped."}
+            </Note>
+          </Section>
+
+          <Section id="c2s" title={fa ? "پیام‌ها: کلاینت ← سرور" : "Messages: client → server"}>
+            <p>{fa ? "کلاینت فقط «درخواست» می‌فرستد — هیچ‌وقت داده‌ی کاربر را push نمی‌کند." : "The client only sends requests — it never pushes user data."}</p>
+            <MsgTable fa={fa} headers={["type", "payload", fa ? "توضیح" : "Description"]} rows={clientRows(fa)} />
+          </Section>
+
+          <Section id="s2c" title={fa ? "پیام‌ها: سرور ← کلاینت" : "Messages: server → client"}>
+            <MsgTable fa={fa} headers={["type", "payload", fa ? "توضیح" : "Description"]} rows={serverRows(fa)} />
+            <Note kind="tip">
+              {fa
+                ? "برای آپدیت ریل‌تایم اندیکاتور، در indicators برای هر کلید فقط یک نقطه بفرستید تا مسیر سریع O(1) فعال شود."
+                : "For realtime indicator updates, send a single point per key in indicators to hit the O(1) fast path; longer arrays replace the whole series."}
+            </Note>
+          </Section>
+
+          <Section id="ohlc" title={fa ? "OHLC و PointData" : "OHLC & PointData"}>
+            <p>
+              {fa
+                ? "واحد زمان همه‌جا «ثانیه‌ی یونیکس» است (نه میلی‌ثانیه). کندل‌ها باید دامنه‌ی زمانی اکیداً صعودی و یکتا داشته باشند."
+                : "Time is unix SECONDS everywhere (not milliseconds). Candles must form a strictly-increasing, unique time domain."}
+            </p>
+            <Code lang="json">{OHLC_SCHEMA}</Code>
+          </Section>
+
+          <Section id="defschema" title={fa ? "اسکیمای SeriesDefinition" : "SeriesDefinition schema"}>
+            <p>
+              {fa
+                ? "هر سری اندیکاتور با این آبجکت تعریف می‌شود. سری‌های pane: \"sub\" به‌صورت خودکار پنل جداگانه با اسکیل مستقل می‌گیرند."
+                : "Every indicator series is described by this object. Series with pane: \"sub\" automatically get their own pane with an independent scale."}
+            </p>
+            <Code lang="json">{DEF_SCHEMA}</Code>
+          </Section>
+
+          <Section id="drawschema" title={fa ? "اشیای ترسیمی (سروری)" : "Drawing objects (server-side)"}>
+            <p>
+              {fa
+                ? "اشیا با مختصات داده (time, price) ذخیره می‌شوند، پس با زوم/پن لنگر می‌مانند. اشیایی که از سرور می‌آیند با locked: true و فقط‌خواندنی رندر می‌شوند."
+                : "Objects are stored in data coordinates (time, price), anchored through zoom/pan. Objects pushed from the server render read-only with locked: true."}
+            </p>
+            <Code lang="json">{DRAWING_SCHEMA}</Code>
+          </Section>
+
+          <Section id="tools" title={fa ? "ابزارهای ترسیم" : "Drawing tools"}>
+            <p>{fa ? "۱۶ ابزار ترسیم پشتیبانی می‌شود:" : "Sixteen drawing tools are supported:"}</p>
+            <KVTable rows={drawingTools(fa)} fa={fa} />
+          </Section>
+
+          <Section id="builder" title={fa ? "طراح اندیکاتور (Indicator Builder)" : "Indicator Builder"}>
+            <p>
+              {fa
+                ? "طراح اندیکاتور یک محیط drag & drop است که ظاهر اندیکاتور را طراحی می‌کنید (نه محاسبه‌اش). خروجی یک قالب JSON است که به سرور می‌گوید چه داده‌ای بفرستد:"
+                : "A drag-and-drop environment where you design an indicator's appearance (not its math). It exports a JSON template that tells the server what data to send:"}
+            </p>
+            <Code lang="json">{TEMPLATE_SCHEMA}</Code>
+            <Note>
+              {fa
+                ? "بخش definitions ظاهر را تعریف می‌کند و dataRequest به سرور می‌گوید برای هر کلید چه چیزی محاسبه و بفرستد. کلاینت هیچ محاسبه‌ای نمی‌کند."
+                : "definitions defines appearance; dataRequest tells the server what to compute and stream per key. The client computes nothing."}
+            </Note>
+          </Section>
+
+          <Section id="workspace" title={fa ? "میزکار و ماندگاری" : "Workspace & persistence"}>
+            <ul className="list-disc space-y-1 ps-5">
+              <li>{fa ? "چیدمان چند-نموداری: تک، دوتایی کنار هم، یا شبکه‌ی ۲×۲." : "Multi-chart layouts: single, side-by-side, or a 2×2 grid."}</li>
+              <li>{fa ? "نوار شناور علاقه‌مندی‌ها: ابزارهای ستاره‌دار." : "Floating favorites bar: starred tools appear in a draggable bar."}</li>
+              <li>{fa ? "ماندگاری در localStorage: نماد، تایم‌فریم، نوع نمایش، تنظیمات ظاهری، چیدمان." : "localStorage persistence: symbol, timeframe, display type, appearance settings, layout."}</li>
+            </ul>
+            <Note kind="warn">
+              {fa
+                ? "فقط ترجیحات UI ذخیره می‌شوند — هیچ داده‌ی بازاری کش نمی‌شود."
+                : "Only UI preferences are stored — no market data is cached."}
+            </Note>
+          </Section>
+
+          <Section id="keys" title={fa ? "میان‌برهای صفحه‌کلید" : "Keyboard shortcuts"}>
+            <KVTable rows={shortcuts(fa)} fa={fa} />
+          </Section>
+
+          {/* ══════════ Trex Engine sections ══════════ */}
+
+          <Section id="eng-intro" title={fa ? "موتور اندیکاتور Trex Engine" : "Trex Engine — Indicator Engine"}>
+            <p>
+              {fa
+                ? "Trex Engine یک موتور اندیکاتور ریل‌تایم برای پایتون است با بیش از ۱۱۰ اندیکاتور آماده. هر اندیکاتور در یک context (نماد × تایم‌فریم) زندگی می‌کند. موتور بارگذاری تدریجی تاریخچه، CTF (تبدیل تایم‌فریم) خودکار، ذخیره/بازیابی وضعیت، و پخش زنده به TrexTerminal را پشتیبانی می‌کند."
+                : "Trex Engine is a realtime Python indicator engine with 110+ ready-made indicators. Each indicator lives in a context (symbol × timeframe). The engine supports lazy history loading, automatic CTF (ConvertTimeFrame) aggregation, state save/restore, and live broadcast to TrexTerminal."}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 ps-5">
+              <li>{fa ? "Trend: ۲۳ اندیکاتور (SMA, EMA, HMA, VWAP, Ichimoku, SuperTrend, …)" : "Trend: 23 indicators (SMA, EMA, HMA, VWAP, Ichimoku, SuperTrend, …)"}</li>
+              <li>{fa ? "Volatility: ۹ (BB, Keltner, ATR, HV, Ulcer, …)" : "Volatility: 9 (BB, Keltner, ATR, HV, Ulcer, …)"}</li>
+              <li>{fa ? "Momentum: ۱۵ (RSI, MACD, Stoch RSI, Squeeze, …)" : "Momentum: 15 (RSI, MACD, Stoch RSI, Squeeze, …)"}</li>
+              <li>{fa ? "Oscillators: ۱۴ (Stoch, CCI, Williams %R, ADX, DMI, …)" : "Oscillators: 14 (Stoch, CCI, Williams %R, ADX, DMI, …)"}</li>
+              <li>{fa ? "Volume: ۹ (OBV, MFI, CMF, A/D, …)" : "Volume: 9 (OBV, MFI, CMF, A/D, …)"}</li>
+              <li>{fa ? "Statistics: ۵ (StdDev, Z-Score, Percentile, Correlation, …)" : "Statistics: 5 (StdDev, Z-Score, Percentile, Correlation, …)"}</li>
+              <li>{fa ? "Hybrid: ۴ (Pivot, Fib Pivot, Camarilla, Woodie)" : "Hybrid: 4 (Pivot, Fib Pivot, Camarilla, Woodie)"}</li>
+              <li>{fa ? "Candlestick Patterns: ۳۵ الگو" : "Candlestick Patterns: 35 patterns"}</li>
+            </ul>
+          </Section>
+
+          <Section id="eng-install" title={fa ? "نصب Trex Engine" : "Installing Trex Engine"}>
+            <Code lang="bash">{TREX_INSTALL}</Code>
+          </Section>
+
+          <Section id="eng-quickstart" title={fa ? "شروع سریع — Trex Engine" : "Trex Engine quick start"}>
+            <Code lang="python">{TREX_QUICKSTART}</Code>
+            <Note kind="tip">
+              {fa
+                ? "اگر source_timeframe=\"1m\" باشد و شما rsi برای \"4h\" رجیستر کنید، موتور به‌صورت خودکار کندل‌های ۱ دقیقه را به ۴ ساعته تبدیل می‌کند — بدون کد اضافه."
+                : "If source_timeframe=\"1m\" and you register rsi for \"4h\", the engine auto-aggregates 1m candles to 4h — no extra code needed."}
+            </Note>
+          </Section>
+
+          <Section id="eng-api" title={fa ? "API اصلی" : "Core API"}>
+            <Code lang="python">{TREX_CORE_API}</Code>
+            <p className="mt-2">
+              {fa
+                ? "هر فراخوانی اندیکاتور یک " : "Each indicator call returns a "}
+              <K>ListenerKey</K>
+              {fa ? " برمی‌گرداند که می‌توانید با آن listener را بعداً حذف کنید." : " you can use later to de-register the listener."}
+            </p>
+          </Section>
+
+          <Section id="eng-trend" title={fa ? "اندیکاتورهای روند (۲۳ اندیکاتور)" : "Trend indicators (23)"}>
+            <Code lang="python">{TREX_INDICATORS_TREND}</Code>
+          </Section>
+
+          <Section id="eng-rest" title={fa ? "سایر اندیکاتورها (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)" : "Other indicators (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)"}>
+            <Code lang="python">{TREX_INDICATORS_REST}</Code>
+          </Section>
+
+          <Section id="eng-multisym" title={fa ? "چند نماد و CTF خودکار" : "Multi-symbol & automatic CTF"}>
+            <p>
+              {fa
+                ? "هر ترکیب (نماد × تایم‌فریم) یک context مستقل است. CTF (ConvertTimeFrame) وقتی تایم‌فریم اندیکاتور از source_timeframe بزرگ‌تر است به‌صورت خودکار فعال می‌شود."
+                : "Every (symbol × timeframe) pair is an independent context. CTF (ConvertTimeFrame) activates automatically when the requested timeframe is larger than source_timeframe."}
+            </p>
+            <Code lang="python">{TREX_MULTISYM}</Code>
+          </Section>
+
+          <Section id="eng-db" title={fa ? "PostgreSQL و DbConfig" : "PostgreSQL & DbConfig"}>
+            <p>
+              {fa
+                ? "برای ذخیره‌ی وضعیت اندیکاتورها در پایگاه داده و شروع سریع بدون نیاز به بازسازی تاریخچه، از DbConfig استفاده کنید:"
+                : "Use DbConfig to persist indicator states to PostgreSQL for fast restarts without replaying history:"}
+            </p>
+            <Code lang="python">{TREX_DB}</Code>
+          </Section>
+
+          <Section id="eng-state" title={fa ? "ماندگاری وضعیت" : "State persistence"}>
+            <p>
+              {fa
+                ? "با فعال‌بودن db_config، ماندگاری وضعیت به‌صورت خودکار فعال می‌شود. همچنین می‌توانید دستی snapshot بگیرید:"
+                : "With db_config active, state persistence is enabled automatically. You can also snapshot manually:"}
+            </p>
+            <Code lang="python">{TREX_STATE}</Code>
+          </Section>
+
+          <Section id="eng-plugin" title={fa ? "اندیکاتور اختصاصی — سیستم Plugin" : "Custom indicators — Plugin system"}>
+            <p>
+              {fa
+                ? "با سیستم plugin می‌توانید اندیکاتور اختصاصی بسازید و بدون تغییر در سورس کتابخانه آن را به‌صورت یک citizen درجه‌ی اول در اختیار بگیرید — در هر دو namespace سطح بالا ("
+                : "The plugin system lets you register a custom indicator as a first-class citizen without touching the library source — available in both the top-level "}
+              <K>trex</K>
+              {fa ? ") و ContextApi (" : " namespace and "}
+              <K>api</K>
+              {fa ? ")." : " inside init_depends)."}
+            </p>
+            <Code lang="python">{TREX_PLUGIN}</Code>
+            <Note kind="tip">
+              {fa
+                ? "کلید context ساخته‌شده به‌صورت trex.plugin.{IndName}|sym=...|tf=...|params خواهد بود — مستقل از مسیر ماژول کاربر و کاملاً سازگار با کلیدهای اندیکاتورهای داخلی."
+                : "The context key is trex.plugin.{IndName}|sym=...|tf=...|params — stable regardless of the user's module path and fully compatible with built-in indicator keys."}
+            </Note>
+          </Section>
+
+          <Section id="eng-plugin-composite" title={fa ? "Plugin ترکیبی (با sub-indicator)" : "Composite plugin (with sub-indicators)"}>
+            <p>
+              {fa
+                ? "اگر اندیکاتور شما نیاز به اندیکاتورهای دیگر دارد، آن‌ها را داخل init_depends از طریق "
+                : "If your indicator depends on other indicators, register them inside init_depends via "}
+              <K>self._ctx.api</K>
+              {fa ? " رجیستر کنید. هرگز مستقیم add_input_value را به sub-indicator فوروارد نکنید (double-feed bug)." : ". Never forward add_input_value directly to sub-indicators (double-feed bug)."}
+            </p>
+            <Code lang="python">{TREX_PLUGIN_COMPOSITE}</Code>
+          </Section>
+
+          {/* ══════════ BackTest sections ══════════ */}
+
+          <Section id="bt-intro" title={fa ? "فریم‌ورک بک‌تست (BackTest)" : "BackTest Framework"}>
+            <p>
+              {fa
+                ? "BackTest یک فریم‌ورک بک‌تست حرفه‌ای است که با Trex Engine یکپارچه می‌شود. شما یک کلاس Strategy می‌نویسید، اندیکاتورها را در indicators() رجیستر می‌کنید، و منطق معامله را در on_kline() می‌نویسید. موتور به‌صورت خودکار Exchange (صرافی شبیه‌سازی‌شده) را مدیریت می‌کند."
+                : "BackTest is a professional backtesting framework integrated with Trex Engine. You write a Strategy class, register indicators in indicators(), and implement trading logic in on_kline(). The engine automatically manages a simulated Exchange."}
+            </p>
+            <p className="mt-2">
+              {fa ? "ترتیب اجرا برای هر کندل:" : "Execution order per bar:"}
+            </p>
+            <ol className="mt-1 list-decimal space-y-1 ps-5">
+              <li><K>trex.push(bar)</K> {fa ? "← اندیکاتورها محاسبه می‌شوند، listenerها اجرا می‌شوند" : "← indicators recomputed, listeners fired"}</li>
+              <li><K>exchange.kline(bar)</K> {fa ? "← سفارشات لیمیت بررسی می‌شوند، موقعیت‌ها به‌روز می‌شوند" : "← limit orders checked, positions updated"}</li>
+              <li><K>strategy.on_kline(bar)</K> {fa ? "← منطق کاربر اجرا می‌شود، سفارشات جدید ثبت می‌شوند" : "← user logic runs, new orders placed"}</li>
+            </ol>
+            <Note>
+              {fa
+                ? "سفارشات مارکت که در on_kline() ثبت می‌شوند با قیمت close همان کندل اجرا می‌شوند. سفارشات لیمیت از کندل بعدی بررسی می‌شوند."
+                : "Market orders placed in on_kline() execute at the current bar's close. Limit orders are evaluated from the next bar."}
+            </Note>
+          </Section>
+
+          <Section id="bt-install" title={fa ? "نصب BackTest" : "Installing BackTest"}>
+            <Code lang="bash">{BT_INSTALL}</Code>
+          </Section>
+
+          <Section id="bt-quickstart" title={fa ? "شروع سریع — BackTest" : "BackTest quick start"}>
+            <Code lang="python">{BT_QUICKSTART}</Code>
+          </Section>
+
+          <Section id="bt-strategy" title={fa ? "کلاس Strategy — تنظیمات" : "Strategy class — configuration"}>
+            <p>
+              {fa
+                ? "تمام تنظیمات به‌صورت class attribute تعریف می‌شوند و می‌توانند در Backtest() در زمان اجرا override شوند:"
+                : "All settings are defined as class attributes and can be overridden at runtime in Backtest():"}
+            </p>
+            <Code lang="python">{BT_STRATEGY_ATTRS}</Code>
+            <Code lang="python">{`# Runtime override example:
+result = Backtest(MyStrategy, deposit=50_000, leverage=10, fee=0.0002).run(candles)`}</Code>
+          </Section>
+
+          <Section id="bt-commands" title={fa ? "دستورات معامله" : "Trading commands"}>
+            <Code lang="python">{BT_COMMANDS}</Code>
+          </Section>
+
+          <Section id="bt-events" title={fa ? "رویدادها (Event Hooks)" : "Event hooks"}>
+            <p>
+              {fa
+                ? "این متدها را در کلاس Strategy خود override کنید تا رویدادهای Exchange را دریافت کنید:"
+                : "Override these methods in your Strategy to receive Exchange events:"}
+            </p>
+            <Code lang="python">{BT_EVENTS}</Code>
+          </Section>
+
+          <Section id="bt-position" title={fa ? "فیلدهای Position" : "Position fields"}>
+            <Code lang="python">{BT_POSITION_FIELDS}</Code>
+          </Section>
+
+          <Section id="bt-candles" title={fa ? "بارگذاری کندل" : "Loading candles"}>
+            <Code lang="python">{BT_CANDLES}</Code>
+          </Section>
+
+          <Section id="bt-result" title={fa ? "نتایج — BacktestResult" : "BacktestResult"}>
+            <Code lang="python">{BT_RESULT}</Code>
+          </Section>
+
+          <Section id="bt-broadcast" title={fa ? "پخش زنده روی TrexTerminal" : "Live chart replay on TrexTerminal"}>
+            <p>
+              {fa
+                ? "با فعال‌کردن broadcast=True در Strategy، هر کندل به‌صورت زنده به TrexTerminal broadcast می‌شود و می‌توانید بک‌تست را روی چارت واقعی تماشا کنید:"
+                : "Set broadcast=True in your Strategy to stream each bar to TrexTerminal in realtime — watch the backtest replay on a live chart:"}
+            </p>
+            <Code lang="python">{BT_BROADCAST}</Code>
+            <Note kind="tip">
+              {fa
+                ? "هنگام پخش زنده، اندیکاتورهایی که در indicators() رجیستر شده‌اند به‌صورت خودکار با definitions و points به ترمینال ارسال می‌شوند."
+                : "During broadcast, indicators registered in indicators() are automatically pushed to the terminal as definitions and points."}
+            </Note>
+          </Section>
+
+          {/* ══════════ Raw WebSocket section ══════════ */}
+
+          <Section id="python" title={fa ? "بدون SDK — سرور خام" : "Without the SDK — raw server"}>
+            <p>
+              {fa
+                ? "اگر نمی‌خواهید از هیچ SDK استفاده کنید، این یک سرور خام کمینه اما کامل است که snapshot می‌فرستد، تیک زنده استریم می‌کند و به ping/history پاسخ می‌دهد:"
+                : "If you'd rather not use any SDK, here's a minimal but complete raw WebSocket server that sends a snapshot, streams live ticks, and answers ping/history:"}
+            </p>
+            <Code lang="python">{PY_EXAMPLE}</Code>
+          </Section>
+
+          {/* Footer */}
+          <div
+            style={{
+              paddingTop: 24,
+              paddingBottom: 40,
+              textAlign: "center",
+              fontSize: 11,
+              color: "#5c6070",
+            }}
+          >
+            Trex · {fa ? "ساخته‌شده با React 19، lightweight-charts v5، Trex Engine، و BackTest" : "Built with React 19, lightweight-charts v5, Trex Engine & BackTest"}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
