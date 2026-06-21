@@ -3043,6 +3043,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     setMode("demo");
     setConnStatus("demo");
     setLatency(null);
+    setBtPlayback(null);
+    setBtState(null);
     setServerDefs([]);
     lastBarTimeRef.current = 0;
     if (!feedRef.current) feedRef.current = new DemoFeed((m) => handleMessageRef.current(m));
@@ -3065,6 +3067,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       (m) => handleMessageRef.current(m),
       (ok) => {
         setConnStatus(ok ? "online" : "offline");
+        if (!ok) { setBtPlayback(null); setBtState(null); }
         if (ok) {
           // Re-send handshake on every (re)connect so the server session gets
           // the current symbol/timeframe even after a reconnect.

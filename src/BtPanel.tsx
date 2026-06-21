@@ -139,7 +139,7 @@ function PositionsTab({ positions }: { positions: BtPosition[] }) {
           <tr key={p.id} style={{ background: BG }}>
             <td style={cell}>{p.symbol}</td>
             <td style={cell}><SideBadge side={p.side} /></td>
-            <td style={cell}>{fmt(p.margin)}</td>
+            <td style={cell}>{fmt(p.margin * p.leverage)}</td>
             <td style={cell}>{fmt(p.entry, 4)}</td>
             <td style={cell}>{fmt(p.mark, 4)}</td>
             <td style={cell}>{p.liquidy != null ? fmt(p.liquidy, 4) : "—"}</td>
