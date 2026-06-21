@@ -272,7 +272,8 @@ function EquityCurve({ curve, initial }: { curve: number[]; initial: number }) {
   const xs = curve.map((_, i) => PAD + ((W - PAD * 2) * i) / (curve.length - 1));
   const ys = curve.map(v => PAD + (H - PAD * 2) * (1 - (v - min) / range));
   const pts = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
-  const baseline = PAD + (H - PAD * 2) * (1 - (initial - min) / range);
+  const baselineRaw = PAD + (H - PAD * 2) * (1 - (initial - min) / range);
+  const baseline = Math.max(PAD, Math.min(H - PAD, baselineRaw));
   const color = curve[curve.length - 1] >= initial ? LONG_CLR : SHORT_CLR;
   return (
     <svg width={W} height={H} style={{ display: "block", borderRadius: 4, background: "#0d1117", overflow: "visible" }}>
