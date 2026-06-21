@@ -52,7 +52,7 @@ function K({ children }: { children: ReactNode }) {
     <code
       dir="ltr"
       className="rounded-[5px] px-1.5 py-px font-mono text-[12px]"
-      style={{ border: "1px solid #d0d7de", background: "#f6f8fa", color: "#cf222e" }}
+      style={{ border: "1px solid #3a3f4b", background: "#1c1f26", color: "#f5a623" }}
     >
       {children}
     </code>
@@ -61,9 +61,9 @@ function K({ children }: { children: ReactNode }) {
 
 function Note({ kind = "note", children }: { kind?: "note" | "warn" | "tip"; children: ReactNode }) {
   const tone = {
-    note: { bar: "#0969da", bg: "#dbeafe", ring: "#bfdbfe", text: "#1e3a5f" },
-    warn: { bar: "#d1242f", bg: "#fff0f0", ring: "#ffc1c0", text: "#6e1c1c" },
-    tip:  { bar: "#1a7f37", bg: "#dafbe1", ring: "#aceebb", text: "#1a3d1f" },
+    note: { bar: "#3b82f6", bg: "rgba(59,130,246,0.1)", ring: "rgba(59,130,246,0.2)", text: "#93c5fd" },
+    warn: { bar: "#ef4444", bg: "rgba(239,68,68,0.1)", ring: "rgba(239,68,68,0.2)", text: "#fca5a5" },
+    tip:  { bar: "#22c55e", bg: "rgba(34,197,94,0.1)", ring: "rgba(34,197,94,0.2)", text: "#86efac" },
   }[kind];
   return (
     <div
@@ -79,25 +79,25 @@ function Note({ kind = "note", children }: { kind?: "note" | "warn" | "tip"; chi
   );
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+function Section({ id, title, hidden, children }: { id: string; title: string; hidden?: boolean; children: ReactNode }) {
   return (
-    <>
+    <div style={{ display: hidden ? "none" : "" }}>
       <section id={id} className="scroll-mt-[68px]">
         <h2
-          style={{ fontSize: 21, fontWeight: 700, color: "#1f2328", paddingTop: 40, marginBottom: 14, lineHeight: 1.3 }}
+          style={{ fontSize: 21, fontWeight: 700, color: "#e2e4eb", paddingTop: 40, marginBottom: 14, lineHeight: 1.3 }}
           dir="auto"
         >
           {title}
         </h2>
         <div
           className="space-y-3 text-start leading-[1.85]"
-          style={{ fontSize: 14.5, color: "#1f2328" }}
+          style={{ fontSize: 14.5, color: "#cdd2db" }}
         >
           {children}
         </div>
       </section>
-      <hr style={{ borderColor: "#d0d7de", margin: "32px 0 0 0" }} />
-    </>
+      <hr style={{ borderColor: "#2e3340", margin: "32px 0 0 0" }} />
+    </div>
   );
 }
 
@@ -108,13 +108,13 @@ function MsgTable({ rows, headers, fa }: { rows: MsgRow[]; headers: [string, str
     <div
       dir="ltr"
       className="trex-scroll my-4 overflow-x-auto"
-      style={{ borderRadius: 8, border: "1px solid #d0d7de" }}
+      style={{ borderRadius: 8, border: "1px solid #2e3340" }}
     >
       <table className="w-full border-collapse text-left text-[13px]">
         <thead>
           <tr
             className="text-[11px] uppercase tracking-wider"
-            style={{ borderBottom: "1px solid #d0d7de", background: "#f6f8fa", color: "#57606a" }}
+            style={{ borderBottom: "1px solid #2e3340", background: "#1c1f26", color: "#8c959f" }}
           >
             <th className="px-3.5 py-2.5 font-semibold">{headers[0]}</th>
             <th className="px-3.5 py-2.5 font-semibold">{headers[1]}</th>
@@ -126,11 +126,11 @@ function MsgTable({ rows, headers, fa }: { rows: MsgRow[]; headers: [string, str
             <tr
               key={r.type + r.payload}
               className="align-top"
-              style={{ borderTop: "1px solid #eaeef2", background: i % 2 ? "#f6f8fa" : "#ffffff" }}
+              style={{ borderTop: "1px solid #2e3340", background: i % 2 ? "#22252d" : "#1c1f26" }}
             >
-              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#0550ae" }}>{r.type}</td>
-              <td className="px-3.5 py-2.5 font-mono text-[12px]" style={{ color: "#57606a" }}>{r.payload}</td>
-              <td className="px-3.5 py-2.5" style={{ color: "#1f2328" }} dir={fa ? "rtl" : "ltr"}>{r.desc}</td>
+              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#60a5fa" }}>{r.type}</td>
+              <td className="px-3.5 py-2.5 font-mono text-[12px]" style={{ color: "#8c959f" }}>{r.payload}</td>
+              <td className="px-3.5 py-2.5" style={{ color: "#cdd2db" }} dir={fa ? "rtl" : "ltr"}>{r.desc}</td>
             </tr>
           ))}
         </tbody>
@@ -144,17 +144,17 @@ function KVTable({ rows, fa }: { rows: [string, string][]; fa: boolean }) {
     <div
       dir="ltr"
       className="trex-scroll my-4 overflow-x-auto"
-      style={{ borderRadius: 8, border: "1px solid #d0d7de" }}
+      style={{ borderRadius: 8, border: "1px solid #2e3340" }}
     >
       <table className="w-full border-collapse text-left text-[13px]">
         <tbody>
           {rows.map(([k, d], i) => (
             <tr
               key={k}
-              style={{ borderTop: i === 0 ? "none" : "1px solid #eaeef2", background: i % 2 ? "#f6f8fa" : "#ffffff" }}
+              style={{ borderTop: i === 0 ? "none" : "1px solid #2e3340", background: i % 2 ? "#22252d" : "#1c1f26" }}
             >
-              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#0550ae" }}>{k}</td>
-              <td className="px-3.5 py-2.5" style={{ color: "#1f2328" }} dir={fa ? "rtl" : "ltr"}>{d}</td>
+              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#60a5fa" }}>{k}</td>
+              <td className="px-3.5 py-2.5" style={{ color: "#cdd2db" }} dir={fa ? "rtl" : "ltr"}>{d}</td>
             </tr>
           ))}
         </tbody>
@@ -929,46 +929,22 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
   const [active, setActive] = useState<string>("intro");
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll-spy: watch the main content scroller
+  // Reset scroll to top when section changes
   useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    const ids = ALL_IDS(fa);
-    const onScroll = () => {
-      const offset = NAVBAR_H + 16;
-      let current = ids[0];
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (el) {
-          // el.offsetTop is relative to its offsetParent inside the scroller
-          const elTop = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-          if (elTop <= offset) current = id;
-        }
-      }
-      setActive(current);
-    };
-    scroller.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => scroller.removeEventListener("scroll", onScroll);
-  }, [fa]);
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+  }, [active]);
 
-  const go = (id: string) => {
-    const el = document.getElementById(id);
-    if (!el || !scrollerRef.current) return;
-    const scroller = scrollerRef.current;
-    const elTop = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
-    scroller.scrollTo({ top: elTop - NAVBAR_H - 8, behavior: "smooth" });
-  };
+  const go = (id: string) => setActive(id);
 
-  // Sidebar nav item style (light theme)
+  // Sidebar nav item style (dark gray theme)
   const navItemStyle = (id: string) =>
     active === id
       ? {
           borderInlineStartWidth: 3,
           borderInlineStartStyle: "solid" as const,
-          borderInlineStartColor: "#0969da",
-          background: "#dbeafe",
-          color: "#0550ae",
+          borderInlineStartColor: "#f5a623",
+          background: "rgba(245,166,35,0.12)",
+          color: "#f5a623",
           fontWeight: 600,
           paddingInlineStart: 13,
         }
@@ -976,13 +952,13 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           borderInlineStartWidth: 3,
           borderInlineStartStyle: "solid" as const,
           borderInlineStartColor: "transparent",
-          color: "#57606a",
+          color: "#9da3b0",
           paddingInlineStart: 13,
         };
 
   return (
     <div
-      style={{ background: "#ffffff", color: "#1f2328", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", height: "100vh", overflow: "hidden" }}
+      style={{ background: "#1c1f26", color: "#cdd2db", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", height: "100vh", overflow: "hidden" }}
       dir={fa ? "rtl" : "ltr"}
     >
       {/* ════ Fixed top navbar ════ */}
@@ -993,8 +969,8 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           left: 0,
           right: 0,
           height: NAVBAR_H,
-          background: "#ffffff",
-          borderBottom: "1px solid #d0d7de",
+          background: "#22252d",
+          borderBottom: "1px solid #2e3340",
           display: "flex",
           alignItems: "center",
           gap: 12,
@@ -1011,22 +987,22 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             alignItems: "center",
             gap: 6,
             background: "none",
-            border: "1px solid #d0d7de",
+            border: "1px solid #2e3340",
             cursor: "pointer",
-            color: "#57606a",
+            color: "#9da3b0",
             fontSize: 12,
             fontWeight: 500,
             padding: "4px 10px",
             borderRadius: 6,
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#f6f8fa"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#2e3340"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
         >
           <IconArrowLeft />
           {fa ? "بازگشت" : "Back"}
         </button>
 
-        <div style={{ width: 1, height: 20, background: "#d0d7de", flexShrink: 0 }} />
+        <div style={{ width: 1, height: 20, background: "#2e3340", flexShrink: 0 }} />
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -1046,16 +1022,16 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           >
             T
           </span>
-          <span style={{ fontWeight: 700, fontSize: 15, color: "#1f2328" }}>Trex</span>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#e2e4eb" }}>Trex</span>
           <span
             style={{
-              background: "#dbeafe",
-              color: "#0550ae",
+              background: "rgba(245,166,35,0.15)",
+              color: "#f5a623",
               fontSize: 10,
               fontWeight: 600,
               padding: "2px 7px",
               borderRadius: 20,
-              border: "1px solid #bfdbfe",
+              border: "1px solid rgba(245,166,35,0.3)",
             }}
           >
             Docs
@@ -1069,27 +1045,27 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
               display: "flex",
               alignItems: "center",
               gap: 8,
-              background: "#f6f8fa",
-              border: "1px solid #d0d7de",
+              background: "#1c1f26",
+              border: "1px solid #2e3340",
               borderRadius: 8,
               padding: "0 12px",
               height: 34,
               width: "min(320px, 40vw)",
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#57606a" strokeWidth="2">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5c6070" strokeWidth="2">
               <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <span style={{ fontSize: 12.5, color: "#8c959f" }}>
+            <span style={{ fontSize: 12.5, color: "#5c6070" }}>
               {fa ? "جستجو…" : "Search..."}
             </span>
             <div style={{ flex: 1 }} />
             <kbd
               style={{
                 fontSize: 10,
-                color: "#8c959f",
-                background: "#ffffff",
-                border: "1px solid #d0d7de",
+                color: "#5c6070",
+                background: "#22252d",
+                border: "1px solid #2e3340",
                 borderRadius: 4,
                 padding: "1px 5px",
               }}
@@ -1103,7 +1079,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
         <div
           style={{
             display: "flex",
-            border: "1px solid #d0d7de",
+            border: "1px solid #2e3340",
             borderRadius: 8,
             overflow: "hidden",
             flexShrink: 0,
@@ -1121,8 +1097,8 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                 border: "none",
                 cursor: "pointer",
                 transition: "background 0.15s, color 0.15s",
-                background: l === x ? "#0969da" : "transparent",
-                color: l === x ? "#ffffff" : "#57606a",
+                background: l === x ? "#f5a623" : "transparent",
+                color: l === x ? "#1a1206" : "#9da3b0",
               }}
             >
               {x === "fa" ? "فارسی" : "English"}
@@ -1140,8 +1116,8 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           [fa ? "right" : "left"]: 0,
           width: SIDEBAR_W,
           height: `calc(100vh - ${NAVBAR_H}px)`,
-          background: "#f6f8fa",
-          borderInlineEnd: "1px solid #d0d7de",
+          background: "#22252d",
+          borderInlineEnd: "1px solid #2e3340",
           overflowY: "auto",
           zIndex: 40,
           paddingBottom: 32,
@@ -1186,13 +1162,13 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                   }}
                   onMouseEnter={(e) => {
                     if (active !== t.id) {
-                      (e.currentTarget as HTMLButtonElement).style.color = "#1f2328";
-                      (e.currentTarget as HTMLButtonElement).style.background = "#eaeef2";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#cdd2db";
+                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (active !== t.id) {
-                      (e.currentTarget as HTMLButtonElement).style.color = "#57606a";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#9da3b0";
                       (e.currentTarget as HTMLButtonElement).style.background = "none";
                     }
                   }}
@@ -1216,7 +1192,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           [fa ? "left" : "right"]: 0,
           height: `calc(100vh - ${NAVBAR_H}px)`,
           overflowY: "auto",
-          background: "#ffffff",
+          background: "#1c1f26",
         }}
       >
         {/* Inner content — max width centered */}
@@ -1227,31 +1203,32 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             padding: "48px 48px 80px",
           }}
         >
-          {/* Page title / hero */}
-          <div style={{ marginBottom: 48, paddingBottom: 32, borderBottom: "1px solid #d0d7de" }}>
+          {/* Page title / hero — shown only on intro */}
+          {active === "intro" && (
+          <div style={{ marginBottom: 48, paddingBottom: 32, borderBottom: "1px solid #2e3340" }}>
             <div
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                background: "#dbeafe",
-                border: "1px solid #bfdbfe",
+                background: "rgba(245,166,35,0.12)",
+                border: "1px solid rgba(245,166,35,0.3)",
                 borderRadius: 20,
                 padding: "3px 12px",
                 fontSize: 11,
                 fontWeight: 600,
-                color: "#0550ae",
+                color: "#f5a623",
                 marginBottom: 16,
               }}
             >
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0969da", display: "inline-block" }} />
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f5a623", display: "inline-block" }} />
               {fa ? "نسخه ۲.۰ · سه پکیج یکپارچه" : "v2.0 · Three integrated packages"}
             </div>
             <h1
               style={{
                 fontSize: 34,
                 fontWeight: 800,
-                color: "#1f2328",
+                color: "#e2e4eb",
                 lineHeight: 1.15,
                 marginBottom: 12,
                 letterSpacing: "-0.02em",
@@ -1260,7 +1237,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             >
               {fa ? "مستندات Trex" : "Trex Docs"}
             </h1>
-            <p style={{ fontSize: 15, color: "#57606a", lineHeight: 1.75, maxWidth: 560 }}>
+            <p style={{ fontSize: 15, color: "#9da3b0", lineHeight: 1.75, maxWidth: 560 }}>
               {fa
                 ? "مستندات کامل سه پکیج Trex: ترمینال نموداری ریل‌تایم، موتور اندیکاتور با ۱۱۰+ اندیکاتور، و فریم‌ورک بک‌تست حرفه‌ای."
                 : "Complete reference for all three Trex packages: the realtime charting terminal, a 110+ indicator engine, and a professional backtesting framework."}
@@ -1276,8 +1253,8 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                   fontWeight: 600,
                   border: "none",
                   cursor: "pointer",
-                  background: "#0969da",
-                  color: "#ffffff",
+                  background: "#f5a623",
+                  color: "#1a1206",
                 }}
               >
                 {fa ? "شروع سریع ترمینال" : "Terminal quick start"}
@@ -1290,10 +1267,10 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                   padding: "8px 18px",
                   fontSize: 13,
                   fontWeight: 600,
-                  border: "1px solid #d0d7de",
+                  border: "1px solid #3a3f4b",
                   cursor: "pointer",
-                  background: "#f6f8fa",
-                  color: "#1f2328",
+                  background: "#22252d",
+                  color: "#cdd2db",
                 }}
               >
                 {fa ? "موتور اندیکاتور" : "Indicator Engine"}
@@ -1306,20 +1283,21 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                   padding: "8px 18px",
                   fontSize: 13,
                   fontWeight: 600,
-                  border: "1px solid #d0d7de",
+                  border: "1px solid #3a3f4b",
                   cursor: "pointer",
-                  background: "#f6f8fa",
-                  color: "#1f2328",
+                  background: "#22252d",
+                  color: "#cdd2db",
                 }}
               >
                 {fa ? "بک‌تست" : "BackTest"}
               </button>
             </div>
           </div>
+          )}
 
           {/* ══════════ TrexTerminal sections ══════════ */}
 
-          <Section id="intro" title={fa ? "معرفی" : "Introduction"}>
+          <Section id="intro" hidden={active !== "intro"} title={fa ? "معرفی" : "Introduction"}>
             <p>
               {fa
                 ? "Trex Terminal یک ترمینال نموداری ریل‌تایم در سبک TradingView است که در یک فایل HTML مستقل بسته‌بندی می‌شود. دیتا یا از شبیه‌ساز داخلی (حالت Demo) می‌آید یا از سرور WebSocket شما — هر دو دقیقاً از یک پروتکل استفاده می‌کنند."
@@ -1332,7 +1310,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </p>
           </Section>
 
-          <Section id="architecture" title={fa ? "معماری (مهم)" : "Architecture (important)"}>
+          <Section id="architecture" hidden={active !== "architecture"} title={fa ? "معماری (مهم)" : "Architecture (important)"}>
             <p>
               {fa
                 ? "Trex یک کلاینت «فقط‌نمایشی» است. هیچ محاسبه‌ای انجام نمی‌دهد و جز درخواست داده هیچ‌چیز به سرور نمی‌فرستد."
@@ -1345,7 +1323,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="quickstart" title={fa ? "شروع سریع" : "Quick start"}>
+          <Section id="quickstart" hidden={active !== "quickstart"} title={fa ? "شروع سریع" : "Quick start"}>
             <p>
               {fa
                 ? "فایل trex-terminal.html را در مرورگر باز کنید. در صفحه‌ی لودر، «Demo» شبیه‌ساز داخلی را اجرا می‌کند و «Connect» به آدرس WebSocket واردشده وصل می‌شود (پیش‌فرض: "
@@ -1360,7 +1338,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </p>
           </Section>
 
-          <Section id="connection" title={fa ? "اتصال و پایداری" : "Connection & resilience"}>
+          <Section id="connection" hidden={active !== "connection"} title={fa ? "اتصال و پایداری" : "Connection & resilience"}>
             <ul className="list-disc space-y-1 ps-5">
               <li>{fa ? "اتصال مجدد خودکار با backoff نمایی." : "Automatic reconnect with exponential backoff."}</li>
               <li>{fa ? "keepalive با ping/pong هر ۱۵ ثانیه؛ تأخیر RTT در نوار وضعیت." : "ping/pong keepalive every 15s; RTT shown in status bar."}</li>
@@ -1374,12 +1352,12 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="c2s" title={fa ? "پیام‌ها: کلاینت ← سرور" : "Messages: client → server"}>
+          <Section id="c2s" hidden={active !== "c2s"} title={fa ? "پیام‌ها: کلاینت ← سرور" : "Messages: client → server"}>
             <p>{fa ? "کلاینت فقط «درخواست» می‌فرستد — هیچ‌وقت داده‌ی کاربر را push نمی‌کند." : "The client only sends requests — it never pushes user data."}</p>
             <MsgTable fa={fa} headers={["type", "payload", fa ? "توضیح" : "Description"]} rows={clientRows(fa)} />
           </Section>
 
-          <Section id="s2c" title={fa ? "پیام‌ها: سرور ← کلاینت" : "Messages: server → client"}>
+          <Section id="s2c" hidden={active !== "s2c"} title={fa ? "پیام‌ها: سرور ← کلاینت" : "Messages: server → client"}>
             <MsgTable fa={fa} headers={["type", "payload", fa ? "توضیح" : "Description"]} rows={serverRows(fa)} />
             <Note kind="tip">
               {fa
@@ -1388,7 +1366,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="ohlc" title={fa ? "OHLC و PointData" : "OHLC & PointData"}>
+          <Section id="ohlc" hidden={active !== "ohlc"} title={fa ? "OHLC و PointData" : "OHLC & PointData"}>
             <p>
               {fa
                 ? "واحد زمان همه‌جا «ثانیه‌ی یونیکس» است (نه میلی‌ثانیه). کندل‌ها باید دامنه‌ی زمانی اکیداً صعودی و یکتا داشته باشند."
@@ -1397,7 +1375,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             <Code lang="json">{OHLC_SCHEMA}</Code>
           </Section>
 
-          <Section id="defschema" title={fa ? "اسکیمای SeriesDefinition" : "SeriesDefinition schema"}>
+          <Section id="defschema" hidden={active !== "defschema"} title={fa ? "اسکیمای SeriesDefinition" : "SeriesDefinition schema"}>
             <p>
               {fa
                 ? "هر سری اندیکاتور با این آبجکت تعریف می‌شود. سری‌های pane: \"sub\" به‌صورت خودکار پنل جداگانه با اسکیل مستقل می‌گیرند."
@@ -1406,7 +1384,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             <Code lang="json">{DEF_SCHEMA}</Code>
           </Section>
 
-          <Section id="drawschema" title={fa ? "اشیای ترسیمی (سروری)" : "Drawing objects (server-side)"}>
+          <Section id="drawschema" hidden={active !== "drawschema"} title={fa ? "اشیای ترسیمی (سروری)" : "Drawing objects (server-side)"}>
             <p>
               {fa
                 ? "اشیا با مختصات داده (time, price) ذخیره می‌شوند، پس با زوم/پن لنگر می‌مانند. اشیایی که از سرور می‌آیند با locked: true و فقط‌خواندنی رندر می‌شوند."
@@ -1415,12 +1393,12 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             <Code lang="json">{DRAWING_SCHEMA}</Code>
           </Section>
 
-          <Section id="tools" title={fa ? "ابزارهای ترسیم" : "Drawing tools"}>
+          <Section id="tools" hidden={active !== "tools"} title={fa ? "ابزارهای ترسیم" : "Drawing tools"}>
             <p>{fa ? "۱۶ ابزار ترسیم پشتیبانی می‌شود:" : "Sixteen drawing tools are supported:"}</p>
             <KVTable rows={drawingTools(fa)} fa={fa} />
           </Section>
 
-          <Section id="builder" title={fa ? "طراح اندیکاتور (Indicator Builder)" : "Indicator Builder"}>
+          <Section id="builder" hidden={active !== "builder"} title={fa ? "طراح اندیکاتور (Indicator Builder)" : "Indicator Builder"}>
             <p>
               {fa
                 ? "طراح اندیکاتور یک محیط drag & drop است که ظاهر اندیکاتور را طراحی می‌کنید (نه محاسبه‌اش). خروجی یک قالب JSON است که به سرور می‌گوید چه داده‌ای بفرستد:"
@@ -1434,7 +1412,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="workspace" title={fa ? "میزکار و ماندگاری" : "Workspace & persistence"}>
+          <Section id="workspace" hidden={active !== "workspace"} title={fa ? "میزکار و ماندگاری" : "Workspace & persistence"}>
             <ul className="list-disc space-y-1 ps-5">
               <li>{fa ? "چیدمان چند-نموداری: تک، دوتایی کنار هم، یا شبکه‌ی ۲×۲." : "Multi-chart layouts: single, side-by-side, or a 2×2 grid."}</li>
               <li>{fa ? "نوار شناور علاقه‌مندی‌ها: ابزارهای ستاره‌دار." : "Floating favorites bar: starred tools appear in a draggable bar."}</li>
@@ -1447,13 +1425,13 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="keys" title={fa ? "میان‌برهای صفحه‌کلید" : "Keyboard shortcuts"}>
+          <Section id="keys" hidden={active !== "keys"} title={fa ? "میان‌برهای صفحه‌کلید" : "Keyboard shortcuts"}>
             <KVTable rows={shortcuts(fa)} fa={fa} />
           </Section>
 
           {/* ══════════ Trex Engine sections ══════════ */}
 
-          <Section id="eng-intro" title={fa ? "موتور اندیکاتور Trex Engine" : "Trex Engine — Indicator Engine"}>
+          <Section id="eng-intro" hidden={active !== "eng-intro"} title={fa ? "موتور اندیکاتور Trex Engine" : "Trex Engine — Indicator Engine"}>
             <p>
               {fa
                 ? "Trex Engine یک موتور اندیکاتور ریل‌تایم برای پایتون است با بیش از ۱۱۰ اندیکاتور آماده. هر اندیکاتور در یک context (نماد × تایم‌فریم) زندگی می‌کند. موتور بارگذاری تدریجی تاریخچه، CTF (تبدیل تایم‌فریم) خودکار، ذخیره/بازیابی وضعیت، و پخش زنده به TrexTerminal را پشتیبانی می‌کند."
@@ -1471,11 +1449,11 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </ul>
           </Section>
 
-          <Section id="eng-install" title={fa ? "نصب Trex Engine" : "Installing Trex Engine"}>
+          <Section id="eng-install" hidden={active !== "eng-install"} title={fa ? "نصب Trex Engine" : "Installing Trex Engine"}>
             <Code lang="bash">{TREX_INSTALL}</Code>
           </Section>
 
-          <Section id="eng-quickstart" title={fa ? "شروع سریع — Trex Engine" : "Trex Engine quick start"}>
+          <Section id="eng-quickstart" hidden={active !== "eng-quickstart"} title={fa ? "شروع سریع — Trex Engine" : "Trex Engine quick start"}>
             <Code lang="python">{TREX_QUICKSTART}</Code>
             <Note kind="tip">
               {fa
@@ -1484,7 +1462,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="eng-api" title={fa ? "API اصلی" : "Core API"}>
+          <Section id="eng-api" hidden={active !== "eng-api"} title={fa ? "API اصلی" : "Core API"}>
             <Code lang="python">{TREX_CORE_API}</Code>
             <p className="mt-2">
               {fa
@@ -1494,15 +1472,15 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </p>
           </Section>
 
-          <Section id="eng-trend" title={fa ? "اندیکاتورهای روند (۲۳ اندیکاتور)" : "Trend indicators (23)"}>
+          <Section id="eng-trend" hidden={active !== "eng-trend"} title={fa ? "اندیکاتورهای روند (۲۳ اندیکاتور)" : "Trend indicators (23)"}>
             <Code lang="python">{TREX_INDICATORS_TREND}</Code>
           </Section>
 
-          <Section id="eng-rest" title={fa ? "سایر اندیکاتورها (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)" : "Other indicators (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)"}>
+          <Section id="eng-rest" hidden={active !== "eng-rest"} title={fa ? "سایر اندیکاتورها (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)" : "Other indicators (Volatility / Momentum / Oscillators / Volume / Statistics / Hybrid / Candlestick)"}>
             <Code lang="python">{TREX_INDICATORS_REST}</Code>
           </Section>
 
-          <Section id="eng-multisym" title={fa ? "چند نماد و CTF خودکار" : "Multi-symbol & automatic CTF"}>
+          <Section id="eng-multisym" hidden={active !== "eng-multisym"} title={fa ? "چند نماد و CTF خودکار" : "Multi-symbol & automatic CTF"}>
             <p>
               {fa
                 ? "هر ترکیب (نماد × تایم‌فریم) یک context مستقل است. CTF (ConvertTimeFrame) وقتی تایم‌فریم اندیکاتور از source_timeframe بزرگ‌تر است به‌صورت خودکار فعال می‌شود."
@@ -1511,7 +1489,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             <Code lang="python">{TREX_MULTISYM}</Code>
           </Section>
 
-          <Section id="eng-db" title={fa ? "PostgreSQL و DbConfig" : "PostgreSQL & DbConfig"}>
+          <Section id="eng-db" hidden={active !== "eng-db"} title={fa ? "PostgreSQL و DbConfig" : "PostgreSQL & DbConfig"}>
             <p>
               {fa
                 ? "برای ذخیره‌ی وضعیت اندیکاتورها در پایگاه داده و شروع سریع بدون نیاز به بازسازی تاریخچه، از DbConfig استفاده کنید:"
@@ -1520,7 +1498,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             <Code lang="python">{TREX_DB}</Code>
           </Section>
 
-          <Section id="eng-state" title={fa ? "ماندگاری وضعیت" : "State persistence"}>
+          <Section id="eng-state" hidden={active !== "eng-state"} title={fa ? "ماندگاری وضعیت" : "State persistence"}>
             <p>
               {fa
                 ? "با فعال‌بودن db_config، ماندگاری وضعیت به‌صورت خودکار فعال می‌شود. همچنین می‌توانید دستی snapshot بگیرید:"
@@ -1529,7 +1507,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             <Code lang="python">{TREX_STATE}</Code>
           </Section>
 
-          <Section id="eng-plugin" title={fa ? "اندیکاتور اختصاصی — سیستم Plugin" : "Custom indicators — Plugin system"}>
+          <Section id="eng-plugin" hidden={active !== "eng-plugin"} title={fa ? "اندیکاتور اختصاصی — سیستم Plugin" : "Custom indicators — Plugin system"}>
             <p>
               {fa
                 ? "با سیستم plugin می‌توانید اندیکاتور اختصاصی بسازید و بدون تغییر در سورس کتابخانه آن را به‌صورت یک citizen درجه‌ی اول در اختیار بگیرید — در هر دو namespace سطح بالا ("
@@ -1547,7 +1525,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="eng-plugin-composite" title={fa ? "Plugin ترکیبی (با sub-indicator)" : "Composite plugin (with sub-indicators)"}>
+          <Section id="eng-plugin-composite" hidden={active !== "eng-plugin-composite"} title={fa ? "Plugin ترکیبی (با sub-indicator)" : "Composite plugin (with sub-indicators)"}>
             <p>
               {fa
                 ? "اگر اندیکاتور شما نیاز به اندیکاتورهای دیگر دارد، آن‌ها را داخل init_depends از طریق "
@@ -1560,7 +1538,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
 
           {/* ══════════ BackTest sections ══════════ */}
 
-          <Section id="bt-intro" title={fa ? "فریم‌ورک بک‌تست (BackTest)" : "BackTest Framework"}>
+          <Section id="bt-intro" hidden={active !== "bt-intro"} title={fa ? "فریم‌ورک بک‌تست (BackTest)" : "BackTest Framework"}>
             <p>
               {fa
                 ? "BackTest یک فریم‌ورک بک‌تست حرفه‌ای است که با Trex Engine یکپارچه می‌شود. شما یک کلاس Strategy می‌نویسید، اندیکاتورها را در indicators() رجیستر می‌کنید، و منطق معامله را در on_kline() می‌نویسید. موتور به‌صورت خودکار Exchange (صرافی شبیه‌سازی‌شده) را مدیریت می‌کند."
@@ -1581,15 +1559,15 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             </Note>
           </Section>
 
-          <Section id="bt-install" title={fa ? "نصب BackTest" : "Installing BackTest"}>
+          <Section id="bt-install" hidden={active !== "bt-install"} title={fa ? "نصب BackTest" : "Installing BackTest"}>
             <Code lang="bash">{BT_INSTALL}</Code>
           </Section>
 
-          <Section id="bt-quickstart" title={fa ? "شروع سریع — BackTest" : "BackTest quick start"}>
+          <Section id="bt-quickstart" hidden={active !== "bt-quickstart"} title={fa ? "شروع سریع — BackTest" : "BackTest quick start"}>
             <Code lang="python">{BT_QUICKSTART}</Code>
           </Section>
 
-          <Section id="bt-strategy" title={fa ? "کلاس Strategy — تنظیمات" : "Strategy class — configuration"}>
+          <Section id="bt-strategy" hidden={active !== "bt-strategy"} title={fa ? "کلاس Strategy — تنظیمات" : "Strategy class — configuration"}>
             <p>
               {fa
                 ? "تمام تنظیمات به‌صورت class attribute تعریف می‌شوند و می‌توانند در Backtest() در زمان اجرا override شوند:"
@@ -1600,11 +1578,11 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
 result = Backtest(MyStrategy, deposit=50_000, leverage=10, fee=0.0002).run(candles)`}</Code>
           </Section>
 
-          <Section id="bt-commands" title={fa ? "دستورات معامله" : "Trading commands"}>
+          <Section id="bt-commands" hidden={active !== "bt-commands"} title={fa ? "دستورات معامله" : "Trading commands"}>
             <Code lang="python">{BT_COMMANDS}</Code>
           </Section>
 
-          <Section id="bt-events" title={fa ? "رویدادها (Event Hooks)" : "Event hooks"}>
+          <Section id="bt-events" hidden={active !== "bt-events"} title={fa ? "رویدادها (Event Hooks)" : "Event hooks"}>
             <p>
               {fa
                 ? "این متدها را در کلاس Strategy خود override کنید تا رویدادهای Exchange را دریافت کنید:"
@@ -1613,19 +1591,19 @@ result = Backtest(MyStrategy, deposit=50_000, leverage=10, fee=0.0002).run(candl
             <Code lang="python">{BT_EVENTS}</Code>
           </Section>
 
-          <Section id="bt-position" title={fa ? "فیلدهای Position" : "Position fields"}>
+          <Section id="bt-position" hidden={active !== "bt-position"} title={fa ? "فیلدهای Position" : "Position fields"}>
             <Code lang="python">{BT_POSITION_FIELDS}</Code>
           </Section>
 
-          <Section id="bt-candles" title={fa ? "بارگذاری کندل" : "Loading candles"}>
+          <Section id="bt-candles" hidden={active !== "bt-candles"} title={fa ? "بارگذاری کندل" : "Loading candles"}>
             <Code lang="python">{BT_CANDLES}</Code>
           </Section>
 
-          <Section id="bt-result" title={fa ? "نتایج — BacktestResult" : "BacktestResult"}>
+          <Section id="bt-result" hidden={active !== "bt-result"} title={fa ? "نتایج — BacktestResult" : "BacktestResult"}>
             <Code lang="python">{BT_RESULT}</Code>
           </Section>
 
-          <Section id="bt-broadcast" title={fa ? "پخش زنده روی TrexTerminal" : "Live chart replay on TrexTerminal"}>
+          <Section id="bt-broadcast" hidden={active !== "bt-broadcast"} title={fa ? "پخش زنده روی TrexTerminal" : "Live chart replay on TrexTerminal"}>
             <p>
               {fa
                 ? "با فعال‌کردن broadcast=True در Strategy، هر کندل به‌صورت زنده به TrexTerminal broadcast می‌شود و می‌توانید بک‌تست را روی چارت واقعی تماشا کنید:"
@@ -1641,7 +1619,7 @@ result = Backtest(MyStrategy, deposit=50_000, leverage=10, fee=0.0002).run(candl
 
           {/* ══════════ Raw WebSocket section ══════════ */}
 
-          <Section id="python" title={fa ? "بدون SDK — سرور خام" : "Without the SDK — raw server"}>
+          <Section id="python" hidden={active !== "python"} title={fa ? "بدون SDK — سرور خام" : "Without the SDK — raw server"}>
             <p>
               {fa
                 ? "اگر نمی‌خواهید از هیچ SDK استفاده کنید، این یک سرور خام کمینه اما کامل است که snapshot می‌فرستد، تیک زنده استریم می‌کند و به ping/history پاسخ می‌دهد:"
