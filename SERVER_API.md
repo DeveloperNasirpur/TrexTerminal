@@ -1,91 +1,97 @@
-# TrexTerminal — راهنمای ساخت سرور WebSocket
+# TrexTerminal — WebSocket Server Protocol
 
-این مستند راهنمای کامل پیاده‌سازی سرور برای TrexTerminal است.  
-TrexTerminal یک **کلاینت خالص** است — هیچ داده‌ای را محاسبه نمی‌کند. تمام کندل‌ها، مقادیر اندیکاتور، و داده‌های رسم از سرور دریافت می‌شود.
+TrexTerminal is a **pure client** — it renders charts exactly as the server sends them.  
+All candles, indicator values, and drawings come from your server over a single WebSocket connection.
 
----
-
-## فهرست مطالب
-
-1. [الزامات فنی](#۱-الزامات-فنی)
-2. [چرخه اتصال](#۲-چرخه-اتصال)
-3. [نسخه‌بندی پروتکل](#۳-نسخه‌بندی-پروتکل)
-4. [پیام‌های کلاینت به سرور](#۴-پیام‌های-کلاینت-به-سرور)
-5. [پیام‌های سرور به کلاینت](#۵-پیام‌های-سرور-به-کلاینت)
-6. [ساختار داده‌های مشترک](#۶-ساختار-داده‌های-مشترک)
-7. [جریان کاری کامل](#۷-جریان-کاری-کامل)
-8. [چارت‌های چندگانه](#۸-چارت‌های-چندگانه)
-9. [اندیکاتورها](#۹-اندیکاتورها)
-10. [سینک رسم (Drawings Sync)](#۱۰-سینک-رسم-drawings-sync)
-11. [قوانین اعتبارسنجی](#۱۱-قوانین-اعتبارسنجی)
-12. [مثال عملی پایتون](#۱۲-مثال-عملی-پایتون)
+**Protocol version:** `2.0.0`
 
 ---
 
-## ۱. الزامات فنی
+## Table of Contents
 
-| مورد | مقدار |
-|------|-------|
-| پروتکل | WebSocket (`ws://` یا `wss://`) |
-| فرمت پیام | JSON خالص (text frame) |
-| Ping/Pong | پشتیبانی از پروتکل داخلی (`type: "ping"` → `type: "pong"`) |
-| نسخه پروتکل | `2.0.0` |
+1. [Technical Requirements](#1-technical-requirements)
+2. [Connection Lifecycle](#2-connection-lifecycle)
+3. [Protocol Versioning](#3-protocol-versioning)
+4. [Client → Server Messages](#4-client--server-messages)
+5. [Server → Client Messages](#5-server--client-messages)
+6. [Shared Data Structures](#6-shared-data-structures)
+7. [Complete Workflow Examples](#7-complete-workflow-examples)
+8. [Multi-Chart Layout](#8-multi-chart-layout)
+9. [Indicators](#9-indicators)
+10. [Drawing Sync](#10-drawing-sync)
+11. [Validation Rules](#11-validation-rules)
+12. [Backtest Messages](#12-backtest-messages)
+13. [Reference Server (Python)](#13-reference-server-python)
 
 ---
 
-## ۲. چرخه اتصال
+## 1. Technical Requirements
+
+| Property | Value |
+|----------|-------|
+| Protocol | WebSocket (`ws://` or `wss://`) |
+| Message format | Plain JSON (text frame) |
+| Ping/Pong | Application-level (`type: "ping"` → `type: "pong"`) |
+| Protocol version | `"2.0.0"` |
+
+---
+
+## 2. Connection Lifecycle
 
 ```
 CLIENT                                SERVER
-  |                                     |
-  |──── WebSocket Handshake ──────────▶|
-  |◀─── Connection Accepted ───────────|
-  |                                     |
-  |──── hello ──────────────────────▶  |  ← اولین پیام حتماً hello باشد
-  |──── get_symbols ────────────────▶  |  ← درخواست لیست سمبل‌ها
-  |──── get_indicators ─────────────▶  |  ← درخواست لیست اندیکاتورها
-  |                                     |
-  |◀─── symbols_list ───────────────   |  ← جواب get_symbols
-  |◀─── indicators_list ────────────   |  ← جواب get_indicators
-  |◀─── snapshot ───────────────────   |  ← داده اولیه چارت اصلی
-  |                                     |
-  |  [حالت عادی]                        |
-  |◀─── bar / tick / update ────────   |  ← به‌روزرسانی لحظه‌ای
-  |◀─── indicators ─────────────────   |  ← مقادیر اندیکاتور
-  |                                     |
-  |──── ping ───────────────────────▶  |  ← هر ۱۵ ثانیه
-  |◀─── pong ───────────────────────   |  ← جواب فوری
-  |                                     |
-  |  [کاربر عمل می‌کند]                  |
-  |──── symbol ─────────────────────▶  |  ← تغییر سمبل
-  |◀─── snapshot ───────────────────   |  ← داده جدید
-  |                                     |
-  |──── timeframe ──────────────────▶  |  ← تغییر تایم‌فریم
-  |◀─── snapshot ───────────────────   |  ← داده جدید
-  |                                     |
-  |──── history ────────────────────▶  |  ← اسکرول به چپ (صفحه قبلی)
-  |◀─── history ────────────────────   |  ← کندل‌های قدیمی‌تر
+  │                                     │
+  ├─ WebSocket Handshake ─────────────▶│
+  │◀─ Connection Accepted ──────────────┤
+  │                                     │
+  ├─ hello ───────────────────────────▶│  ← must be the first message
+  ├─ get_symbols ─────────────────────▶│
+  ├─ get_indicators ──────────────────▶│
+  │                                     │
+  │◀─ symbols_list ─────────────────────┤
+  │◀─ indicators_list ──────────────────┤
+  │◀─ snapshot ─────────────────────────┤  ← initial chart data
+  │                                     │
+  │  ── normal operation ────────────── │
+  │                                     │
+  │◀─ bar ──────────────────────────────┤  ← realtime candle updates
+  │◀─ indicators ───────────────────────┤  ← indicator values
+  │                                     │
+  ├─ ping ────────────────────────────▶│  ← every ~15 seconds
+  │◀─ pong ─────────────────────────────┤
+  │                                     │
+  │  ── user actions ──────────────────│
+  │                                     │
+  ├─ symbol ──────────────────────────▶│  ← switch symbol
+  │◀─ snapshot ─────────────────────────┤
+  │                                     │
+  ├─ timeframe ───────────────────────▶│  ← switch timeframe
+  │◀─ snapshot ─────────────────────────┤
+  │                                     │
+  ├─ history ─────────────────────────▶│  ← scroll left
+  │◀─ history ──────────────────────────┤  ← older bars
 ```
 
 ---
 
-## ۳. نسخه‌بندی پروتکل
+## 3. Protocol Versioning
 
 ```
 MAJOR.MINOR.PATCH
 ```
 
-- **MAJOR** تغییر: ناسازگار با نسخه قبل — سرور می‌تواند اتصال را ببندد
-- **MINOR** تغییر: افزودنی، سازگار با نسخه قبل
-- نسخه جاری: `"2.0.0"`
+- **MAJOR** change: breaking — server should close the connection if MAJOR doesn't match
+- **MINOR** change: additive, backward-compatible
+- **PATCH** change: bug fix, no protocol change
+- Current version: `"2.0.0"`
 
 ---
 
-## ۴. پیام‌های کلاینت به سرور
+## 4. Client → Server Messages
 
-### 4.1 `hello` — دست‌دهی اولیه
+### 4.1 `hello` — Handshake
 
-**اولین پیامی که کلاینت ارسال می‌کند.**
+**Must be the first message the client sends.**
 
 ```json
 {
@@ -97,192 +103,129 @@ MAJOR.MINOR.PATCH
 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
 | `type` | `"hello"` | ✅ | |
-| `client` | string | ✅ | نام کلاینت |
-| `version` | string | ✅ | نسخه اپلیکیشن |
-| `protocol` | string | ✅ | نسخه پروتکل (`"2.0.0"`) |
-| `initialCount` | number | ❌ | تعداد کندل خواسته‌شده (پیش‌فرض: ۵۰۰۰) |
+| `client` | string | ✅ | Client identifier |
+| `version` | string | ✅ | App version |
+| `protocol` | string | ✅ | Protocol version (`"2.0.0"`) |
+| `initialCount` | number | ❌ | How many candles to request (default: 5000) |
 
-**عملکرد سرور:**
-- اعتبارسنجی `protocol` — اگر MAJOR متفاوت است، اتصال را ببندید
-- ارسال `snapshot` برای سمبل/تایم‌فریم پیش‌فرض
+**Server action:** Validate `protocol` MAJOR version, then send `snapshot` for the default symbol/timeframe.
 
 ---
 
-### 4.2 `ping` — زنده‌نگه‌داری
+### 4.2 `ping` — Keepalive
 
 ```json
-{
-  "type": "ping",
-  "t": 1716800000000
-}
+{ "type": "ping", "t": 1716800000000 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `type` | `"ping"` | ✅ | |
-| `t` | number | ❌ | زمان ارسال (ms) — برای محاسبه تأخیر |
-
-**عملکرد سرور:** بلافاصله `pong` را با همان `t` برگردانید.
+**Server action:** Immediately reply with `pong` echoing the same `t`.
 
 ---
 
-### 4.3 `get_symbols` — درخواست لیست سمبل‌ها
+### 4.3 `get_symbols`
 
 ```json
 { "type": "get_symbols" }
 ```
 
-**عملکرد سرور:** ارسال `symbols_list`
+**Server action:** Send `symbols_list`.
 
 ---
 
-### 4.4 `get_indicators` — درخواست لیست اندیکاتورها
+### 4.4 `get_indicators`
 
 ```json
 { "type": "get_indicators" }
 ```
 
-**عملکرد سرور:** ارسال `indicators_list`
+**Server action:** Send `indicators_list`.
 
 ---
 
-### 4.5 `symbol` — تغییر سمبل (چارت اصلی)
+### 4.5 `symbol` — Switch symbol (main chart)
 
 ```json
-{
-  "type": "symbol",
-  "symbol": "BTCUSDT"
-}
+{ "type": "symbol", "symbol": "BTCUSDT" }
 ```
 
-**عملکرد سرور:**
-1. اشتراک feed سمبل جدید را شروع کنید
-2. ارسال `snapshot` با کندل‌های جدید
-3. ارسال `definitions` اگر اندیکاتورها تغییر کرده‌اند
+**Server action:** Send `snapshot` for the new symbol.
 
 ---
 
-### 4.6 `timeframe` — تغییر تایم‌فریم (چارت اصلی)
+### 4.6 `timeframe` — Switch timeframe (main chart)
 
 ```json
-{
-  "type": "timeframe",
-  "timeframe": "1h"
-}
+{ "type": "timeframe", "timeframe": "1h" }
 ```
 
-**مقادیر رایج تایم‌فریم:**
+Common timeframe strings: `"1m"` `"3m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1d"` `"1w"` `"1M"`
 
-| مقدار | توضیح |
-|-------|-------|
-| `"1m"` | ۱ دقیقه |
-| `"3m"` | ۳ دقیقه |
-| `"5m"` | ۵ دقیقه |
-| `"15m"` | ۱۵ دقیقه |
-| `"30m"` | ۳۰ دقیقه |
-| `"1h"` | ۱ ساعت |
-| `"4h"` | ۴ ساعت |
-| `"1d"` | ۱ روز |
-| `"1w"` | ۱ هفته |
-| `"1M"` | ۱ ماه |
-
-**عملکرد سرور:** ارسال `snapshot` با کندل‌های تایم‌فریم جدید
+**Server action:** Send `snapshot` for the new timeframe.
 
 ---
 
-### 4.7 `history` — درخواست تاریخچه بیشتر
+### 4.7 `history` — Request older bars
 
-وقتی کاربر به چپ اسکرول می‌کند و به لبه می‌رسد، کلاینت این پیام را ارسال می‌کند.
+Sent when the user scrolls left and reaches the left edge of the chart.
 
 ```json
 {
   "type": "history",
   "before": 1716000000,
   "count": 5000,
-  "from": 1715000000,
-  "to": 1716000000,
   "chartId": "chart_0"
 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `type` | `"history"` | ✅ | |
-| `before` | number | ✅ | unix-second — برگردانید کندل‌هایی که `time < before` |
-| `count` | number | ✅ | تعداد درخواستی (معمولاً ۵۰۰۰) |
-| `from` | number | ❌ | کران پایین بازه زمانی |
-| `to` | number | ❌ | کران بالای بازه زمانی |
-| `chartId` | string | ❌ | اگر موجود است: برای چارت ثانوی (`"chart_0"`, `"chart_1"`, `"chart_2"`) |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `before` | number | ✅ | Unix seconds — return bars where `time < before` |
+| `count` | number | ✅ | How many bars (usually 5000) |
+| `chartId` | string | ❌ | If present: secondary chart ID (`"chart_0"`, `"chart_1"`, `"chart_2"`) |
 
-**عملکرد سرور:**
-- اگر `chartId` دارد: ارسال `chart_history`
-- در غیر این صورت: ارسال `history`
-- اگر داده قدیمی‌تری وجود ندارد: ارسال با `"noMoreHistory": true`
+**Server action:** Send `history` (or `chart_history` if `chartId` is set). Set `noMoreHistory: true` when no older data exists.
 
 ---
 
-### 4.8 `chartType` — تغییر نوع چارت (اطلاعاتی)
+### 4.8 `chartType` — Inform server of chart type change
 
 ```json
-{
-  "type": "chartType",
-  "chartType": "heikin"
-}
+{ "type": "chartType", "chartType": "heikin" }
 ```
 
-| مقدار | توضیح |
-|-------|-------|
-| `"candles"` | کندل استیک معمولی |
-| `"heikin"` | هیکن آشی |
-| `"line"` | خط |
-| `"area"` | ناحیه |
-| `"bar"` | بار |
-| `"baseline"` | خط پایه |
-| `"hlc"` | HLC |
+Valid values: `"candles"` `"heikin"` `"line"` `"area"` `"bar"` `"baseline"` `"hlc"`
 
-> این پیام اطلاعاتی است. سرور می‌تواند نوع کندل را در پاسخ تغییر دهد (مثلاً برای هیکن آشی OHLC متفاوت ارسال کند).
+This is informational — the server may optionally change the OHLCV it sends (e.g. Heikin-Ashi computed OHLC).
 
 ---
 
-### 4.9 `layout` — تغییر چیدمان چند چارتی
+### 4.9 `layout` — Multi-chart layout change
 
 ```json
 {
   "type": "layout",
   "layout": "split2",
   "charts": [
-    {
-      "chartId": "main",
-      "symbol": "BTCUSDT",
-      "timeframe": "1h",
-      "indicators": ["ema_20", "volume"]
-    },
-    {
-      "chartId": "chart_0",
-      "symbol": "ETHUSDT",
-      "timeframe": "1m",
-      "indicators": []
-    }
+    { "chartId": "main",    "symbol": "BTCUSDT", "timeframe": "1h",  "indicators": ["ema_20"] },
+    { "chartId": "chart_0", "symbol": "ETHUSDT", "timeframe": "15m", "indicators": [] }
   ]
 }
 ```
 
-| فیلد layout | مقدار |
-|------------|-------|
-| `"single"` | فقط چارت اصلی |
-| `"split2"` | دو چارت کنار هم |
-| `"grid4"` | چهار چارت (۲×۲) |
+| `layout` value | Description |
+|----------------|-------------|
+| `"single"` | Main chart only |
+| `"split2"` | Two charts side by side |
+| `"grid4"` | Four charts (2×2) |
 
-**عملکرد سرور:**
-- برای `chartId === "main"`: ارسال `snapshot`
-- برای `chartId === "chart_0/1/2"`: ارسال `chart_snapshot` با همان `chartId`
+**Server action:** For `"main"` → send `snapshot`. For `"chart_0/1/2"` → send `chart_snapshot` with matching `chartId`.
 
 ---
 
-### 4.10 `chart_symbol` — تغییر سمبل/تایم‌فریم در چارت ثانوی
+### 4.10 `chart_symbol` — Switch symbol/timeframe in a secondary chart
 
 ```json
 {
@@ -294,143 +237,75 @@ MAJOR.MINOR.PATCH
 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `chartId` | string | ✅ | `"chart_0"`, `"chart_1"`, یا `"chart_2"` |
-| `symbol` | string | ✅ | سمبل جدید |
-| `timeframe` | string | ❌ | تایم‌فریم جدید |
-| `indicators` | string[] | ✅ | لیست key اندیکاتورهای فعال |
-
-**عملکرد سرور:** ارسال `chart_snapshot` با `chartId` مطابق
+**Server action:** Send `chart_snapshot` with the matching `chartId`.
 
 ---
 
-### 4.11 پیام‌های رسم (Drawings)
+### 4.11 Drawing messages (client → server)
 
-#### `drawing_upsert` — ایجاد یا ویرایش رسم
-
-```json
-{
-  "type": "drawing_upsert",
-  "drawing": { "id": "d_abc123", "tool": "trendline", "points": [...] }
-}
-```
-
-#### `drawing_delete` — حذف رسم
+When the user draws on the chart the client notifies the server so it can persist drawings:
 
 ```json
-{
-  "type": "drawing_delete",
-  "drawingId": "d_abc123"
-}
-```
-
-#### `drawings_clear` — حذف همه رسم‌ها
-
-```json
+{ "type": "drawing_upsert", "drawing": { "id": "d_abc", "tool": "trendline", "points": [...] } }
+{ "type": "drawing_delete",  "drawingId": "d_abc" }
 { "type": "drawings_clear" }
-```
-
-#### `drawings` — همگام‌سازی کامل (بعد از undo/redo)
-
-```json
-{
-  "type": "drawings",
-  "drawings": [ ]
-}
+{ "type": "drawings",        "drawings": [] }
 ```
 
 ---
 
-## ۵. پیام‌های سرور به کلاینت
+## 5. Server → Client Messages
 
-### 5.1 `pong` — پاسخ ping
+### 5.1 `pong`
 
 ```json
-{
-  "type": "pong",
-  "t": 1716800000000
-}
+{ "type": "pong", "t": 1716800000000 }
 ```
 
-> همان مقدار `t` که در `ping` آمده را برگردانید.
+Echo the same `t` from `ping`.
 
 ---
 
-### 5.2 `symbols_list` — لیست سمبل‌ها
-
-پاسخ `get_symbols`:
+### 5.2 `symbols_list`
 
 ```json
 {
   "type": "symbols_list",
   "symbols": [
-    { "symbol": "BTCUSDT", "name": "Bitcoin / Tether", "type": "spot" },
-    { "symbol": "ETHUSDT", "name": "Ethereum / Tether", "type": "spot" },
-    { "symbol": "SOLUSDT", "name": "Solana / Tether",   "type": "spot" }
+    { "symbol": "BTCUSDT", "name": "Bitcoin / Tether",  "type": "spot" },
+    { "symbol": "ETHUSDT", "name": "Ethereum / Tether", "type": "spot" }
   ]
 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `symbol` | string | ✅ | نماد — همین مقدار در تمام پیام‌های دیگر استفاده می‌شود |
-| `name` | string | ❌ | نام کامل |
-| `type` | string | ❌ | نوع بازار (`"spot"`, `"futures"`, `"forex"`, ...) |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `symbol` | ✅ | Used in all other messages |
+| `name` | ❌ | Display name |
+| `type` | ❌ | Market type (`"spot"`, `"futures"`, `"forex"`, …) |
 
 ---
 
-### 5.3 `indicators_list` — لیست اندیکاتورهای موجود
-
-پاسخ `get_indicators`:
+### 5.3 `indicators_list`
 
 ```json
 {
   "type": "indicators_list",
   "indicators": [
-    {
-      "key": "ema_20",
-      "label": "EMA 20",
-      "type": "line",
-      "pane": "main",
-      "paneId": "ema_20",
-      "color": "#2962FF",
-      "lineWidth": 2,
-      "lineStyle": 0,
-      "digits": 2,
-      "visible": true
-    },
-    {
-      "key": "rsi_14",
-      "label": "RSI 14",
-      "type": "line",
-      "pane": "sub",
-      "paneId": "pane_rsi_14",
-      "color": "#9C27B0",
-      "lineWidth": 2,
-      "subPaneHeight": 120,
-      "scaleMargins": { "top": 0.1, "bottom": 0.1 }
-    },
-    {
-      "key": "volume",
-      "label": "Volume",
-      "type": "histogram",
-      "pane": "sub",
-      "paneId": "pane_volume",
-      "color": "#26a69a",
-      "colorPos": "#26a69a",
-      "colorNeg": "#ef5350",
-      "subPaneHeight": 80
-    }
+    { "key": "ema_20", "label": "EMA 20",  "type": "line", "pane": "main", "color": "#2962FF", "lineWidth": 2 },
+    { "key": "rsi_14", "label": "RSI 14",  "type": "line", "pane": "sub",  "color": "#9C27B0", "subPaneHeight": 120 },
+    { "key": "volume", "label": "Volume",  "type": "histogram", "pane": "sub", "colorPos": "#26a69a", "colorNeg": "#ef5350", "subPaneHeight": 80 }
   ]
 }
 ```
 
+See [SeriesDefinition](#62-seriesdefinition) for the full field list.
+
 ---
 
-### 5.4 `snapshot` / `init` — داده اولیه چارت اصلی
+### 5.4 `snapshot` — Initial chart data
 
-**مهم‌ترین پیام.** بعد از `hello`، `symbol`، یا `timeframe` ارسال کنید.
+The most important message. Send after `hello`, `symbol`, or `timeframe`.
 
 ```json
 {
@@ -439,68 +314,52 @@ MAJOR.MINOR.PATCH
   "timeframe": "1h",
   "digits": 2,
   "data": [
-    { "time": 1715000000, "open": 62100.5, "high": 62800.0, "low": 61900.0, "close": 62500.0, "volume": 1200.5 },
-    { "time": 1715003600, "open": 62500.0, "high": 63100.0, "low": 62300.0, "close": 62950.0, "volume": 980.3 }
+    { "time": 1715000000, "open": 62100.5, "high": 62800.0, "low": 61900.0, "close": 62500.0, "volume": 1200.5 }
   ],
   "definitions": [
-    {
-      "key": "ema_20",
-      "label": "EMA 20",
-      "type": "line",
-      "pane": "main",
-      "paneId": "ema_20",
-      "color": "#2962FF",
-      "lineWidth": 2
-    }
+    { "key": "ema_20", "label": "EMA 20", "type": "line", "pane": "main", "color": "#2962FF" }
   ],
   "points": {
     "ema_20": [
-      { "time": 1715000000, "value": 62050.3 },
-      { "time": 1715003600, "value": 62180.7 }
+      { "time": 1715000000, "value": 62050.3 }
     ]
   },
   "drawings": []
 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `type` | `"snapshot"` یا `"init"` | ✅ | هر دو یکسان هستند |
-| `data` | OHLC[] | ✅ | آرایه کندل‌ها — حتماً به ترتیب صعودی زمانی |
-| `symbol` | string | ❌ | برچسب سمبل در UI را به‌روز می‌کند |
-| `timeframe` | string | ❌ | برچسب تایم‌فریم در UI را به‌روز می‌کند |
-| `digits` | number | ❌ | دقت اعشار قیمت (پیش‌فرض: خودکار) |
-| `definitions` | SeriesDefinition[] | ❌ | تعریف اندیکاتورهای فعال |
-| `points` | Record\<string, PointData[]\> | ❌ | مقادیر اندیکاتورها (key = `definition.key`) |
-| `drawings` | Drawing[] | ❌ | رسم‌های ذخیره‌شده در سرور |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `data` | ✅ | OHLCV array — must be in ascending time order |
+| `symbol` | ❌ | Updates the symbol label in the UI |
+| `timeframe` | ❌ | Updates the timeframe label |
+| `digits` | ❌ | Price decimal precision (auto-detected if omitted) |
+| `definitions` | ❌ | Active indicator series definitions |
+| `points` | ❌ | Historical indicator values keyed by `definition.key` |
+| `drawings` | ❌ | Server-persisted drawings to restore |
+
+> `"init"` is an alias for `"snapshot"` — both are accepted.
 
 ---
 
-### 5.5 `bar` / `tick` / `update` — به‌روزرسانی لحظه‌ای
-
-هر سه نام یکسان هستند:
+### 5.5 `bar` — Realtime candle update
 
 ```json
 {
   "type": "bar",
-  "bar": {
-    "time": 1716800000,
-    "open": 67450.0,
-    "high": 67600.0,
-    "low": 67380.0,
-    "close": 67520.0,
-    "volume": 320.8
-  }
+  "bar": { "time": 1716800000, "open": 67450.0, "high": 67600.0, "low": 67380.0, "close": 67520.0, "volume": 320.8 }
 }
 ```
 
-**منطق کلاینت:**
-- اگر `bar.time` == آخرین کندل: **آپدیت** (در جای خود)
-- اگر `bar.time` > آخرین کندل: **کندل جدید** (به انتها اضافه)
+**Client logic:**
+- If `bar.time == last candle time` → **update** the last bar in place
+- If `bar.time > last candle time` → **append** as a new bar
+
+> `"tick"` and `"update"` are aliases for `"bar"`.
 
 ---
 
-### 5.6 `history` — پاسخ درخواست تاریخچه (چارت اصلی)
+### 5.6 `history` — Response to history request
 
 ```json
 {
@@ -512,64 +371,45 @@ MAJOR.MINOR.PATCH
 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `data` | OHLC[] | ✅ | کندل‌های قدیمی‌تر (`time < before`) |
-| `noMoreHistory` | boolean | ❌ | اگر `true`: دیگر درخواست ارسال نمی‌شود |
-
-> اگر `data` خالی باشد، کلاینت آن را معادل `noMoreHistory: true` می‌داند.
+Set `noMoreHistory: true` (or return an empty `data` array) when no older bars exist — the client stops sending further requests.
 
 ---
 
-### 5.7 `definitions` — به‌روزرسانی تعریف اندیکاتورها
+### 5.7 `definitions` — Update indicator definitions
+
+Send this when new indicators are activated at runtime:
 
 ```json
 {
   "type": "definitions",
   "definitions": [
-    {
-      "key": "rsi_14",
-      "label": "RSI 14",
-      "type": "line",
-      "pane": "sub",
-      "paneId": "pane_rsi_14",
-      "color": "#9C27B0",
-      "lineWidth": 2,
-      "subPaneHeight": 120,
-      "scaleMargins": { "top": 0.1, "bottom": 0.1 }
-    }
+    { "key": "rsi_14", "label": "RSI 14", "type": "line", "pane": "sub", "color": "#9C27B0", "subPaneHeight": 120 }
   ]
 }
 ```
 
 ---
 
-### 5.8 `indicators` — مقادیر اندیکاتورها
+### 5.8 `indicators` — Indicator values
 
 ```json
 {
   "type": "indicators",
   "points": {
-    "ema_20": [
-      { "time": 1716800000, "value": 67300.5 }
-    ],
-    "rsi_14": [
-      { "time": 1716800000, "value": 58.3 }
-    ],
-    "volume": [
-      { "time": 1716800000, "value": 1500.0, "color": "#26a69a" }
-    ]
+    "ema_20": [ { "time": 1716800000, "value": 67300.5 } ],
+    "rsi_14": [ { "time": 1716800000, "value": 58.3 } ],
+    "volume":  [ { "time": 1716800000, "value": 1500.0, "color": "#26a69a" } ]
   }
 }
 ```
 
-**قانون سرعت:**
-- اگر آرایه **۱ عنصر** دارد: فقط آخرین نقطه را آپدیت می‌کند (O(1) — برای real-time استفاده کنید)
-- اگر آرایه **بیشتر از ۱ عنصر** دارد: کل سری را جایگزین می‌کند
+**Fast-path rule:**
+- Array with **1 element** → update only the last point (O(1) — use this for realtime)
+- Array with **more than 1 element** → replace the entire series
 
 ---
 
-### 5.9 `chart_snapshot` — داده اولیه چارت ثانوی
+### 5.9 `chart_snapshot` — Secondary chart data
 
 ```json
 {
@@ -577,98 +417,76 @@ MAJOR.MINOR.PATCH
   "chartId": "chart_0",
   "symbol": "ETHUSDT",
   "timeframe": "15m",
-  "digits": 2,
-  "data": [
-    { "time": 1715000000, "open": 3100.5, "high": 3150.0, "low": 3080.0, "close": 3130.0 }
-  ],
+  "data": [...],
   "definitions": [],
   "points": {}
 }
 ```
 
-> شکل یکسان `snapshot` است اما با فیلد `chartId` اضافه.
+Same shape as `snapshot` with the addition of `chartId`.
 
 ---
 
-### 5.10 `chart_bar` — آپدیت لحظه‌ای چارت ثانوی
+### 5.10 `chart_bar` — Secondary chart realtime update
 
 ```json
 {
   "type": "chart_bar",
   "chartId": "chart_0",
-  "bar": {
-    "time": 1716800000,
-    "open": 3200.0,
-    "high": 3210.0,
-    "low": 3195.0,
-    "close": 3205.0,
-    "volume": 450.2
-  }
+  "bar": { "time": 1716800000, "open": 3200.0, "high": 3210.0, "low": 3195.0, "close": 3205.0, "volume": 450.2 }
 }
 ```
 
 ---
 
-### 5.11 `chart_history` — تاریخچه چارت ثانوی
+### 5.11 `chart_history` — Secondary chart history
 
 ```json
 {
   "type": "chart_history",
   "chartId": "chart_0",
-  "data": [
-    { "time": 1714900000, "open": 3000.0, "high": 3050.0, "low": 2980.0, "close": 3020.0 }
-  ],
+  "data": [...],
   "noMoreHistory": false
 }
 ```
 
 ---
 
-### 5.12 `toast` — نوتیفیکیشن
+### 5.12 `toast` — Notification banner
 
 ```json
-{
-  "type": "toast",
-  "message": "Data feed connected successfully.",
-  "toastType": "success"
-}
+{ "type": "toast", "message": "Data feed connected.", "toastType": "success" }
 ```
 
-| `toastType` | رنگ |
-|-------------|-----|
-| `"info"` | آبی |
-| `"success"` | سبز |
-| `"warning"` | نارنجی |
-| `"error"` | قرمز |
+| `toastType` | Color |
+|-------------|-------|
+| `"info"` | Blue |
+| `"success"` | Green |
+| `"warning"` | Orange |
+| `"error"` | Red |
 
 ---
 
-### 5.13 `error` — خطا
+### 5.13 `error`
 
 ```json
-{
-  "type": "error",
-  "message": "Symbol not found: XYZUSDT"
-}
+{ "type": "error", "message": "Symbol not found: XYZUSDT" }
 ```
 
 ---
 
-### 5.14 پیام‌های کنترل UI
+### 5.14 Remote UI control
 
-سرور می‌تواند UI کلاینت را از راه دور کنترل کند:
+The server can control the client's UI state:
 
 ```json
-{ "type": "symbol",     "symbol": "BNBUSDT"   }
-{ "type": "timeframe",  "timeframe": "4h"      }
-{ "type": "chartType",  "chartType": "heikin"  }
-{ "type": "magnet",     "magnet": true         }
-{ "type": "fitContent"                         }
-{ "type": "scrollToEnd"                        }
-{
-  "type": "zoomRange",
-  "zoomRange": { "from": 1715000000, "to": 1716000000 }
-}
+{ "type": "symbol",     "symbol":    "BNBUSDT"  }
+{ "type": "timeframe",  "timeframe": "4h"        }
+{ "type": "chartType",  "chartType": "heikin"    }
+{ "type": "magnet",     "magnet":    true         }
+{ "type": "fitContent"                            }
+{ "type": "scrollToEnd"                           }
+{ "type": "zoomRange",  "zoomRange": { "from": 1715000000, "to": 1716000000 } }
 {
   "type": "settings",
   "settings": {
@@ -682,108 +500,103 @@ MAJOR.MINOR.PATCH
 
 ---
 
-### 5.15 پیام‌های رسم از سرور
+### 5.15 Server-pushed drawings
 
 ```json
-{ "type": "drawings",       "drawings": [ ] }
-{ "type": "drawing_set",    "drawings": [ ] }
-{ "type": "drawing_upsert", "drawing":  { } }
-{ "type": "drawing",        "drawing":  { } }
-{ "type": "drawing_delete", "drawingId": "d_abc123"       }
-{ "type": "drawing_delete", "drawingIds": ["d_1", "d_2"]  }
-{ "type": "drawings_clear"                                 }
+{ "type": "drawings",       "drawings":  [ ... ] }
+{ "type": "drawing_upsert", "drawing":   { ... } }
+{ "type": "drawing_delete", "drawingId":  "d_abc" }
+{ "type": "drawing_delete", "drawingIds": ["d_1", "d_2"] }
+{ "type": "drawings_clear"               }
 ```
 
-> رسم‌های ارسال‌شده از سرور در کلاینت **قفل** هستند (کاربر نمی‌تواند آن‌ها را ویرایش کند).
+Server-pushed drawings are rendered **locked** — the user cannot move or delete them. This is the mechanism used by BackTest for trade markers.
 
 ---
 
-## ۶. ساختار داده‌های مشترک
+## 6. Shared Data Structures
 
-### 6.1 OHLC (کندل)
+### 6.1 OHLCV (candle)
 
 ```json
 {
-  "time": 1716800000,
-  "open": 67450.0,
-  "high": 67600.0,
-  "low": 67380.0,
-  "close": 67520.0,
+  "time":   1716800000,
+  "open":   67450.0,
+  "high":   67600.0,
+  "low":    67380.0,
+  "close":  67520.0,
   "volume": 320.8
 }
 ```
 
-| فیلد | نوع | اجباری | شرط اعتبار |
-|------|-----|--------|------------|
-| `time` | number | ✅ | unix-second (یا میلی‌ثانیه — کلاینت هر دو را می‌پذیرد) |
-| `open` | number | ✅ | عدد محدود (finite) |
-| `high` | number | ✅ | `>= max(open, close)` |
-| `low` | number | ✅ | `<= min(open, close)` |
-| `close` | number | ✅ | عدد محدود |
-| `volume` | number | ❌ | `>= 0` |
+| Field | Required | Validation |
+|-------|----------|-----------|
+| `time` | ✅ | Unix seconds (ms also accepted — auto-detected) |
+| `open` | ✅ | Finite number |
+| `high` | ✅ | `>= max(open, close)` |
+| `low` | ✅ | `<= min(open, close)` |
+| `close` | ✅ | Finite number |
+| `volume` | ❌ | `>= 0` |
 
 ---
 
-### 6.2 SeriesDefinition (تعریف اندیکاتور)
+### 6.2 SeriesDefinition
 
 ```json
 {
-  "key": "ema_20",
-  "label": "EMA 20",
-  "type": "line",
-  "pane": "main",
-  "paneId": "ema_20",
-  "color": "#2962FF",
-  "lineWidth": 2,
-  "lineStyle": 0,
-  "digits": 2,
-  "visible": true,
+  "key":           "ema_20",
+  "label":         "EMA 20",
+  "type":          "line",
+  "pane":          "main",
+  "paneId":        "ema_20",
+  "color":         "#2962FF",
+  "lineWidth":     2,
+  "lineStyle":     0,
+  "digits":        2,
+  "visible":       true,
   "subPaneHeight": 120,
-  "scaleMargins": { "top": 0.1, "bottom": 0.1 }
+  "scaleMargins":  { "top": 0.1, "bottom": 0.1 }
 }
 ```
 
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `key` | string | ✅ | کلید یکتا — در `points` استفاده می‌شود |
-| `label` | string | ✅ | نام نمایشی در UI |
-| `type` | string | ✅ | `"line"` / `"histogram"` / `"area"` / `"baseline"` / `"scatter"` |
-| `pane` | string | ✅ | `"main"` (روی قیمت) یا `"sub"` (پنجره جداگانه) |
-| `paneId` | string | ❌ | ID پنجره (اگر خالی: از `key` ساخته می‌شود) |
-| `color` | string | ❌ | رنگ hex (پیش‌فرض: `"#2962FF"`) |
-| `colorPos` | string | ❌ | رنگ مثبت برای histogram |
-| `colorNeg` | string | ❌ | رنگ منفی برای histogram |
-| `lineWidth` | number | ❌ | پهنای خط (پیش‌فرض: ۲) |
-| `lineStyle` | number | ❌ | `0`=solid, `1`=dotted, `2`=dashed, `3`=large-dashed |
-| `subPaneHeight` | number | ❌ | ارتفاع پنجره پایین (px، پیش‌فرض: ۱۲۰) |
-| `scaleMargins` | object | ❌ | `{ "top": 0.1, "bottom": 0.1 }` — فاصله از لبه |
-| `digits` | number | ❌ | دقت اعشار |
-| `visible` | boolean | ❌ | پیش‌فرض: `true` |
-| `baseValue` | number | ❌ | برای نوع `"baseline"` |
-| `topColor` | string | ❌ | رنگ بالا برای `"area"` |
-| `bottomColor` | string | ❌ | رنگ پایین برای `"area"` |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `key` | ✅ | Unique key — used in `points` objects |
+| `label` | ✅ | Display name |
+| `type` | ✅ | `"line"` / `"histogram"` / `"area"` / `"baseline"` / `"scatter"` |
+| `pane` | ✅ | `"main"` (overlaid on price) or `"sub"` (separate pane) |
+| `paneId` | ❌ | Pane ID (derived from `key` if omitted) |
+| `color` | ❌ | Hex color (default: `"#2962FF"`) |
+| `colorPos` | ❌ | Positive color for histogram |
+| `colorNeg` | ❌ | Negative color for histogram |
+| `lineWidth` | ❌ | Stroke width (default: 2) |
+| `lineStyle` | ❌ | `0`=solid `1`=dotted `2`=dashed `3`=large-dashed |
+| `subPaneHeight` | ❌ | Sub-pane height in px (default: 120) |
+| `scaleMargins` | ❌ | `{ "top": 0.1, "bottom": 0.1 }` |
+| `digits` | ❌ | Decimal precision for value labels |
+| `visible` | ❌ | Default: `true` |
+| `baseValue` | ❌ | For `"baseline"` type |
+| `topColor` | ❌ | For `"area"` type |
+| `bottomColor` | ❌ | For `"area"` type |
 
 ---
 
-### 6.3 PointData (نقطه اندیکاتور)
+### 6.3 PointData
 
 ```json
 { "time": 1716800000, "value": 67300.5 }
+{ "time": 1716800000, "value": 1500.0,  "color": "#ef5350" }
 ```
 
-```json
-{ "time": 1716800000, "value": 1500.0, "color": "#ef5350" }
-```
-
-| فیلد | نوع | اجباری | توضیح |
-|------|-----|--------|-------|
-| `time` | number | ✅ | unix-second |
-| `value` | number | ✅ | مقدار اندیکاتور |
-| `color` | string | ❌ | رنگ اختصاصی این نقطه (برای histogram رنگی) |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `time` | ✅ | Unix seconds |
+| `value` | ✅ | Indicator value |
+| `color` | ❌ | Per-point color override (useful for colored histograms) |
 
 ---
 
-### 6.4 Drawing (شیء رسم)
+### 6.4 Drawing
 
 ```json
 {
@@ -805,63 +618,60 @@ MAJOR.MINOR.PATCH
 }
 ```
 
-**تعداد نقاط مورد نیاز هر ابزار:**
+**Required points per tool:**
 
-| ابزار | نقاط |
-|-------|------|
-| `horizontal`, `vertical`, `text` | ۱ |
-| `trendline`, `ray`, `extended`, `arrow`, `rectangle`, `ellipse`, `fibRetracement`, `measure`, `longPosition`, `shortPosition` | ۲ |
-| `parallelChannel`, `fibExtension` | ۳ |
-| `polyline` | ۲+ |
+| Tool | Points |
+|------|--------|
+| `horizontal`, `vertical`, `text` | 1 |
+| `trendline`, `ray`, `extended`, `arrow`, `rectangle`, `ellipse`, `fibRetracement`, `measure`, `longPosition`, `shortPosition` | 2 |
+| `parallelChannel`, `fibExtension` | 3 |
+| `polyline` | 2+ |
 
 ---
 
-## ۷. جریان کاری کامل
+## 7. Complete Workflow Examples
 
-### سناریو: اتصال اولیه
+### Initial connection
 
 ```
-# 1. کلاینت متصل می‌شود
-CLIENT → { "type": "hello", "client": "trex-terminal", "version": "1.0.0", "protocol": "2.0.0", "initialCount": 5000 }
+CLIENT → { "type": "hello",           "client": "trex-terminal", "protocol": "2.0.0", "initialCount": 5000 }
 CLIENT → { "type": "get_symbols" }
 CLIENT → { "type": "get_indicators" }
 
-# 2. سرور اطلاعات اولیه را ارسال می‌کند
 SERVER → { "type": "symbols_list",    "symbols": [...] }
 SERVER → { "type": "indicators_list", "indicators": [...] }
 SERVER → { "type": "snapshot",        "symbol": "BTCUSDT", "timeframe": "1h", "data": [...], "definitions": [...], "points": {...} }
 
-# 3. به‌روزرسانی real-time
 SERVER → { "type": "bar",        "bar": { "time": 1716800060, ... } }
 SERVER → { "type": "indicators", "points": { "ema_20": [{ "time": 1716800060, "value": 67400.0 }] } }
 ```
 
-### سناریو: تغییر سمبل
+### Symbol change
 
 ```
 CLIENT → { "type": "symbol", "symbol": "ETHUSDT" }
-SERVER → { "type": "snapshot", "symbol": "ETHUSDT", "data": [...], "definitions": [...], "points": {...} }
+SERVER → { "type": "snapshot", "symbol": "ETHUSDT", "data": [...], ... }
 ```
 
-### سناریو: اسکرول به چپ (تاریخچه)
+### History scroll
 
 ```
 CLIENT → { "type": "history", "before": 1715000000, "count": 5000 }
 SERVER → { "type": "history", "data": [...], "noMoreHistory": false }
-# یا وقتی دیگر تاریخچه‌ای ندارید:
-SERVER → { "type": "history", "data": [], "noMoreHistory": true }
+
+CLIENT → { "type": "history", "before": 1713000000, "count": 5000 }
+SERVER → { "type": "history", "data": [],   "noMoreHistory": true }
 ```
 
 ---
 
-## ۸. چارت‌های چندگانه
+## 8. Multi-Chart Layout
 
-### 8.1 فعال شدن چیدمان چندگانه
+### Activate layout
 
 ```
 CLIENT → {
-  "type": "layout",
-  "layout": "split2",
+  "type": "layout", "layout": "split2",
   "charts": [
     { "chartId": "main",    "symbol": "BTCUSDT", "timeframe": "1h",  "indicators": ["ema_20"] },
     { "chartId": "chart_0", "symbol": "ETHUSDT", "timeframe": "15m", "indicators": [] }
@@ -872,67 +682,54 @@ SERVER → { "type": "snapshot",       "symbol": "BTCUSDT", "data": [...] }
 SERVER → { "type": "chart_snapshot", "chartId": "chart_0", "symbol": "ETHUSDT", "data": [...] }
 ```
 
-### 8.2 Real-time برای چارت ثانوی
+### Realtime for secondary chart
 
 ```
 SERVER → { "type": "chart_bar", "chartId": "chart_0", "bar": { "time": 1716800060, ... } }
 ```
 
-### 8.3 تغییر سمبل در چارت ثانوی
+### Chart IDs
 
-```
-CLIENT → { "type": "chart_symbol", "chartId": "chart_0", "symbol": "SOLUSDT", "timeframe": "5m", "indicators": [] }
-SERVER → { "type": "chart_snapshot", "chartId": "chart_0", "symbol": "SOLUSDT", "data": [...] }
-```
-
-### 8.4 شناسه‌های چارت
-
-| `chartId` | توضیح |
-|-----------|-------|
-| `"main"` | چارت اصلی (همیشه موجود) |
-| `"chart_0"` | چارت دوم (در `split2` و `grid4`) |
-| `"chart_1"` | چارت سوم (در `grid4`) |
-| `"chart_2"` | چارت چهارم (در `grid4`) |
+| `chartId` | Description |
+|-----------|-------------|
+| `"main"` | Always present |
+| `"chart_0"` | Second chart (split2 / grid4) |
+| `"chart_1"` | Third chart (grid4) |
+| `"chart_2"` | Fourth chart (grid4) |
 
 ---
 
-## ۹. اندیکاتورها
+## 9. Indicators
 
-### 9.1 جریان کاری اندیکاتور
+### Workflow
 
 ```
-# 1. کاربر اندیکاتور را فعال می‌کند
-CLIENT → { "type": "chart_symbol", "chartId": "main", "symbol": "BTCUSDT", "timeframe": "1h", "indicators": ["ema_20", "rsi_14"] }
+# 1. Client requests indicators for a symbol
+CLIENT → { "type": "chart_symbol", "chartId": "main", "symbol": "BTCUSDT",
+           "timeframe": "1h", "indicators": ["ema_20", "rsi_14"] }
 
-# 2. سرور definitions را می‌فرستد
-SERVER → {
-  "type": "definitions",
-  "definitions": [
-    { "key": "ema_20", "label": "EMA 20", "type": "line", "pane": "main", ... },
-    { "key": "rsi_14", "label": "RSI 14", "type": "line", "pane": "sub",  ... }
-  ]
-}
+# 2. Server sends definitions
+SERVER → { "type": "definitions", "definitions": [
+  { "key": "ema_20", "label": "EMA 20", "type": "line", "pane": "main" },
+  { "key": "rsi_14", "label": "RSI 14", "type": "line", "pane": "sub" }
+]}
 
-# 3. سرور مقادیر را می‌فرستد
-SERVER → {
-  "type": "indicators",
-  "points": {
-    "ema_20": [ {"time": 1715000000, "value": 62100.0}, ... ],
-    "rsi_14": [ {"time": 1715000000, "value": 55.3},   ... ]
-  }
-}
+# 3. Server sends historical values
+SERVER → { "type": "indicators", "points": {
+  "ema_20": [ {"time": 1715000000, "value": 62100.0}, ... ],
+  "rsi_14": [ {"time": 1715000000, "value": 55.3},   ... ]
+}}
 
-# 4. real-time — فقط یک نقطه (سریع)
-SERVER → {
-  "type": "indicators",
-  "points": {
-    "ema_20": [{"time": 1716800060, "value": 67400.0}],
-    "rsi_14": [{"time": 1716800060, "value": 58.7}]
-  }
-}
+# 4. Realtime — single point per series (fast path)
+SERVER → { "type": "indicators", "points": {
+  "ema_20": [{"time": 1716800060, "value": 67400.0}],
+  "rsi_14": [{"time": 1716800060, "value": 58.7}]
+}}
 ```
 
-### 9.2 بهترین روش ارسال اندیکاتور در snapshot
+### Including indicators in snapshot
+
+The recommended approach — send definitions and historical values together in the initial snapshot so the chart is fully populated immediately:
 
 ```json
 {
@@ -952,123 +749,171 @@ SERVER → {
 
 ---
 
-## ۱۰. سینک رسم (Drawings Sync)
+## 10. Drawing Sync
 
 ```
-# کاربر خط رسم می‌کند
+# User draws on the chart
 CLIENT → { "type": "drawing_upsert", "drawing": { "id": "d_abc", "tool": "trendline", "points": [...] } }
-
-# سرور برای کاربران دیگر (multi-user) می‌فرستد
+# Server persists it, then broadcasts to other clients (multi-user)
 SERVER → { "type": "drawing_upsert", "drawing": { ... } }
 
-# کاربر رسم را حذف می‌کند
+# User deletes a drawing
 CLIENT → { "type": "drawing_delete", "drawingId": "d_abc" }
 
-# بازگردانی رسم‌های ذخیره‌شده (هنگام اتصال)
+# On reconnect — restore saved drawings
 SERVER → { "type": "drawings", "drawings": [ ... ] }
 ```
 
+Server-pushed drawings are **locked** in the client — users can view them but cannot move or delete them. Use this for programmatic drawings (trade markers, support levels, etc.).
+
 ---
 
-## ۱۱. قوانین اعتبارسنجی
+## 11. Validation Rules
 
-کلاینت پیام‌ها را قبل از پردازش اعتبارسنجی می‌کند. پیام‌های ناقص به سکوت رد می‌شوند:
+The client validates messages silently — invalid messages are ignored:
 
-### کندل معتبر
-- تمام OHLC باید عدد محدود (finite) باشند
+### Valid candle
+- All OHLC values must be finite numbers
 - `high >= max(open, close)`
-- `low <= min(open, close)`
-- `volume >= 0` (اختیاری)
+- `low  <= min(open, close)`
+- `volume >= 0` (optional)
 
-### نقطه اندیکاتور معتبر
-- `time`: عدد محدود
-- `value`: عدد محدود
+### Valid indicator point
+- `time`: finite number
+- `value`: finite number
 
-### SeriesDefinition معتبر
-- `key`: رشته غیرخالی
-- `label`: رشته غیرخالی
-- `type`: یکی از `line`, `histogram`, `area`, `baseline`, `scatter`
-- `pane`: `"main"` یا `"sub"`
+### Valid SeriesDefinition
+- `key`: non-empty string
+- `label`: non-empty string
+- `type`: one of `"line"` `"histogram"` `"area"` `"baseline"` `"scatter"`
+- `pane`: `"main"` or `"sub"`
+
+### Valid Drawing
+- Tool must be a recognized tool name
+- Must have the minimum number of `points` for that tool (see table in §6.4)
 
 ---
 
-## ۱۲. مثال عملی پایتون
+## 12. Backtest Messages
+
+These messages are sent by [BackTest](https://github.com/DeveloperNasirpur/BackTest) when `broadcast=True`. They update the BtPanel at the bottom of the terminal.
+
+### `bt_progress` — Progress update
+
+```json
+{ "type": "bt_progress", "current": 5000, "total": 10000, "pct": 50.0 }
+```
+
+### `bt_state` — Live account state
+
+```json
+{
+  "type": "bt_state",
+  "balance": 10124.50,
+  "margin_used": 200.00,
+  "unrealized_pnl": 14.20,
+  "equity": 10338.70,
+  "positions": [
+    {
+      "id": 1, "symbol": "BTCUSDT", "side": "long",
+      "entry": 67450.0, "mark": 67520.0,
+      "margin": 200.0, "leverage": 5,
+      "pnl": 0.00104, "pnl_usdt": 14.20, "pnl_pct": 0.52,
+      "stop_price": 66500.0, "take_profit": 69000.0,
+      "open_time": "2024-05-01 10:00", "bars": 12
+    }
+  ],
+  "orders": [],
+  "trade_history": []
+}
+```
+
+### `bt_result` — Final statistics
+
+```json
+{
+  "type": "bt_result",
+  "initial_balance": 10000.00,
+  "final_balance":   11243.60,
+  "return_pct":      12.44,
+  "total_trades":    87,
+  "winning_trades":  51,
+  "losing_trades":   36,
+  "win_rate":        58.6,
+  "profit_factor":   1.82,
+  "risk_reward":     1.23,
+  "total_pnl_usdt":  1243.60,
+  "gross_profit":    2468.30,
+  "gross_loss":     -1224.70,
+  "largest_win":     312.00,
+  "largest_loss":    -89.50,
+  "avg_win":          48.40,
+  "avg_loss":        -34.02,
+  "max_drawdown_usdt": 620.40,
+  "max_drawdown_pct":    6.20,
+  "equity_curve": [10050.0, 10120.0, ...]
+}
+```
+
+### `bt_playback` — Playback control (client → server)
+
+```json
+{ "type": "bt_playback", "action": "pause"  }
+{ "type": "bt_playback", "action": "resume" }
+{ "type": "bt_playback", "action": "speed",  "speed": 60.0 }
+{ "type": "bt_playback", "action": "stop"   }
+```
+
+### `bt_playback_state` — Sync playback state (server → client)
+
+```json
+{ "type": "bt_playback_state", "paused": false, "speed": 1.0 }
+```
+
+---
+
+## 13. Reference Server (Python)
+
+A minimal server implementing the full protocol — useful as a starting point or for testing:
 
 ```python
-import asyncio
-import json
-import time
-import random
+import asyncio, json, time, random
 import websockets
 
 
 class TrexServer:
-    """سرور نمونه برای TrexTerminal — شامل تمام جریان‌های کاری پروتکل."""
+    """Minimal Protocol 2.0.0 server compatible with TrexTerminal."""
 
     SYMBOLS = [
-        {"symbol": "BTCUSDT", "name": "Bitcoin / Tether",   "type": "spot"},
-        {"symbol": "ETHUSDT", "name": "Ethereum / Tether",  "type": "spot"},
-        {"symbol": "SOLUSDT", "name": "Solana / Tether",    "type": "spot"},
-        {"symbol": "BNBUSDT", "name": "BNB / Tether",       "type": "spot"},
+        {"symbol": "BTCUSDT", "name": "Bitcoin / Tether",  "type": "spot"},
+        {"symbol": "ETHUSDT", "name": "Ethereum / Tether", "type": "spot"},
     ]
 
     INDICATORS = [
-        {
-            "key": "ema_20", "label": "EMA 20",
-            "type": "line",  "pane": "main", "paneId": "ema_20",
-            "color": "#2962FF", "lineWidth": 2,
-        },
-        {
-            "key": "rsi_14", "label": "RSI 14",
-            "type": "line",  "pane": "sub",  "paneId": "pane_rsi_14",
-            "color": "#9C27B0", "lineWidth": 2,
-            "subPaneHeight": 120,
-            "scaleMargins": {"top": 0.1, "bottom": 0.1},
-        },
-        {
-            "key": "volume", "label": "Volume",
-            "type": "histogram", "pane": "sub", "paneId": "pane_volume",
-            "color": "#26a69a", "colorPos": "#26a69a", "colorNeg": "#ef5350",
-            "subPaneHeight": 80,
-        },
+        {"key": "ema_20", "label": "EMA 20", "type": "line", "pane": "main", "color": "#2962FF", "lineWidth": 2},
+        {"key": "rsi_14", "label": "RSI 14", "type": "line", "pane": "sub",  "color": "#9C27B0", "subPaneHeight": 120},
     ]
 
-    BASE_PRICES = {
-        "BTCUSDT": 67000.0, "ETHUSDT": 3200.0,
-        "SOLUSDT": 165.0,   "BNBUSDT": 580.0,
-    }
-
-    TF_SECONDS = {
-        "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
-        "1h": 3600, "4h": 14400, "1d": 86400, "1w": 604800,
-    }
+    TF_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
+    BASE = {"BTCUSDT": 67000.0, "ETHUSDT": 3200.0}
 
     def __init__(self):
-        self.connections: dict = {}
+        self.conns = {}
 
-    # ───── entry point ─────────────────────────────────────────────────
-
-    async def handler(self, websocket):
-        print(f"[+] {websocket.remote_address} connected")
-        state = {
-            "symbol": "BTCUSDT", "timeframe": "1h",
-            "indicators": [],
-            "secondary": {},        # chartId → {symbol, timeframe, indicators}
-        }
-        self.connections[websocket] = state
-        rt = asyncio.create_task(self.realtime_loop(websocket, state))
+    async def handler(self, ws):
+        state = {"symbol": "BTCUSDT", "timeframe": "1h", "indicators": [], "secondary": {}}
+        self.conns[ws] = state
+        rt = asyncio.create_task(self._realtime(ws, state))
         try:
-            async for raw in websocket:
-                await self._dispatch(websocket, state, raw)
+            async for raw in ws:
+                await self._dispatch(ws, state, raw)
         except websockets.ConnectionClosed:
-            print(f"[-] {websocket.remote_address} disconnected")
+            pass
         finally:
             rt.cancel()
-            self.connections.pop(websocket, None)
+            self.conns.pop(ws, None)
 
-    # ───── dispatcher ──────────────────────────────────────────────────
-
-    async def _dispatch(self, ws, state, raw: str):
+    async def _dispatch(self, ws, state, raw):
         try:
             msg = json.loads(raw)
         except json.JSONDecodeError:
@@ -1076,16 +921,10 @@ class TrexServer:
         t = msg.get("type", "")
 
         if t == "hello":
-            proto = msg.get("protocol", "")
-            if not proto.startswith("2."):
-                await ws.send(json.dumps({
-                    "type": "error",
-                    "message": f"Protocol mismatch. Server expects 2.x, client sent {proto}",
-                }))
+            if not msg.get("protocol", "").startswith("2."):
+                await ws.send(json.dumps({"type": "error", "message": "Protocol mismatch — expected 2.x"}))
                 return
-            await self.send_snapshot(ws, state["symbol"], state["timeframe"],
-                                     state["indicators"],
-                                     count=msg.get("initialCount", 5000))
+            await self._snapshot(ws, state["symbol"], state["timeframe"], msg.get("initialCount", 5000))
 
         elif t == "ping":
             await ws.send(json.dumps({"type": "pong", "t": msg.get("t")}))
@@ -1098,276 +937,129 @@ class TrexServer:
 
         elif t == "symbol":
             state["symbol"] = msg["symbol"]
-            await self.send_snapshot(ws, state["symbol"], state["timeframe"], state["indicators"])
+            await self._snapshot(ws, state["symbol"], state["timeframe"])
 
         elif t == "timeframe":
             state["timeframe"] = msg["timeframe"]
-            await self.send_snapshot(ws, state["symbol"], state["timeframe"], state["indicators"])
+            await self._snapshot(ws, state["symbol"], state["timeframe"])
 
         elif t == "history":
-            chart_id = msg.get("chartId")
-            sym = state["secondary"].get(chart_id, {}).get("symbol", state["symbol"]) if chart_id else state["symbol"]
-            tf  = state["secondary"].get(chart_id, {}).get("timeframe", state["timeframe"]) if chart_id else state["timeframe"]
-            candles = self._history_page(sym, tf, msg["before"], msg.get("count", 5000))
-            if chart_id:
-                await ws.send(json.dumps({
-                    "type": "chart_history", "chartId": chart_id,
-                    "data": candles, "noMoreHistory": len(candles) == 0,
-                }))
-            else:
-                await ws.send(json.dumps({
-                    "type": "history",
-                    "data": candles, "noMoreHistory": len(candles) == 0,
-                }))
+            cid    = msg.get("chartId")
+            sym    = state["secondary"].get(cid, state)["symbol"] if cid else state["symbol"]
+            tf     = state["secondary"].get(cid, state)["timeframe"] if cid else state["timeframe"]
+            data   = self._gen_bars(sym, tf, msg["before"], msg.get("count", 5000))
+            mtype  = "chart_history" if cid else "history"
+            reply  = {"type": mtype, "data": data, "noMoreHistory": len(data) == 0}
+            if cid:
+                reply["chartId"] = cid
+            await ws.send(json.dumps(reply))
 
-        elif t == "layout":
-            for chart in msg.get("charts", []):
-                cid  = chart["chartId"]
-                sym  = chart["symbol"]
-                tf   = chart["timeframe"]
-                inds = chart.get("indicators", [])
+        elif t in ("layout", "chart_symbol"):
+            charts = msg.get("charts", [{"chartId": msg.get("chartId", "main"),
+                                         "symbol": msg.get("symbol", state["symbol"]),
+                                         "timeframe": msg.get("timeframe", state["timeframe"])}])
+            for c in charts:
+                cid, sym, tf = c["chartId"], c["symbol"], c.get("timeframe", "1h")
                 if cid == "main":
-                    state.update({"symbol": sym, "timeframe": tf, "indicators": inds})
-                    await self.send_snapshot(ws, sym, tf, inds)
+                    state.update({"symbol": sym, "timeframe": tf})
+                    await self._snapshot(ws, sym, tf)
                 else:
-                    state["secondary"][cid] = {"symbol": sym, "timeframe": tf, "indicators": inds}
-                    await self.send_chart_snapshot(ws, cid, sym, tf, inds)
+                    state["secondary"][cid] = {"symbol": sym, "timeframe": tf}
+                    bars = self._make_bars(sym, tf, 5000)
+                    await ws.send(json.dumps({"type": "chart_snapshot", "chartId": cid,
+                                             "symbol": sym, "timeframe": tf, "data": bars,
+                                             "definitions": [], "points": {}}))
 
-        elif t == "chart_symbol":
-            cid  = msg["chartId"]
-            sym  = msg["symbol"]
-            tf   = msg.get("timeframe", "1h")
-            inds = msg.get("indicators", [])
-            if cid == "main":
-                state.update({"symbol": sym, "timeframe": tf, "indicators": inds})
-                await self.send_snapshot(ws, sym, tf, inds)
-            else:
-                state["secondary"][cid] = {"symbol": sym, "timeframe": tf, "indicators": inds}
-                await self.send_chart_snapshot(ws, cid, sym, tf, inds)
-
-        elif t == "drawing_upsert":
-            pass   # ← ذخیره در دیتابیس
-
-        elif t == "drawing_delete":
-            pass   # ← حذف از دیتابیس
-
-        elif t == "drawings_clear":
-            pass   # ← پاک کردن همه
-
-        elif t == "drawings":
-            pass   # ← همگام‌سازی کامل
-
-    # ───── snapshot helpers ────────────────────────────────────────────
-
-    async def send_snapshot(self, ws, symbol, timeframe, indicators, count=5000):
-        candles = self._gen_candles(symbol, timeframe, count)
-        defs, pts = self._build_indicators(symbol, indicators, candles)
+    async def _snapshot(self, ws, symbol, timeframe, count=5000):
+        bars = self._make_bars(symbol, timeframe, count)
         await ws.send(json.dumps({
-            "type": "snapshot",
-            "symbol": symbol, "timeframe": timeframe,
-            "digits": self._digits(symbol),
-            "data": candles,
-            "definitions": defs, "points": pts,
-            "drawings": [],
+            "type": "snapshot", "symbol": symbol, "timeframe": timeframe,
+            "data": bars, "definitions": [], "points": {}, "drawings": [],
         }))
 
-    async def send_chart_snapshot(self, ws, chart_id, symbol, timeframe, indicators):
-        candles = self._gen_candles(symbol, timeframe, 5000)
-        defs, pts = self._build_indicators(symbol, indicators, candles)
-        await ws.send(json.dumps({
-            "type": "chart_snapshot",
-            "chartId": chart_id,
-            "symbol": symbol, "timeframe": timeframe,
-            "digits": self._digits(symbol),
-            "data": candles,
-            "definitions": defs, "points": pts,
-        }))
-
-    # ───── realtime loop ───────────────────────────────────────────────
-
-    async def realtime_loop(self, ws, state):
+    async def _realtime(self, ws, state):
         while True:
             await asyncio.sleep(1)
             now = int(time.time())
             try:
-                # چارت اصلی
-                tf_sec = self.TF_SECONDS.get(state["timeframe"], 3600)
-                bar    = self._make_bar(state["symbol"], now, tf_sec)
+                tf_s = self.TF_SECONDS.get(state["timeframe"], 3600)
+                bar  = self._bar(state["symbol"], now, tf_s)
                 await ws.send(json.dumps({"type": "bar", "bar": bar}))
-
-                # اندیکاتورهای فعال چارت اصلی
-                if state["indicators"]:
-                    pts = self._realtime_pts(state["indicators"], bar["time"], bar["close"])
-                    if pts:
-                        await ws.send(json.dumps({"type": "indicators", "points": pts}))
-
-                # چارت‌های ثانوی
                 for cid, info in state["secondary"].items():
-                    tf2    = self.TF_SECONDS.get(info["timeframe"], 3600)
-                    bar2   = self._make_bar(info["symbol"], now, tf2)
-                    await ws.send(json.dumps({"type": "chart_bar", "chartId": cid, "bar": bar2}))
-
+                    b2 = self._bar(info["symbol"], now, self.TF_SECONDS.get(info["timeframe"], 3600))
+                    await ws.send(json.dumps({"type": "chart_bar", "chartId": cid, "bar": b2}))
             except websockets.ConnectionClosed:
                 break
 
-    # ───── data generators ─────────────────────────────────────────────
-
-    def _gen_candles(self, symbol, timeframe, count=500):
-        tf_sec = self.TF_SECONDS.get(timeframe, 3600)
-        now_ts = (int(time.time()) // tf_sec) * tf_sec
-        price  = self.BASE_PRICES.get(symbol, 100.0) * 0.85
-        out    = []
+    def _make_bars(self, symbol, timeframe, count):
+        tf_s = self.TF_SECONDS.get(timeframe, 3600)
+        now  = (int(time.time()) // tf_s) * tf_s
+        p    = self.BASE.get(symbol, 100.0) * 0.85
+        out  = []
         for i in range(count):
-            ts     = now_ts - (count - 1 - i) * tf_sec
-            ch     = price * random.uniform(-0.015, 0.015)
-            o, c   = price, round(price + ch, self._digits(symbol))
-            h      = round(max(o, c) * random.uniform(1.001, 1.008), self._digits(symbol))
-            l      = round(min(o, c) * random.uniform(0.992, 0.999), self._digits(symbol))
-            out.append({"time": ts, "open": round(o, self._digits(symbol)),
-                        "high": h, "low": l, "close": c,
-                        "volume": round(random.uniform(100, 2000), 2)})
-            price = c
+            ts = now - (count - 1 - i) * tf_s
+            c  = round(p * (1 + random.uniform(-0.015, 0.015)), 2)
+            out.append({"time": ts, "open": round(p, 2),
+                        "high": round(max(p, c) * 1.003, 2), "low": round(min(p, c) * 0.997, 2),
+                        "close": c, "volume": round(random.uniform(100, 2000), 2)})
+            p = c
         return out
 
-    def _history_page(self, symbol, timeframe, before, count):
-        tf_sec  = self.TF_SECONDS.get(timeframe, 3600)
-        end_ts  = before - tf_sec
-        start   = end_ts - count * tf_sec
+    def _gen_bars(self, symbol, timeframe, before, count):
+        tf_s  = self.TF_SECONDS.get(timeframe, 3600)
+        start = before - count * tf_s
         if start < 1_000_000_000:
-            return []           # قبل از سال ۲۰۰۱ — تاریخچه‌ای وجود ندارد
-        price   = self.BASE_PRICES.get(symbol, 100.0) * 0.70
-        out     = []
+            return []
+        p = self.BASE.get(symbol, 100.0) * 0.7
+        out = []
         for i in range(count):
-            ts  = start + i * tf_sec
+            ts = start + i * tf_s
             if ts >= before:
                 break
-            ch  = price * random.uniform(-0.012, 0.012)
-            o   = price
-            c   = round(price + ch, self._digits(symbol))
-            h   = round(max(o, c) * 1.004, self._digits(symbol))
-            l   = round(min(o, c) * 0.996, self._digits(symbol))
-            out.append({"time": ts, "open": round(o, self._digits(symbol)),
-                        "high": h, "low": l, "close": c,
-                        "volume": round(random.uniform(50, 1500), 2)})
-            price = c
+            c = round(p * (1 + random.uniform(-0.012, 0.012)), 2)
+            out.append({"time": ts, "open": round(p, 2),
+                        "high": round(max(p, c) * 1.003, 2), "low": round(min(p, c) * 0.997, 2),
+                        "close": c, "volume": round(random.uniform(50, 1500), 2)})
+            p = c
         return out
 
-    def _make_bar(self, symbol, now, tf_sec):
-        base   = self.BASE_PRICES.get(symbol, 100.0)
-        bt     = (now // tf_sec) * tf_sec
-        ch     = base * random.uniform(-0.002, 0.002)
-        c      = round(base + ch, self._digits(symbol))
-        return {
-            "time": bt,
-            "open": round(base, self._digits(symbol)),
-            "high": round(max(base, c) * 1.0005, self._digits(symbol)),
-            "low":  round(min(base, c) * 0.9995, self._digits(symbol)),
-            "close": c,
-            "volume": round(random.uniform(100, 600), 2),
-        }
-
-    def _build_indicators(self, symbol, indicator_keys, candles):
-        closes = [c["close"] for c in candles]
-        times  = [c["time"]  for c in candles]
-        defs, pts = [], {}
-        for key in indicator_keys:
-            defn = next((i for i in self.INDICATORS if i["key"] == key), None)
-            if not defn:
-                continue
-            defs.append(defn)
-            if key == "ema_20":
-                vals = self._ema(closes, 20)
-                pts[key] = [{"time": times[i], "value": round(vals[i], 2)}
-                            for i in range(len(times)) if vals[i] is not None]
-            elif key == "rsi_14":
-                vals = self._rsi(closes, 14)
-                pts[key] = [{"time": times[i], "value": round(vals[i], 2)}
-                            for i in range(len(times)) if vals[i] is not None]
-            elif key == "volume":
-                pts[key] = [{
-                    "time": candles[i]["time"],
-                    "value": candles[i].get("volume", 0),
-                    "color": "#26a69a" if candles[i]["close"] >= candles[i]["open"] else "#ef5350",
-                } for i in range(len(candles))]
-        return defs, pts
-
-    def _realtime_pts(self, indicator_keys, bar_time, close):
-        pts = {}
-        for key in indicator_keys:
-            if key == "ema_20":
-                pts[key] = [{"time": bar_time, "value": round(close * 0.999, 2)}]
-            elif key == "rsi_14":
-                pts[key] = [{"time": bar_time, "value": round(50 + random.uniform(-15, 15), 2)}]
-        return pts
-
-    # ───── utils ───────────────────────────────────────────────────────
-
-    def _digits(self, symbol):
-        p = self.BASE_PRICES.get(symbol, 100.0)
-        return 2 if p >= 1000 else (3 if p >= 10 else 5)
-
-    @staticmethod
-    def _ema(closes, period):
-        result, k = [None] * len(closes), 2 / (period + 1)
-        ema = None
-        for i, c in enumerate(closes):
-            if ema is None:
-                if i >= period - 1:
-                    ema = sum(closes[i - period + 1: i + 1]) / period
-                    result[i] = ema
-            else:
-                ema = c * k + ema * (1 - k)
-                result[i] = ema
-        return result
-
-    @staticmethod
-    def _rsi(closes, period=14):
-        result = [None] * len(closes)
-        if len(closes) < period + 1:
-            return result
-        gains  = [max(closes[i] - closes[i-1], 0) for i in range(1, len(closes))]
-        losses = [max(closes[i-1] - closes[i], 0) for i in range(1, len(closes))]
-        ag = sum(gains[:period])  / period
-        al = sum(losses[:period]) / period
-        for i in range(period, len(closes)):
-            result[i] = 100.0 if al == 0 else round(100 - 100 / (1 + ag / al), 2)
-            if i < len(gains):
-                ag = (ag * (period - 1) + gains[i])  / period
-                al = (al * (period - 1) + losses[i]) / period
-        return result
+    def _bar(self, symbol, now, tf_s):
+        base = self.BASE.get(symbol, 100.0)
+        bt   = (now // tf_s) * tf_s
+        c    = round(base * (1 + random.uniform(-0.002, 0.002)), 2)
+        return {"time": bt, "open": round(base, 2),
+                "high": round(max(base, c) * 1.0005, 2), "low": round(min(base, c) * 0.9995, 2),
+                "close": c, "volume": round(random.uniform(100, 600), 2)}
 
 
 async def main():
     server = TrexServer()
-    host, port = "0.0.0.0", 8765
-    print(f"TrexTerminal WebSocket Server → ws://localhost:{port}")
-    async with websockets.serve(server.handler, host, port):
+    print("TrexTerminal server → ws://localhost:8765")
+    async with websockets.serve(server.handler, "0.0.0.0", 8765):
         await asyncio.Future()
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### نصب و راه‌اندازی
-
 ```bash
 pip install websockets
 python server.py
 ```
 
-سپس TrexTerminal را باز کنید، حالت **Server** را انتخاب کنید و آدرس `ws://localhost:8765` را وارد کنید.
+Open TrexTerminal, select **Server** mode, and connect to `ws://localhost:8765`.
 
 ---
 
-## خلاصه مرجع سریع
+## Quick Reference
 
 ```
-اتصال جدید:      hello + get_symbols + get_indicators  →  symbols_list + indicators_list + snapshot
-تغییر سمبل:      symbol                                →  snapshot
-تغییر تایم‌فریم:  timeframe                             →  snapshot
-اسکرول چپ:       history (before, count)               →  history (data, noMoreHistory)
-چیدمان چندگانه:  layout (charts[])                     →  snapshot + chart_snapshot[]
-چارت ثانوی:      chart_symbol (chartId, symbol, tf)    →  chart_snapshot
-Real-time:        (بدون درخواست)                       →  bar + indicators
-Ping/Pong:        ping                                  →  pong
+New connection:   hello + get_symbols + get_indicators  →  symbols_list + indicators_list + snapshot
+Symbol change:    symbol                                →  snapshot
+Timeframe change: timeframe                             →  snapshot
+Scroll left:      history { before, count }             →  history { data, noMoreHistory }
+Multi-chart:      layout { charts[] }                   →  snapshot + chart_snapshot[]
+Secondary chart:  chart_symbol { chartId, symbol, tf }  →  chart_snapshot
+Realtime:         (no request)                          →  bar + indicators
+Keepalive:        ping                                  →  pong
 ```
