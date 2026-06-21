@@ -1042,11 +1042,14 @@ const shortcuts = (fa: boolean): [string, string][] => [
   [fa ? "اسکرول / درگ" : "Scroll / Drag", fa ? "زوم / جابه‌جایی (لیزی‌لود تاریخچه در لبه چپ)" : "Zoom / pan (history lazy-loads at left edge)"],
 ];
 
-interface TocGroup { group: string; items: { id: string; label: string }[] }
+// depth=0: top-level item, depth=1: sub-item, id="" means non-clickable sub-folder label
+interface TocItem { id: string; label: string; depth?: number }
+interface TocGroup { group: string; icon: string; items: TocItem[] }
 
 const TOC_GROUPS = (fa: boolean): TocGroup[] => [
   {
     group: fa ? "شروع" : "Getting started",
+    icon: "🚀",
     items: [
       { id: "intro",        label: fa ? "معرفی" : "Introduction" },
       { id: "architecture", label: fa ? "معماری" : "Architecture" },
@@ -1056,6 +1059,7 @@ const TOC_GROUPS = (fa: boolean): TocGroup[] => [
   },
   {
     group: fa ? "پروتکل WebSocket" : "WebSocket Protocol",
+    icon: "⚡",
     items: [
       { id: "c2s",       label: fa ? "کلاینت ← سرور" : "Client → server" },
       { id: "s2c",       label: fa ? "سرور ← کلاینت" : "Server → client" },
@@ -1067,6 +1071,7 @@ const TOC_GROUPS = (fa: boolean): TocGroup[] => [
   },
   {
     group: fa ? "قابلیت‌ها" : "Features",
+    icon: "✦",
     items: [
       { id: "tools",     label: fa ? "ابزارهای ترسیم" : "Drawing tools" },
       { id: "builder",   label: fa ? "طراح اندیکاتور" : "Indicator Builder" },
@@ -1076,43 +1081,54 @@ const TOC_GROUPS = (fa: boolean): TocGroup[] => [
   },
   {
     group: fa ? "موتور اندیکاتور" : "Trex Engine",
+    icon: "⚙",
     items: [
       { id: "eng-intro",      label: fa ? "معرفی" : "Overview" },
       { id: "eng-install",    label: fa ? "نصب" : "Installation" },
       { id: "eng-quickstart", label: fa ? "شروع سریع" : "Quick start" },
       { id: "eng-api",        label: fa ? "API اصلی" : "Core API" },
-      { id: "eng-trend",      label: fa ? "اندیکاتورهای روند" : "Trend indicators" },
-      { id: "eng-volatility", label: fa ? "اندیکاتورهای نوسان" : "Volatility" },
-      { id: "eng-momentum",   label: fa ? "اندیکاتورهای مومنتوم" : "Momentum" },
-      { id: "eng-oscillators",label: fa ? "اسیلاتورها" : "Oscillators" },
-      { id: "eng-volume",     label: fa ? "اندیکاتورهای حجم" : "Volume" },
-      { id: "eng-statistics", label: fa ? "آمار و احتمال" : "Statistics" },
-      { id: "eng-patterns",   label: fa ? "الگوهای کندل (۳۵)" : "Candlestick patterns (35)" },
-      { id: "eng-output",     label: fa ? "انواع خروجی" : "Output types" },
-      { id: "eng-multisym",   label: fa ? "چند نماد و CTF" : "Multi-symbol & CTF" },
-      { id: "eng-db",         label: fa ? "PostgreSQL" : "PostgreSQL" },
-      { id: "eng-plugin",     label: fa ? "اندیکاتور اختصاصی" : "Custom indicators" },
-      { id: "eng-plugin-composite", label: fa ? "Plugin ترکیبی" : "Composite plugin" },
+      // sub-folder label — not clickable
+      { id: "", label: fa ? "اندیکاتورها" : "Indicators" },
+      { id: "eng-trend",      label: fa ? "روند" : "Trend", depth: 1 },
+      { id: "eng-volatility", label: fa ? "نوسان" : "Volatility", depth: 1 },
+      { id: "eng-momentum",   label: fa ? "مومنتوم" : "Momentum", depth: 1 },
+      { id: "eng-oscillators",label: fa ? "اسیلاتور" : "Oscillators", depth: 1 },
+      { id: "eng-volume",     label: fa ? "حجم" : "Volume", depth: 1 },
+      { id: "eng-statistics", label: fa ? "آمار" : "Statistics", depth: 1 },
+      { id: "eng-patterns",   label: fa ? "الگو (۳۵)" : "Patterns (35)", depth: 1 },
+      { id: "eng-output",     label: fa ? "انواع خروجی" : "Output types", depth: 1 },
+      { id: "eng-multisym",   label: fa ? "چند نماد / CTF" : "Multi-symbol & CTF" },
+      { id: "eng-db",         label: "PostgreSQL" },
+      // sub-folder label — not clickable
+      { id: "", label: fa ? "پلاگین‌ها" : "Plugins" },
+      { id: "eng-plugin",           label: fa ? "اندیکاتور اختصاصی" : "Custom indicator", depth: 1 },
+      { id: "eng-plugin-composite", label: fa ? "ترکیبی" : "Composite plugin", depth: 1 },
     ],
   },
   {
     group: fa ? "بک‌تست" : "BackTest",
+    icon: "📊",
     items: [
       { id: "bt-intro",     label: fa ? "معرفی" : "Overview" },
       { id: "bt-install",   label: fa ? "نصب" : "Installation" },
       { id: "bt-quickstart",label: fa ? "شروع سریع" : "Quick start" },
-      { id: "bt-strategy",  label: fa ? "کلاس Strategy" : "Strategy class" },
-      { id: "bt-commands",  label: fa ? "دستورات معامله" : "Trading commands" },
-      { id: "bt-events",    label: fa ? "رویدادها (Hooks)" : "Event hooks" },
-      { id: "bt-position",  label: fa ? "فیلدهای Position" : "Position fields" },
-      { id: "bt-order",     label: fa ? "فیلدهای Order" : "Order fields" },
-      { id: "bt-candles",   label: fa ? "بارگذاری کندل" : "Loading candles" },
-      { id: "bt-result",    label: fa ? "BacktestResult" : "BacktestResult" },
+      // sub-folder label — not clickable
+      { id: "", label: fa ? "Strategy" : "Strategy" },
+      { id: "bt-strategy",  label: fa ? "کلاس Strategy" : "Strategy class", depth: 1 },
+      { id: "bt-commands",  label: fa ? "دستورات" : "Trading commands", depth: 1 },
+      { id: "bt-events",    label: fa ? "رویدادها" : "Event hooks", depth: 1 },
+      // sub-folder label — not clickable
+      { id: "", label: fa ? "داده‌ها" : "Data" },
+      { id: "bt-position",  label: fa ? "Position" : "Position fields", depth: 1 },
+      { id: "bt-order",     label: fa ? "Order" : "Order fields", depth: 1 },
+      { id: "bt-candles",   label: fa ? "بارگذاری کندل" : "Loading candles", depth: 1 },
+      { id: "bt-result",    label: "BacktestResult", depth: 1 },
       { id: "bt-broadcast", label: fa ? "پخش زنده" : "Live chart replay" },
     ],
   },
   {
     group: fa ? "یکپارچه‌سازی" : "Integration",
+    icon: "🔗",
     items: [
       { id: "integration", label: fa ? "هر سه پکیج با هم" : "All 3 packages together" },
       { id: "python",      label: fa ? "سرور خام (بدون SDK)" : "Raw server (no SDK)" },
@@ -1177,18 +1193,66 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
 
       {/* ══ Sidebar ══ */}
       <aside className="trex-scroll" style={{ position: "fixed", top: NAVBAR_H, [fa ? "right" : "left"]: 0, width: SIDEBAR_W, height: `calc(100vh - ${NAVBAR_H}px)`, background: "#22252d", borderInlineEnd: "1px solid #2e3340", overflowY: "auto", zIndex: 40, paddingBottom: 32 }}>
-        <nav style={{ paddingTop: 12 }}>
+        <nav style={{ paddingTop: 8 }}>
           {TOC_GROUPS(fa).map(grp => (
-            <div key={grp.group} style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#8c959f", padding: "0 16px", marginBottom: 2 }}>{grp.group}</div>
-              {grp.items.map(t => (
-                <button key={t.id} type="button" onClick={() => go(t.id)}
-                  style={{ display: "block", width: "100%", textAlign: fa ? "right" : "left", background: "none", border: "none", cursor: "pointer", fontSize: 13, height: 32, lineHeight: "32px", paddingInlineEnd: 16, transition: "color 0.1s, background 0.1s", ...navItemStyle(t.id) }}
-                  onMouseEnter={e => { if (active !== t.id) { (e.currentTarget as HTMLButtonElement).style.color = "#cdd2db"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; } }}
-                  onMouseLeave={e => { if (active !== t.id) { (e.currentTarget as HTMLButtonElement).style.color = "#9da3b0"; (e.currentTarget as HTMLButtonElement).style.background = "none"; } }}>
-                  {t.label}
-                </button>
-              ))}
+            <div key={grp.group} style={{ marginBottom: 4 }}>
+              {/* Group header — acts as parent folder */}
+              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#6b7280", padding: fa ? "10px 16px 4px 8px" : "10px 8px 4px 16px" }}>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>{grp.icon}</span>
+                {grp.group}
+              </div>
+
+              {/* Tree items — left/right border line acts as connector */}
+              <div style={{ position: "relative", [fa ? "marginRight" : "marginLeft"]: 22, [fa ? "borderRight" : "borderLeft"]: "1px solid #2e3340" }}>
+                {grp.items.map((t, idx) => {
+                  // non-clickable sub-folder label
+                  if (t.id === "") {
+                    return (
+                      <div key={t.label + idx} style={{
+                        display: "flex", alignItems: "center", gap: 5,
+                        fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+                        color: "#4b5263",
+                        padding: fa ? "8px 16px 3px 8px" : "8px 8px 3px 16px",
+                        position: "relative",
+                      }}>
+                        {/* horizontal connector */}
+                        <span style={{ position: "absolute", [fa ? "right" : "left"]: -12, top: "50%", width: 8, height: 1, background: "#2e3340", marginTop: 4 }} />
+                        <span style={{ color: "#f5a623", opacity: 0.5 }}>▸</span>
+                        {t.label}
+                      </div>
+                    );
+                  }
+
+                  const depth = t.depth ?? 0;
+                  const isActive = active === t.id;
+                  const baseInlineStart = depth === 1 ? (fa ? 10 : 22) : (fa ? 10 : 10);
+                  const baseInlineEnd = fa ? 22 : 10;
+
+                  return (
+                    <button key={t.id} type="button" onClick={() => go(t.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        width: "100%", textAlign: fa ? "right" : "left",
+                        background: isActive ? "rgba(245,166,35,0.1)" : "none",
+                        border: "none", cursor: "pointer",
+                        fontSize: depth === 1 ? 12.5 : 13,
+                        height: depth === 1 ? 28 : 30, lineHeight: depth === 1 ? "28px" : "30px",
+                        paddingInlineStart: baseInlineStart, paddingInlineEnd: baseInlineEnd,
+                        position: "relative",
+                        color: isActive ? "#f5a623" : depth === 1 ? "#7a8292" : "#9da3b0",
+                        transition: "color 0.12s, background 0.12s",
+                        borderInlineStart: isActive ? "2px solid #f5a623" : "2px solid transparent",
+                      }}
+                      onMouseEnter={e => { if (!isActive) { const b = e.currentTarget as HTMLButtonElement; b.style.color = "#cdd2db"; b.style.background = "rgba(255,255,255,0.05)"; } }}
+                      onMouseLeave={e => { if (!isActive) { const b = e.currentTarget as HTMLButtonElement; b.style.color = depth === 1 ? "#7a8292" : "#9da3b0"; b.style.background = "none"; } }}>
+                      {/* horizontal connector tick */}
+                      <span style={{ position: "absolute", [fa ? "right" : "left"]: -12, top: "50%", width: depth === 1 ? 10 : 7, height: 1, background: isActive ? "#f5a623" : "#2e3340", marginTop: 0.5, flexShrink: 0 }} />
+                      {depth === 1 && <span style={{ width: 3, height: 3, borderRadius: "50%", background: isActive ? "#f5a623" : "#4b5263", flexShrink: 0 }} />}
+                      <span dir="auto" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>
