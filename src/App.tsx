@@ -2851,6 +2851,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
               const last = cached[cached.length - 1];
               if (Number(last.time) === Number(pt.time)) cached[cached.length - 1] = pt;
               else if (Number(pt.time) > Number(last.time)) cached.push(pt);
+            } else {
+              pointsCacheRef.current[key] = [pt];
             }
           } else {
             const pts = sanitizePoints(raw);
@@ -3257,6 +3259,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   }, []);
 
   const changeSymbol = useCallback((s: string) => {
+    pointsCacheRef.current = {};   // stale indicator data must not leak to new symbol
     setSymbol(s);
     if (modeRef.current === "demo") {
       feedRef.current?.start({
@@ -3270,6 +3273,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   }, []);
 
   const changeTimeframe = useCallback((tf: string) => {
+    pointsCacheRef.current = {};   // stale indicator data must not leak to new timeframe
     setTimeframe(tf);
     engineRef.current?.setTimeframeSeconds(timeframeToSeconds(tf));
     if (modeRef.current === "demo") {
