@@ -135,6 +135,31 @@ const fmtNum = (v: number, digits = 2) => {
   return d ? `${neg}${g}.${d}` : `${neg}${g}`;
 };
 
+/**
+ * Detect the natural price precision from a sample of candles.
+ * Finds the minimum number of decimal places that exactly represents
+ * the prices (using floating-point tolerance), then returns the max
+ * observed across the sample — giving the chart tick-accurate formatting.
+ */
+function detectPriceDigits(candles: { close: number; open?: number }[]): number {
+  if (!candles.length) return 2;
+  const sample = candles.slice(-50);
+  let maxD = 0;
+  for (const c of sample) {
+    for (const price of [c.close, c.open ?? c.close]) {
+      if (!price || !Number.isFinite(price) || price <= 0) continue;
+      for (let d = 0; d <= 8; d++) {
+        const scale = Math.pow(10, d);
+        if (Math.abs(Math.round(price * scale) / scale - price) < price * 1e-9) {
+          if (d > maxD) maxD = d;
+          break;
+        }
+      }
+    }
+  }
+  return Math.max(2, Math.min(8, maxD));
+}
+
 const fmtCompact = (v: number) => {
   const a = Math.abs(v);
   if (a >= 1e9) return (v / 1e9).toFixed(2) + "B";
@@ -2752,7 +2777,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           eng.setCandles(candles);
           const last = candles[candles.length - 1];
           lastBarTimeRef.current = last ? Number(last.time) : 0;
-          const digits = msg.digits ?? (last ? (last.close < 2 ? 5 : last.close < 100 ? 3 : 2) : 2);
+          const digits = msg.digits ?? detectPriceDigits(candles);
           eng.setPrecision(digits);
         }
         if (msg.symbol) setSymbol(msg.symbol);
@@ -2820,8 +2845,15 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           const t = Number(msg.bar.time);
           lastBarTimeRef.current = Math.max(lastBarTimeRef.current, t);
           eng.applyBar(msg.bar as OHLC);
-          // On bar close the data source streams updated indicator points
-          // itself; the client never recomputes them.
+          // If the server sends `digits` alongside the bar, re-apply precision.
+          // Otherwise auto-detect from the bar's close price when no candles
+          // have been loaded yet (e.g. symbol switch before snapshot arrives).
+          if (msg.digits != null) {
+            eng.setPrecision(msg.digits);
+          } else if (eng.getDigits() === 2) {
+            const d = detectPriceDigits([msg.bar]);
+            if (d !== 2) eng.setPrecision(d);
+          }
         }
         break;
       }
