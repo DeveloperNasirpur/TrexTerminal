@@ -51,8 +51,8 @@ function K({ children }: { children: ReactNode }) {
   return (
     <code
       dir="ltr"
-      className="rounded-[5px] px-1.5 py-px font-mono text-[11px]"
-      style={{ border: "1px solid #2d3139", background: "#1e2128", color: "#f5a623" }}
+      className="rounded-[5px] px-1.5 py-px font-mono text-[12px]"
+      style={{ border: "1px solid #d0d7de", background: "#f6f8fa", color: "#cf222e" }}
     >
       {children}
     </code>
@@ -61,21 +61,17 @@ function K({ children }: { children: ReactNode }) {
 
 function Note({ kind = "note", children }: { kind?: "note" | "warn" | "tip"; children: ReactNode }) {
   const tone = {
-    note: { bar: "#f5a623", bg: "rgba(245,166,35,0.07)", ring: "rgba(245,166,35,0.2)" },
-    warn: { bar: "#F23645", bg: "rgba(242,54,69,0.07)", ring: "rgba(242,54,69,0.2)" },
-    tip:  { bar: "#1FBF8F", bg: "rgba(31,191,143,0.07)", ring: "rgba(31,191,143,0.2)" },
+    note: { bar: "#0969da", bg: "#dbeafe", ring: "#bfdbfe", text: "#1e3a5f" },
+    warn: { bar: "#d1242f", bg: "#fff0f0", ring: "#ffc1c0", text: "#6e1c1c" },
+    tip:  { bar: "#1a7f37", bg: "#dafbe1", ring: "#aceebb", text: "#1a3d1f" },
   }[kind];
   return (
     <div
-      className="my-4 rounded-[8px] px-4 py-3.5 text-[12.5px] leading-relaxed"
+      className="my-4 rounded-[6px] px-4 py-3 text-[13.5px] leading-relaxed"
       style={{
-        borderInlineStartWidth: 3,
-        borderInlineStartStyle: "solid",
-        borderInlineStartColor: tone.bar,
+        borderInlineStart: `4px solid ${tone.bar}`,
         background: tone.bg,
-        border: `1px solid ${tone.ring}`,
-        borderLeftColor: tone.bar,
-        color: "#9da3b0",
+        color: tone.text,
       }}
     >
       {children}
@@ -88,23 +84,19 @@ function Section({ id, title, children }: { id: string; title: string; children:
     <>
       <section id={id} className="scroll-mt-[68px]">
         <h2
-          className="mb-4 flex items-center gap-3 text-start font-bold leading-tight"
-          style={{ fontSize: 22, color: "#e2e4eb", paddingTop: 32, marginBottom: 16 }}
+          style={{ fontSize: 21, fontWeight: 700, color: "#1f2328", paddingTop: 40, marginBottom: 14, lineHeight: 1.3 }}
+          dir="auto"
         >
-          <span
-            className="inline-block shrink-0 rounded-full"
-            style={{ width: 3, height: 20, background: "#f5a623" }}
-          />
-          <span dir="auto">{title}</span>
+          {title}
         </h2>
         <div
-          className="space-y-3 text-start leading-[1.8]"
-          style={{ fontSize: 13.5, color: "#9da3b0" }}
+          className="space-y-3 text-start leading-[1.85]"
+          style={{ fontSize: 14.5, color: "#1f2328" }}
         >
           {children}
         </div>
       </section>
-      <hr style={{ borderColor: "#2d3139", margin: "32px 0 0 0" }} />
+      <hr style={{ borderColor: "#d0d7de", margin: "32px 0 0 0" }} />
     </>
   );
 }
@@ -116,13 +108,13 @@ function MsgTable({ rows, headers, fa }: { rows: MsgRow[]; headers: [string, str
     <div
       dir="ltr"
       className="trex-scroll my-4 overflow-x-auto"
-      style={{ borderRadius: 10, border: "1px solid #272B35" }}
+      style={{ borderRadius: 8, border: "1px solid #d0d7de" }}
     >
-      <table className="w-full border-collapse text-left text-[12px]">
+      <table className="w-full border-collapse text-left text-[13px]">
         <thead>
           <tr
-            className="text-[10.5px] uppercase tracking-wider"
-            style={{ borderBottom: "2px solid #323743", background: "#191D24", color: "#8A8F9C" }}
+            className="text-[11px] uppercase tracking-wider"
+            style={{ borderBottom: "1px solid #d0d7de", background: "#f6f8fa", color: "#57606a" }}
           >
             <th className="px-3.5 py-2.5 font-semibold">{headers[0]}</th>
             <th className="px-3.5 py-2.5 font-semibold">{headers[1]}</th>
@@ -134,11 +126,11 @@ function MsgTable({ rows, headers, fa }: { rows: MsgRow[]; headers: [string, str
             <tr
               key={r.type + r.payload}
               className="align-top"
-              style={{ borderTop: "1px solid #21252E", background: i % 2 ? "#15181F" : "transparent" }}
+              style={{ borderTop: "1px solid #eaeef2", background: i % 2 ? "#f6f8fa" : "#ffffff" }}
             >
-              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#f5a623" }}>{r.type}</td>
-              <td className="px-3.5 py-2.5 font-mono text-[11px]" style={{ color: "#9598A1" }}>{r.payload}</td>
-              <td className="px-3.5 py-2.5" style={{ color: "#B7BAC4" }} dir={fa ? "rtl" : "ltr"}>{r.desc}</td>
+              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#0550ae" }}>{r.type}</td>
+              <td className="px-3.5 py-2.5 font-mono text-[12px]" style={{ color: "#57606a" }}>{r.payload}</td>
+              <td className="px-3.5 py-2.5" style={{ color: "#1f2328" }} dir={fa ? "rtl" : "ltr"}>{r.desc}</td>
             </tr>
           ))}
         </tbody>
@@ -152,17 +144,17 @@ function KVTable({ rows, fa }: { rows: [string, string][]; fa: boolean }) {
     <div
       dir="ltr"
       className="trex-scroll my-4 overflow-x-auto"
-      style={{ borderRadius: 10, border: "1px solid #272B35" }}
+      style={{ borderRadius: 8, border: "1px solid #d0d7de" }}
     >
-      <table className="w-full border-collapse text-left text-[12px]">
+      <table className="w-full border-collapse text-left text-[13px]">
         <tbody>
           {rows.map(([k, d], i) => (
             <tr
               key={k}
-              style={{ borderTop: i === 0 ? "none" : "1px solid #21252E", background: i % 2 ? "#15181F" : "transparent" }}
+              style={{ borderTop: i === 0 ? "none" : "1px solid #eaeef2", background: i % 2 ? "#f6f8fa" : "#ffffff" }}
             >
-              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#f5a623" }}>{k}</td>
-              <td className="px-3.5 py-2.5" style={{ color: "#B7BAC4" }} dir={fa ? "rtl" : "ltr"}>{d}</td>
+              <td className="whitespace-nowrap px-3.5 py-2.5 font-mono font-medium" style={{ color: "#0550ae" }}>{k}</td>
+              <td className="px-3.5 py-2.5" style={{ color: "#1f2328" }} dir={fa ? "rtl" : "ltr"}>{d}</td>
             </tr>
           ))}
         </tbody>
@@ -928,9 +920,8 @@ const ALL_IDS = (fa: boolean): string[] => TOC_GROUPS(fa).flatMap((g) => g.items
 
 /* ═══════════════════════════ component ════════════════════════════ */
 
-const NAVBAR_H = 52;
-const SIDEBAR_W = 260;
-const RIGHT_TOC_W = 200;
+const NAVBAR_H = 56;
+const SIDEBAR_W = 272;
 
 export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack: () => void }) {
   const [l, setL] = useState<Lang>(lang);
@@ -969,28 +960,29 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
     scroller.scrollTo({ top: elTop - NAVBAR_H - 8, behavior: "smooth" });
   };
 
-  // Sidebar nav item style
+  // Sidebar nav item style (light theme)
   const navItemStyle = (id: string) =>
     active === id
       ? {
           borderInlineStartWidth: 3,
           borderInlineStartStyle: "solid" as const,
-          borderInlineStartColor: "#f5a623",
-          background: "rgba(245,166,35,0.08)",
-          color: "#ffffff",
+          borderInlineStartColor: "#0969da",
+          background: "#dbeafe",
+          color: "#0550ae",
+          fontWeight: 600,
           paddingInlineStart: 13,
         }
       : {
           borderInlineStartWidth: 3,
           borderInlineStartStyle: "solid" as const,
           borderInlineStartColor: "transparent",
-          color: "#8a8f9c",
+          color: "#57606a",
           paddingInlineStart: 13,
         };
 
   return (
     <div
-      style={{ background: "#0f1117", color: "#e2e4eb", fontFamily: "inherit", height: "100vh", overflow: "hidden" }}
+      style={{ background: "#ffffff", color: "#1f2328", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", height: "100vh", overflow: "hidden" }}
       dir={fa ? "rtl" : "ltr"}
     >
       {/* ════ Fixed top navbar ════ */}
@@ -1001,8 +993,8 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           left: 0,
           right: 0,
           height: NAVBAR_H,
-          background: "#1a1d23",
-          borderBottom: "1px solid #2d3139",
+          background: "#ffffff",
+          borderBottom: "1px solid #d0d7de",
           display: "flex",
           alignItems: "center",
           gap: 12,
@@ -1019,21 +1011,22 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             alignItems: "center",
             gap: 6,
             background: "none",
-            border: "none",
+            border: "1px solid #d0d7de",
             cursor: "pointer",
-            color: "#9da3b0",
+            color: "#57606a",
             fontSize: 12,
-            padding: "4px 8px",
+            fontWeight: 500,
+            padding: "4px 10px",
             borderRadius: 6,
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#e2e4eb"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9da3b0"; (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#f6f8fa"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
         >
           <IconArrowLeft />
           {fa ? "بازگشت" : "Back"}
         </button>
 
-        <div style={{ width: 1, height: 20, background: "#2d3139", flexShrink: 0 }} />
+        <div style={{ width: 1, height: 20, background: "#d0d7de", flexShrink: 0 }} />
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -1053,16 +1046,16 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           >
             T
           </span>
-          <span style={{ fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Trex</span>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#1f2328" }}>Trex</span>
           <span
             style={{
-              background: "rgba(245,166,35,0.15)",
-              color: "#f5a623",
+              background: "#dbeafe",
+              color: "#0550ae",
               fontSize: 10,
               fontWeight: 600,
               padding: "2px 7px",
               borderRadius: 20,
-              border: "1px solid rgba(245,166,35,0.3)",
+              border: "1px solid #bfdbfe",
             }}
           >
             Docs
@@ -1076,27 +1069,27 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
               display: "flex",
               alignItems: "center",
               gap: 8,
-              background: "#0f1117",
-              border: "1px solid #2d3139",
+              background: "#f6f8fa",
+              border: "1px solid #d0d7de",
               borderRadius: 8,
               padding: "0 12px",
               height: 34,
               width: "min(320px, 40vw)",
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5c6070" strokeWidth="2">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#57606a" strokeWidth="2">
               <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <span style={{ fontSize: 12.5, color: "#5c6070" }}>
+            <span style={{ fontSize: 12.5, color: "#8c959f" }}>
               {fa ? "جستجو…" : "Search..."}
             </span>
             <div style={{ flex: 1 }} />
             <kbd
               style={{
                 fontSize: 10,
-                color: "#5c6070",
-                background: "#1a1d23",
-                border: "1px solid #2d3139",
+                color: "#8c959f",
+                background: "#ffffff",
+                border: "1px solid #d0d7de",
                 borderRadius: 4,
                 padding: "1px 5px",
               }}
@@ -1110,7 +1103,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
         <div
           style={{
             display: "flex",
-            border: "1px solid #2d3139",
+            border: "1px solid #d0d7de",
             borderRadius: 8,
             overflow: "hidden",
             flexShrink: 0,
@@ -1128,8 +1121,8 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                 border: "none",
                 cursor: "pointer",
                 transition: "background 0.15s, color 0.15s",
-                background: l === x ? "linear-gradient(135deg, #FFB733, #FF7847)" : "transparent",
-                color: l === x ? "#1a1206" : "#9da3b0",
+                background: l === x ? "#0969da" : "transparent",
+                color: l === x ? "#ffffff" : "#57606a",
               }}
             >
               {x === "fa" ? "فارسی" : "English"}
@@ -1147,26 +1140,26 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           [fa ? "right" : "left"]: 0,
           width: SIDEBAR_W,
           height: `calc(100vh - ${NAVBAR_H}px)`,
-          background: "#1a1d23",
-          borderInlineEnd: "1px solid #2d3139",
+          background: "#f6f8fa",
+          borderInlineEnd: "1px solid #d0d7de",
           overflowY: "auto",
           zIndex: 40,
           paddingBottom: 32,
         }}
       >
-        <nav style={{ paddingTop: 16 }}>
+        <nav style={{ paddingTop: 12 }}>
           {TOC_GROUPS(fa).map((grp) => (
-            <div key={grp.group} style={{ marginBottom: 20 }}>
+            <div key={grp.group} style={{ marginBottom: 16 }}>
               {/* Group label */}
               <div
                 style={{
                   fontSize: 10.5,
                   fontWeight: 700,
-                  letterSpacing: "0.08em",
+                  letterSpacing: "0.07em",
                   textTransform: "uppercase",
-                  color: "#5c6070",
+                  color: "#8c959f",
                   padding: "0 16px",
-                  marginBottom: 4,
+                  marginBottom: 2,
                 }}
               >
                 {grp.group}
@@ -1188,18 +1181,18 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                     height: 32,
                     lineHeight: "32px",
                     paddingInlineEnd: 16,
-                    transition: "color 0.12s, background 0.12s",
+                    transition: "color 0.1s, background 0.1s",
                     ...navItemStyle(t.id),
                   }}
                   onMouseEnter={(e) => {
                     if (active !== t.id) {
-                      (e.currentTarget as HTMLButtonElement).style.color = "#e2e4eb";
-                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#1f2328";
+                      (e.currentTarget as HTMLButtonElement).style.background = "#eaeef2";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (active !== t.id) {
-                      (e.currentTarget as HTMLButtonElement).style.color = "#8a8f9c";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#57606a";
                       (e.currentTarget as HTMLButtonElement).style.background = "none";
                     }
                   }}
@@ -1223,43 +1216,43 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           [fa ? "left" : "right"]: 0,
           height: `calc(100vh - ${NAVBAR_H}px)`,
           overflowY: "auto",
-          background: "#0f1117",
+          background: "#ffffff",
         }}
       >
         {/* Inner content — max width centered */}
         <div
           style={{
-            maxWidth: 860,
+            maxWidth: 820,
             margin: "0 auto",
-            padding: "48px 40px",
+            padding: "48px 48px 80px",
           }}
         >
-          {/* Page title / hero (compact, GitBook-style) */}
-          <div style={{ marginBottom: 40 }}>
+          {/* Page title / hero */}
+          <div style={{ marginBottom: 48, paddingBottom: 32, borderBottom: "1px solid #d0d7de" }}>
             <div
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                background: "rgba(245,166,35,0.1)",
-                border: "1px solid rgba(245,166,35,0.25)",
+                background: "#dbeafe",
+                border: "1px solid #bfdbfe",
                 borderRadius: 20,
                 padding: "3px 12px",
                 fontSize: 11,
                 fontWeight: 600,
-                color: "#f5a623",
+                color: "#0550ae",
                 marginBottom: 16,
               }}
             >
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f5a623", display: "inline-block" }} />
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0969da", display: "inline-block" }} />
               {fa ? "نسخه ۲.۰ · سه پکیج یکپارچه" : "v2.0 · Three integrated packages"}
             </div>
             <h1
               style={{
-                fontSize: 36,
+                fontSize: 34,
                 fontWeight: 800,
-                color: "#ffffff",
-                lineHeight: 1.1,
+                color: "#1f2328",
+                lineHeight: 1.15,
                 marginBottom: 12,
                 letterSpacing: "-0.02em",
               }}
@@ -1267,7 +1260,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
             >
               {fa ? "مستندات Trex" : "Trex Docs"}
             </h1>
-            <p style={{ fontSize: 14.5, color: "#9da3b0", lineHeight: 1.7, maxWidth: 560 }}>
+            <p style={{ fontSize: 15, color: "#57606a", lineHeight: 1.75, maxWidth: 560 }}>
               {fa
                 ? "مستندات کامل سه پکیج Trex: ترمینال نموداری ریل‌تایم، موتور اندیکاتور با ۱۱۰+ اندیکاتور، و فریم‌ورک بک‌تست حرفه‌ای."
                 : "Complete reference for all three Trex packages: the realtime charting terminal, a 110+ indicator engine, and a professional backtesting framework."}
@@ -1277,14 +1270,14 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                 type="button"
                 onClick={() => go("quickstart")}
                 style={{
-                  borderRadius: 8,
+                  borderRadius: 6,
                   padding: "8px 18px",
                   fontSize: 13,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   border: "none",
                   cursor: "pointer",
-                  background: "linear-gradient(135deg, #FFB733, #FF7847)",
-                  color: "#1a1206",
+                  background: "#0969da",
+                  color: "#ffffff",
                 }}
               >
                 {fa ? "شروع سریع ترمینال" : "Terminal quick start"}
@@ -1293,17 +1286,15 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                 type="button"
                 onClick={() => go("eng-quickstart")}
                 style={{
-                  borderRadius: 8,
+                  borderRadius: 6,
                   padding: "8px 18px",
                   fontSize: 13,
-                  fontWeight: 700,
-                  border: "1px solid #2d3139",
+                  fontWeight: 600,
+                  border: "1px solid #d0d7de",
                   cursor: "pointer",
-                  background: "#1a1d23",
-                  color: "#e2e4eb",
+                  background: "#f6f8fa",
+                  color: "#1f2328",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#f5a623"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2d3139"; }}
               >
                 {fa ? "موتور اندیکاتور" : "Indicator Engine"}
               </button>
@@ -1311,24 +1302,20 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                 type="button"
                 onClick={() => go("bt-quickstart")}
                 style={{
-                  borderRadius: 8,
+                  borderRadius: 6,
                   padding: "8px 18px",
                   fontSize: 13,
-                  fontWeight: 700,
-                  border: "1px solid #2d3139",
+                  fontWeight: 600,
+                  border: "1px solid #d0d7de",
                   cursor: "pointer",
-                  background: "#1a1d23",
-                  color: "#e2e4eb",
+                  background: "#f6f8fa",
+                  color: "#1f2328",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#f5a623"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2d3139"; }}
               >
                 {fa ? "بک‌تست" : "BackTest"}
               </button>
             </div>
           </div>
-
-          <hr style={{ borderColor: "#2d3139", margin: "0 0 0 0" }} />
 
           {/* ══════════ TrexTerminal sections ══════════ */}
 
