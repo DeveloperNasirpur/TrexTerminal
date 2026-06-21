@@ -1080,7 +1080,7 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
               <p>
                 {fa
                   ? "فایل trex-terminal.html را در مرورگر باز کنید. در صفحه‌ی لودر، «Demo» شبیه‌ساز داخلی را اجرا می‌کند و «Connect» به آدرس WebSocket واردشده وصل می‌شود (پیش‌فرض: "
-                  : "Open trex-terminal.html in a browser. On the loader screen, "Demo" runs the built-in simulator while "Connect" attaches to the WebSocket URL you enter (default: "}
+                  : "Open trex-terminal.html in a browser. On the loader screen, “Demo” runs the built-in simulator while “Connect” attaches to the WebSocket URL you enter (default: "}
                 <K>ws://localhost:8765</K>
                 {fa ? ")." : ")."}
               </p>
