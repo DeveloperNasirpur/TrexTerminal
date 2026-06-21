@@ -1000,10 +1000,11 @@ df = pd.read_csv("data.csv", parse_dates=["time"])
 candles = load_dicts(df.to_dict("records"))`;
 
 const BT_BROADCAST = `class MyStrategy(Strategy):
-    symbol    = "BTCUSDT"
-    timeframe = "1h"
-    broadcast = True      # ← stream bars to TrexTerminal
-    port      = 8765
+    symbol       = "BTCUSDT"
+    timeframe    = "1h"
+    broadcast    = True      # ← stream bars to TrexTerminal
+    port         = 8765
+    replay_speed = 1.0       # bars per second (0 = max speed, no delay)
 
     def indicators(self):
         import trex
@@ -1012,8 +1013,42 @@ const BT_BROADCAST = `class MyStrategy(Strategy):
     def on_kline(self, bar): ...
 
 # Run → open TrexTerminal → Connect to ws://localhost:8765
-# You'll see the backtest replay live on the chart.
+# ✓ Chart replays live (candles + drawings + indicators)
+# ✓ Bottom panel shows Positions / Open Orders / Trade History / Assets
+# ✓ Progress bar tracks current bar vs total
+# ✓ Results tab appears when backtest finishes
+# ✓ Playback controls (play/pause/speed) work from TrexTerminal
 result = Backtest(MyStrategy).run(candles)`;
+
+const BT_WS_MESSAGES = `# WebSocket messages sent from BackTest to TrexTerminal:
+
+# bt_playback_state  — on connect, on pause/resume/speed change
+{ "type": "bt_playback_state", "active": true, "paused": false, "speed": 1.0 }
+
+# bt_progress  — throttled to ~10 fps
+{ "type": "bt_progress", "current": 342, "total": 5000, "pct": 6.8 }
+
+# bt_state  — live positions / orders / balance (throttled to ~10 fps)
+{ "type": "bt_state",
+  "balance": 9800.0, "equity": 10200.0,
+  "margin_used": 400.0, "unrealized_pnl": 0.0,
+  "positions": [ { "id": 1, "symbol": "BTCUSDT", "side": "LONG",
+                   "entry": 42000, "mark": 42500, "margin": 200,
+                   "leverage": 10, "pnl_usdt": 23.8, "pnl_pct": 11.9,
+                   "stop_price": 41500, "take_profit": 44000 } ],
+  "orders": [], "trade_history": [] }
+
+# bt_result  — sent once when backtest finishes
+{ "type": "bt_result",
+  "initial_balance": 10000, "final_balance": 13241.5,
+  "return_pct": 32.4, "total_trades": 47,
+  "win_rate": 57.4, "profit_factor": 1.83,
+  "max_drawdown_pct": 12.4, "equity_curve": [10000, 10120, ...] }
+
+# bt_playback — sent FROM TrexTerminal TO BackTest (client → server)
+{ "type": "bt_playback", "action": "pause" }
+{ "type": "bt_playback", "action": "play" }
+{ "type": "bt_playback", "action": "speed", "value": 5.0 }`;
 
 const INTEGRATION_EXAMPLE = `# Full integration: Trex Engine + BackTest + TrexTerminal
 #
@@ -1589,8 +1624,24 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           </Section>
 
           <Section id="bt-broadcast" hidden={active !== "bt-broadcast"} title={fa ? "پخش زنده روی TrexTerminal" : "Live chart replay"}>
-            <p>{fa ? "با broadcast=True، هر کندل به‌صورت زنده به TrexTerminal broadcast می‌شود:" : "Set broadcast=True to stream each bar to TrexTerminal in realtime:"}</p>
+            <p>{fa
+              ? "با broadcast=True بک‌تست به‌صورت زنده در TrexTerminal نمایش داده می‌شود. replay_speed سرعت پخش را کنترل می‌کند:"
+              : "Set broadcast=True to replay the backtest live in TrexTerminal. Use replay_speed to control playback rate:"
+            }</p>
             <Code lang="python">{BT_BROADCAST}</Code>
+            <p style={{ marginTop: 16 }}>{fa
+              ? "پنل پایین (Bottom Panel) به‌طور خودکار پوزیشن‌ها، سفارشات و نتایج را نمایش می‌دهد:"
+              : "The bottom panel automatically shows live positions, orders, and final results:"
+            }</p>
+            <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
+              <li><b>Positions</b> — {fa ? "پوزیشن‌های باز با PnL لحظه‌ای" : "open positions with live unrealized PnL"}</li>
+              <li><b>Open Orders</b> — {fa ? "سفارشات لیمیت در انتظار" : "pending limit orders"}</li>
+              <li><b>Trade History</b> — {fa ? "معاملات بسته شده (آخرین اول)" : "closed trades (latest first)"}</li>
+              <li><b>Assets</b> — {fa ? "موجودی، مارجین، equity" : "wallet balance, margin used, equity"}</li>
+              <li><b>Results</b> — {fa ? "پس از پایان بک‌تست: آمار کامل + equity curve" : "after backtest ends: full stats + equity curve"}</li>
+            </ul>
+            <p style={{ marginTop: 16 }}>{fa ? "پیام‌های WebSocket ارسالی از BackTest:" : "WebSocket messages sent from BackTest:"}</p>
+            <Code lang="python">{BT_WS_MESSAGES}</Code>
           </Section>
 
           {/* ══ Integration ══ */}

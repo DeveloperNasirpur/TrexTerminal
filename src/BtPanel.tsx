@@ -60,6 +60,28 @@ export interface BtState {
   trade_history: BtHistoryEntry[];
 }
 
+export interface BtResult {
+  initial_balance: number;
+  final_balance: number;
+  return_pct: number;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: number;
+  profit_factor: number;
+  risk_reward: number;
+  total_pnl_usdt: number;
+  gross_profit: number;
+  gross_loss: number;
+  largest_win: number;
+  largest_loss: number;
+  avg_win: number;
+  avg_loss: number;
+  max_drawdown_usdt: number;
+  max_drawdown_pct: number;
+  equity_curve: number[];
+}
+
 // ── Styles ─────────────────────────────────────────────────────────
 
 const BG       = "#0b0e11";
@@ -241,6 +263,86 @@ function AssetsTab({ state }: { state: BtState }) {
   );
 }
 
+function EquityCurve({ curve, initial }: { curve: number[]; initial: number }) {
+  if (curve.length < 2) return null;
+  const W = 320, H = 80, PAD = 6;
+  const min = Math.min(...curve);
+  const max = Math.max(...curve);
+  const range = max - min || 1;
+  const xs = curve.map((_, i) => PAD + ((W - PAD * 2) * i) / (curve.length - 1));
+  const ys = curve.map(v => PAD + (H - PAD * 2) * (1 - (v - min) / range));
+  const pts = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
+  const baseline = PAD + (H - PAD * 2) * (1 - (initial - min) / range);
+  const color = curve[curve.length - 1] >= initial ? LONG_CLR : SHORT_CLR;
+  return (
+    <svg width={W} height={H} style={{ display: "block", borderRadius: 4, background: "#0d1117", overflow: "visible" }}>
+      <line x1={PAD} y1={baseline} x2={W - PAD} y2={baseline} stroke="#2b3139" strokeWidth={1} strokeDasharray="3,3" />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" />
+      <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r={3} fill={color} />
+    </svg>
+  );
+}
+
+function ResultsTab({ result }: { result: BtResult }) {
+  const win = result.return_pct >= 0;
+  const rows: [string, string, string?][] = [
+    ["Initial Balance",   `$${result.initial_balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, "USDT"],
+    ["Final Balance",     `$${result.final_balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, "USDT"],
+    ["Net Return",        `${result.return_pct >= 0 ? "+" : ""}${fmt(result.return_pct, 2)}%`],
+    ["Total P&L",         `${result.total_pnl_usdt >= 0 ? "+" : ""}${fmt(result.total_pnl_usdt)}`, "USDT"],
+  ];
+  const stats: [string, string][] = [
+    ["Total Trades",     String(result.total_trades)],
+    ["Win / Loss",       `${result.winning_trades} / ${result.losing_trades}`],
+    ["Win Rate",         `${fmt(result.win_rate, 1)}%`],
+    ["Profit Factor",    fmt(result.profit_factor, 2)],
+    ["Risk / Reward",    fmt(result.risk_reward, 2)],
+    ["Gross Profit",     `+${fmt(result.gross_profit)} USDT`],
+    ["Gross Loss",       `${fmt(result.gross_loss)} USDT`],
+    ["Largest Win",      `+${fmt(result.largest_win)} USDT`],
+    ["Largest Loss",     `${fmt(result.largest_loss)} USDT`],
+    ["Avg Win",          `+${fmt(result.avg_win)} USDT`],
+    ["Avg Loss",         `${fmt(result.avg_loss)} USDT`],
+    ["Max Drawdown",     `${fmt(result.max_drawdown_pct, 1)}%  ($${fmt(result.max_drawdown_usdt)})`],
+  ];
+  return (
+    <div style={{ padding: "16px 20px", display: "flex", gap: 32, flexWrap: "wrap", alignItems: "flex-start" }}>
+      {/* Left: key metrics */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 200 }}>
+        {rows.map(([label, val, unit]) => {
+          const isReturn = label === "Net Return";
+          const isPnl = label === "Total P&L";
+          const colored = (isReturn || isPnl) ? pnlColor(parseFloat(val)) : TEXT;
+          return (
+            <div key={label}>
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: isReturn ? 22 : 16, fontWeight: 700, color: isReturn ? (win ? LONG_CLR : SHORT_CLR) : colored }}>
+                {val}{unit && <span style={{ fontSize: 11, fontWeight: 400, color: MUTED, marginLeft: 4 }}>{unit}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Middle: equity curve */}
+      <div>
+        <div style={{ fontSize: 11, color: MUTED, marginBottom: 8 }}>Equity Curve</div>
+        <EquityCurve curve={result.equity_curve} initial={result.initial_balance} />
+      </div>
+
+      {/* Right: stats grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: "6px 24px", alignContent: "start" }}>
+        {stats.map(([label, val]) => (
+          <div key={label} style={{ display: "contents" }}>
+            <span style={{ fontSize: 11, color: MUTED }}>{label}</span>
+            <span style={{ fontSize: 11, color: TEXT, fontWeight: 500 }}>{val}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EmptyRow({ text }: { text: string }) {
   return (
     <div style={{ padding: "20px", textAlign: "center", color: MUTED, fontSize: 13 }}>
@@ -251,20 +353,23 @@ function EmptyRow({ text }: { text: string }) {
 
 // ── Main component ─────────────────────────────────────────────────
 
-type Tab = "positions" | "orders" | "history" | "assets";
+type Tab = "positions" | "orders" | "history" | "assets" | "results";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "positions", label: "Positions" },
   { id: "orders",    label: "Open Orders" },
   { id: "history",   label: "Trade History" },
   { id: "assets",    label: "Assets" },
+  { id: "results",   label: "Results" },
 ];
 
 interface Props {
   state: BtState;
+  result?: BtResult | null;
+  progress?: { current: number; total: number; pct: number } | null;
 }
 
-export const BtPanel = memo(function BtPanel({ state }: Props) {
+export const BtPanel = memo(function BtPanel({ state, result, progress }: Props) {
   const [tab, setTab]       = useState<Tab>("positions");
   const [height, setHeight] = useState(240);
   const dragging            = useRef(false);
@@ -339,6 +444,7 @@ export const BtPanel = memo(function BtPanel({ state }: Props) {
         }}
       >
         {TABS.map(t => {
+          if (t.id === "results" && !result) return null;
           const badge = t.id === "positions" ? posCount : t.id === "orders" ? ordCount : null;
           const active = tab === t.id;
           return (
@@ -383,12 +489,25 @@ export const BtPanel = memo(function BtPanel({ state }: Props) {
         })}
       </div>
 
+      {/* Progress bar */}
+      {progress && progress.total > 0 && progress.pct < 100 && (
+        <div style={{ height: 3, background: "#2b3139", flexShrink: 0 }}>
+          <div style={{
+            height: "100%",
+            width: `${progress.pct}%`,
+            background: "linear-gradient(90deg, #f0b90b, #f5a623)",
+            transition: "width 0.15s ease",
+          }} />
+        </div>
+      )}
+
       {/* Content */}
       <div style={{ flex: 1, overflow: "auto" }}>
         {tab === "positions" && <PositionsTab positions={state.positions} />}
         {tab === "orders"    && <OrdersTab orders={state.orders} />}
         {tab === "history"   && <TradeHistoryTab history={state.trade_history} />}
         {tab === "assets"    && <AssetsTab state={state} />}
+        {tab === "results"   && result && <ResultsTab result={result} />}
       </div>
     </div>
   );

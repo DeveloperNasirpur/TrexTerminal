@@ -57,7 +57,7 @@ import {
   type PaneLayoutEntry,
 } from "./chartEngine";
 import { WSClient } from "./wsClient";
-import { BtPanel, type BtState } from "./BtPanel";
+import { BtPanel, type BtState, type BtResult } from "./BtPanel";
 import {
   makeHello,
   PROTOCOL_VERSION,
@@ -2636,6 +2636,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const [latency, setLatency] = useState<number | null>(null);
   const [btPlayback, setBtPlayback] = useState<{ active: boolean; paused: boolean; speed: number } | null>(null);
   const [btState, setBtState] = useState<BtState | null>(null);
+  const [btResult, setBtResult] = useState<BtResult | null>(null);
+  const [btProgress, setBtProgress] = useState<{ current: number; total: number; pct: number } | null>(null);
   // One-time load of the saved workspace (UI prefs only — never market data).
   const savedRef = useRef<Partial<WorkspaceState> | null>(null);
   if (savedRef.current === null) savedRef.current = loadWorkspace() ?? {};
@@ -2972,8 +2974,11 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         if (m.active === false) {
           setBtPlayback(null);
           setBtState(null);
+          setBtProgress(null);
+          // keep btResult visible so user can review after backtest ends
         } else {
           setBtPlayback({ active: true, paused: !!m.paused, speed: typeof m.speed === "number" ? m.speed : 1 });
+          setBtResult(null);
         }
         break;
       }
@@ -2989,6 +2994,39 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           orders:         m.orders         ?? [],
           trade_history:  m.trade_history  ?? [],
         });
+        break;
+      }
+
+      case "bt_progress": {
+        const m = msg as any;
+        setBtProgress({ current: m.current ?? 0, total: m.total ?? 0, pct: m.pct ?? 0 });
+        break;
+      }
+
+      case "bt_result": {
+        const m = msg as any;
+        setBtResult({
+          initial_balance:   m.initial_balance   ?? 0,
+          final_balance:     m.final_balance     ?? 0,
+          return_pct:        m.return_pct        ?? 0,
+          total_trades:      m.total_trades      ?? 0,
+          winning_trades:    m.winning_trades    ?? 0,
+          losing_trades:     m.losing_trades     ?? 0,
+          win_rate:          m.win_rate          ?? 0,
+          profit_factor:     m.profit_factor     ?? 0,
+          risk_reward:       m.risk_reward       ?? 0,
+          total_pnl_usdt:    m.total_pnl_usdt    ?? 0,
+          gross_profit:      m.gross_profit      ?? 0,
+          gross_loss:        m.gross_loss        ?? 0,
+          largest_win:       m.largest_win       ?? 0,
+          largest_loss:      m.largest_loss      ?? 0,
+          avg_win:           m.avg_win           ?? 0,
+          avg_loss:          m.avg_loss          ?? 0,
+          max_drawdown_usdt: m.max_drawdown_usdt ?? 0,
+          max_drawdown_pct:  m.max_drawdown_pct  ?? 0,
+          equity_curve:      Array.isArray(m.equity_curve) ? m.equity_curve : [],
+        });
+        setBtProgress(p => p ? { ...p, pct: 100 } : null);
         break;
       }
 
@@ -3077,6 +3115,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     setLatency(null);
     setBtPlayback(null);
     setBtState(null);
+    setBtResult(null);
+    setBtProgress(null);
     setServerDefs([]);
     lastBarTimeRef.current = 0;
     if (!feedRef.current) feedRef.current = new DemoFeed((m) => handleMessageRef.current(m));
@@ -3099,7 +3139,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       (m) => handleMessageRef.current(m),
       (ok) => {
         setConnStatus(ok ? "online" : "offline");
-        if (!ok) { setBtPlayback(null); setBtState(null); }
+        if (!ok) { setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null); }
         if (ok) {
           // Re-send handshake on every (re)connect so the server session gets
           // the current symbol/timeframe even after a reconnect.
@@ -3588,6 +3628,15 @@ export default function App({ initialMode }: { initialMode: string | null }) {
               );
             })}
           </div>
+          {/* progress */}
+          {btProgress && btProgress.total > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
+              <div style={{ width: 80, height: 3, background: "#2a2d3a", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${btProgress.pct}%`, background: "#f5a623", transition: "width 0.15s" }} />
+              </div>
+              <span style={{ fontSize: 10, color: "#6b7280" }}>{btProgress.pct.toFixed(1)}%</span>
+            </div>
+          )}
           {/* status text */}
           <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 4 }}>
             {btPlayback.paused ? "Paused" : btPlayback.speed === 0 ? "Max speed" : `${btPlayback.speed}× speed`}
@@ -3717,7 +3766,13 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         </div>
       </div>
 
-      {btState && <BtPanel state={btState} />}
+      {(btPlayback || btState || btResult) && (
+        <BtPanel
+          state={btState ?? { balance: 0, margin_used: 0, unrealized_pnl: 0, equity: 0, positions: [], orders: [], trade_history: [] }}
+          result={btResult}
+          progress={btProgress}
+        />
+      )}
 
       <StatusBar
         connLabel={conn.label}
