@@ -57,6 +57,7 @@ import {
   type PaneLayoutEntry,
 } from "./chartEngine";
 import { WSClient } from "./wsClient";
+import { BtPanel, type BtState } from "./BtPanel";
 import {
   makeHello,
   PROTOCOL_VERSION,
@@ -2609,6 +2610,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const [connStatus, setConnStatus] = useState<ConnStatus>(initialMode === "server" ? "connecting" : "demo");
   const [latency, setLatency] = useState<number | null>(null);
   const [btPlayback, setBtPlayback] = useState<{ active: boolean; paused: boolean; speed: number } | null>(null);
+  const [btState, setBtState] = useState<BtState | null>(null);
   // One-time load of the saved workspace (UI prefs only — never market data).
   const savedRef = useRef<Partial<WorkspaceState> | null>(null);
   if (savedRef.current === null) savedRef.current = loadWorkspace() ?? {};
@@ -2937,9 +2939,24 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         const m = msg as any;
         if (m.active === false) {
           setBtPlayback(null);
+          setBtState(null);
         } else {
           setBtPlayback({ active: true, paused: !!m.paused, speed: typeof m.speed === "number" ? m.speed : 1 });
         }
+        break;
+      }
+
+      case "bt_state": {
+        const m = msg as any;
+        setBtState({
+          balance:        m.balance        ?? 0,
+          margin_used:    m.margin_used    ?? 0,
+          unrealized_pnl: m.unrealized_pnl ?? 0,
+          equity:         m.equity         ?? 0,
+          positions:      m.positions      ?? [],
+          orders:         m.orders         ?? [],
+          trade_history:  m.trade_history  ?? [],
+        });
         break;
       }
 
@@ -3664,6 +3681,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           ))}
         </div>
       </div>
+
+      {btState && <BtPanel state={btState} />}
 
       <StatusBar
         connLabel={conn.label}
