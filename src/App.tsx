@@ -2765,6 +2765,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
             eng.setDefinitions(defs);
             setAppliedDefs(defs);
           } else {
+            eng.setDefinitions(defs);   // apply immediately so setSeriesData below finds the series
             setServerDefs(defs);
           }
         }
@@ -2830,6 +2831,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           setAppliedDefs(defs);
           flushPoints();
         } else {
+          eng.setDefinitions(defs);   // apply immediately so subsequent indicator updates find the series
           setServerDefs(defs);
         }
         break;
@@ -2897,7 +2899,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       case "fitContent": eng.fitContent(); break;
       case "scrollToEnd": eng.scrollToRealTime(); break;
       case "zoomRange":
-        if (msg.zoomRange) eng.setZoomRangeTimes(msg.zoomRange.from, msg.zoomRange.to);
+        if (msg.zoomRange && Number.isFinite(msg.zoomRange.from) && Number.isFinite(msg.zoomRange.to))
+          eng.setZoomRangeTimes(msg.zoomRange.from, msg.zoomRange.to);
         break;
 
       /* ── remote drawing sync (never echoes back) ── */
@@ -2920,7 +2923,11 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         break;
 
       case "toast":
-        if (msg.message) showToast(msg.message, (msg.toastType as ToastKind) ?? "info");
+        if (msg.message) {
+          const validKinds: ToastKind[] = ["info", "success", "error", "warning"];
+          const kind: ToastKind = validKinds.includes(msg.toastType) ? msg.toastType : "info";
+          showToast(msg.message, kind);
+        }
         break;
 
       case "error":
