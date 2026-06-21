@@ -2560,7 +2560,7 @@ export class ChartEngine {
     const rr = p.risk > 0 ? (p.reward / p.risk) : 0;
     const long = d.tool === "longPosition";
     const dirLabel = long ? "Long" : "Short";
-    this.chipLabel(ctx, x0 + 4, yE, `${dirLabel} · ${this.fmt(p.entryPrice)} · Qty ${p.quantity}`, "#1E222D", "#D1D4DC");
+    this.chipLabel(ctx, x0 + 4, yE, `${dirLabel} · ${this.fmt(p.entryPrice)}${p.quantity != null ? ` · Qty ${this.fmt(p.quantity)}` : ""}`, "#1E222D", "#D1D4DC");
     this.chipLabel(ctx, x0 + 4, yTP, `Target ${this.fmt(p.takeProfit)} (+${this.fmt(p.reward)}) · RR ${rr.toFixed(2)}`, this.hexA(green, 0.9), "#FFFFFF");
     this.chipLabel(ctx, x0 + 4, ySL, `Stop ${this.fmt(p.stopLoss)} (−${this.fmt(p.risk)})`, this.hexA(red, 0.9), "#FFFFFF");
     ctx.restore();

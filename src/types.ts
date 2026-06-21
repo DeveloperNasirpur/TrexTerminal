@@ -141,7 +141,7 @@ export interface WSMessage {
   drawingStyle?: Partial<DrawingStyle>;
   drawingText?: string;
   drawingPoints?: DrawingPoint[];
-  positionData?: Partial<{ entryPrice: number; stopLoss: number; takeProfit: number; quantity: number }>;
+  positionData?: Partial<PositionData>;
   // Chart control
   chartType?: string;
   timeframe?: string;
