@@ -1212,71 +1212,6 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
         </nav>
       </aside>
 
-      {/* ════ Fixed right TOC ════ */}
-      <div
-        className="trex-scroll hidden lg:block"
-        style={{
-          position: "fixed",
-          top: NAVBAR_H,
-          [fa ? "left" : "right"]: 0,
-          width: RIGHT_TOC_W,
-          height: `calc(100vh - ${NAVBAR_H}px)`,
-          borderInlineStart: "1px solid #2d3139",
-          overflowY: "auto",
-          zIndex: 40,
-          padding: "20px 0",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 10.5,
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "#5c6070",
-            padding: "0 16px",
-            marginBottom: 8,
-          }}
-        >
-          {fa ? "در این صفحه" : "On this page"}
-        </div>
-        {TOC_GROUPS(fa).map((grp) =>
-          grp.items.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => go(t.id)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: fa ? "right" : "left",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 12,
-                height: 28,
-                lineHeight: "28px",
-                paddingInlineEnd: 16,
-                transition: "color 0.12s",
-                borderInlineStartWidth: 2,
-                borderInlineStartStyle: "solid",
-                borderInlineStartColor: active === t.id ? "#f5a623" : "transparent",
-                color: active === t.id ? "#e2e4eb" : "#5c6070",
-                paddingInlineStart: 14,
-              }}
-              onMouseEnter={(e) => {
-                if (active !== t.id) (e.currentTarget as HTMLButtonElement).style.color = "#9da3b0";
-              }}
-              onMouseLeave={(e) => {
-                if (active !== t.id) (e.currentTarget as HTMLButtonElement).style.color = "#5c6070";
-              }}
-            >
-              {t.label}
-            </button>
-          ))
-        )}
-      </div>
-
       {/* ════ Main content area ════ */}
       <main
         ref={scrollerRef}
@@ -1294,10 +1229,9 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
         {/* Inner content — max width centered */}
         <div
           style={{
-            maxWidth: 760 + RIGHT_TOC_W,
+            maxWidth: 860,
             margin: "0 auto",
-            padding: "48px 40px 48px calc(40px)",
-            paddingInlineEnd: `calc(${RIGHT_TOC_W}px + 40px)`,
+            padding: "48px 40px",
           }}
         >
           {/* Page title / hero (compact, GitBook-style) */}
