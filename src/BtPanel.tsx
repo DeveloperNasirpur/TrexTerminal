@@ -266,8 +266,8 @@ function AssetsTab({ state }: { state: BtState }) {
 function EquityCurve({ curve, initial }: { curve: number[]; initial: number }) {
   if (curve.length < 2) return null;
   const W = 320, H = 80, PAD = 6;
-  const min = Math.min(...curve);
-  const max = Math.max(...curve);
+  const min = curve.reduce((a, b) => Math.min(a, b));
+  const max = curve.reduce((a, b) => Math.max(a, b));
   const range = max - min || 1;
   const xs = curve.map((_, i) => PAD + ((W - PAD * 2) * i) / (curve.length - 1));
   const ys = curve.map(v => PAD + (H - PAD * 2) * (1 - (v - min) / range));
@@ -312,7 +312,7 @@ function ResultsTab({ result }: { result: BtResult }) {
         {rows.map(([label, val, unit]) => {
           const isReturn = label === "Net Return";
           const isPnl = label === "Total P&L";
-          const colored = (isReturn || isPnl) ? pnlColor(parseFloat(val)) : TEXT;
+          const colored = (isReturn || isPnl) ? pnlColor(isPnl ? result.total_pnl_usdt : result.return_pct) : TEXT;
           return (
             <div key={label}>
               <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>{label}</div>
@@ -373,6 +373,10 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
   const [tab, setTab]       = useState<Tab>("positions");
   const [height, setHeight] = useState(240);
   const dragging            = useRef(false);
+
+  useEffect(() => {
+    if (!result && tab === "results") setTab("positions");
+  }, [result, tab]);
   const startY              = useRef(0);
   const startH              = useRef(0);
 
