@@ -708,7 +708,7 @@ function TopBar(p: TopBarProps) {
   );
 
   return (
-    <div className="nb-topbar relative z-40 flex h-[40px] shrink-0 items-center gap-0.5 bg-[#0D1120] px-1.5">
+    <div className="nb-topbar relative z-40 flex h-[40px] shrink-0 items-center gap-0.5 bg-[#0D1120] pl-1.5 pr-3">
       {/* ── Trex brand logo ── */}
       <div className="mr-1 flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-gradient-to-br from-[#f0b90b] to-[#fcd535] shadow-[0_2px_10px_rgba(240,185,11,0.45),0_0_20px_rgba(240,185,11,0.18)]">
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="#0b0e11" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -1065,7 +1065,7 @@ function LeftBar(props: {
   };
 
   return (
-    <div className="nb-leftbar relative z-30 flex w-[52px] shrink-0 flex-col items-center border-r bg-[#0D1120] pt-2 pb-1">
+    <div className="nb-leftbar relative z-30 flex w-[52px] shrink-0 flex-col items-center border-r bg-[#0D1120] pt-8 pb-1">
       {TOOL_GROUPS.map((g, gi) => {
         const current = lastUsed[g.id];
         const meta = TOOL_META[current];
@@ -1082,7 +1082,14 @@ function LeftBar(props: {
                 data-tip={meta.label + (meta.shortcut ? ` (${meta.shortcut})` : "")}
                 data-tip-pos="right"
                 aria-label={meta.label}
-                onClick={() => { props.onTool(current); setFlyout(null); }}
+                onClick={() => {
+                  if (activeInGroup && g.tools.length > 1) {
+                    setFlyout(flyout === g.id ? null : g.id);
+                  } else {
+                    props.onTool(current);
+                    setFlyout(null);
+                  }
+                }}
                 onContextMenu={(e) => { e.preventDefault(); if (g.tools.length > 1) setFlyout(g.id); }}
                 style={activeInGroup ? {
                   color: g.color,
