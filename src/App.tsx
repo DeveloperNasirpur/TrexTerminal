@@ -3186,12 +3186,11 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       case "definitions": {
         if (!msg.definitions) break;
         const defs = sanitizeDefinitions(msg.definitions);
+        eng.setDefinitions(defs);
+        flushPoints();
         if (modeRef.current === "demo") {
-          eng.setDefinitions(defs);
           setAppliedDefs(defs);
-          flushPoints();
         } else {
-          eng.setDefinitions(defs);   // apply immediately so subsequent indicator updates find the series
           setServerDefs(defs);
         }
         break;

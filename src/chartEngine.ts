@@ -673,7 +673,9 @@ export class ChartEngine {
     const i = this.candles.length - 1;
     const c = this.candles[i];
     if (this.chartType === "heikin") {
-      // depends on the previous *displayed* HA bar
+      // Must ensure the HA array is built before reading prev, otherwise
+      // displayed===candles and prev would be a raw bar — producing wrong haO.
+      if (this.displayed === this.candles) this.transformAll();
       const prev = this.displayed[i - 1];
       const haC = (c.open + c.high + c.low + c.close) / 4;
       const haO = prev ? (prev.open + prev.close) / 2 : (c.open + c.close) / 2;
@@ -683,7 +685,6 @@ export class ChartEngine {
         low: Math.min(c.low, haO, haC),
         close: haC, volume: c.volume,
       };
-      if (this.displayed === this.candles) this.transformAll();
       if (i < this.displayed.length) this.displayed[i] = ha;
       else this.displayed.push(ha);
       return this.toSeriesBar(ha);
@@ -723,8 +724,8 @@ export class ChartEngine {
       time: c.time,
       value: c.volume ?? 0,
       color: c.close >= c.open
-        ? this.hexA(this.settings.candleUpColor, 0.45)
-        : this.hexA(this.settings.candleDownColor, 0.45),
+        ? this.hexA(this.settings.candleUpColor, 0.28)
+        : this.hexA(this.settings.candleDownColor, 0.22),
     });
   }
 
@@ -1509,7 +1510,7 @@ export class ChartEngine {
   }
 
   private setSelected(id: string | null): void {
-    if (this.selectedId === id) { this.emitSelection(); return; }
+    if (this.selectedId === id) return;
     for (const d of this.drawings) d.selected = d.id === id;
     this.selectedId = id;
     this.emitSelection();
