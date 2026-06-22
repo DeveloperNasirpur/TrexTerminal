@@ -491,7 +491,7 @@ function Menu(props: {
       style={{ width: props.width }}
       className={cn(
         "trex-menu absolute top-[calc(100%+6px)] z-50 overflow-hidden rounded-md",
-        "border border-[#363A45] bg-[#1E222D] py-1 shadow-xl shadow-black/50",
+        "border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl shadow-black/50",
         props.anchor === "right" ? "right-0" : "left-0",
         props.className
       )}
@@ -539,15 +539,15 @@ function Modal(props: { open: boolean; onClose: () => void; title: string; width
       onPointerDown={(e) => { if (e.target === e.currentTarget) props.onClose(); }}
     >
       <div
-        className="trex-menu flex max-h-[85%] flex-col overflow-hidden rounded-lg border border-[#363A45] bg-[#1E222D] shadow-2xl shadow-black/60"
+        className="trex-menu flex max-h-[85%] flex-col overflow-hidden rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#111827] shadow-2xl shadow-black/60"
         style={{ width: props.width ?? 440 }}
       >
-        <div className="flex h-11 shrink-0 items-center justify-between border-b border-[#2A2E39] px-4">
+        <div className="flex h-11 shrink-0 items-center justify-between border-b border-[rgba(255,255,255,0.06)] px-4">
           <span className="text-[13px] font-semibold text-[#D1D4DC]">{props.title}</span>
           <IconBtn tip="Close" onClick={props.onClose}><IconX /></IconBtn>
         </div>
         <div className="trex-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3">{props.children}</div>
-        {props.footer && <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[#2A2E39] px-4 py-3">{props.footer}</div>}
+        {props.footer && <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[rgba(255,255,255,0.06)] px-4 py-3">{props.footer}</div>}
       </div>
     </div>
   );
@@ -585,7 +585,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const inputCls =
-  "h-8 w-full rounded border border-[#363A45] bg-[#131722] px-2.5 text-[12.5px] text-[#D1D4DC] " +
+  "h-8 w-full rounded border border-[rgba(255,255,255,0.08)] bg-[#0D1120] px-2.5 text-[12.5px] text-[#C9D1E0] " +
   "outline-none transition-colors focus:border-[#2962FF] font-mono";
 
 function ColorSwatchGrid({ value, onPick }: { value: string; onPick: (c: string) => void }) {
@@ -707,7 +707,7 @@ function TopBar(p: TopBarProps) {
   );
 
   return (
-    <div className="nb-topbar relative z-40 flex h-[40px] shrink-0 items-center gap-0.5 border-b border-[#2A2E39] bg-[#131722] px-1.5">
+    <div className="nb-topbar relative z-40 flex h-[40px] shrink-0 items-center gap-0.5 border-b border-[rgba(255,255,255,0.06)] bg-[#0D1120] px-1.5">
       {/* ── Trex brand logo ── */}
       <div className="mr-1 flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-gradient-to-br from-[#f0b90b] to-[#fcd535] shadow-[0_4px_12px_rgba(240,185,11,0.35)]">
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="#0b0e11" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -909,7 +909,7 @@ function TopBar(p: TopBarProps) {
         <button
           type="button"
           onClick={() => setConnOpen((v) => !v)}
-          className="flex h-[30px] items-center gap-1.5 rounded-full border border-[#2A2E39] bg-[#1E222D] px-2.5 text-[11px] font-semibold text-[#B2B5BE] hover:border-[#363A45]"
+          className="flex h-[30px] items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.06)] bg-[#111827] px-2.5 text-[11px] font-semibold text-[#B2B5BE] hover:border-[rgba(255,255,255,0.08)]"
         >
           <span className="h-2 w-2 rounded-full" style={{
             background: p.connColor,
@@ -985,7 +985,7 @@ function FloatingFavorites(props: {
 
   return (
     <div
-      className="trex-menu nb-floating absolute z-30 flex items-center gap-0.5 rounded-md border border-[#363A45] bg-[#1E222D] p-1"
+      className="trex-menu nb-floating absolute z-30 flex items-center gap-0.5 rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] p-1"
       style={{ left: pos.x, top: pos.y }}
     >
       <span
@@ -1054,7 +1054,7 @@ function LeftBar(props: {
   };
 
   return (
-    <div className="nb-leftbar relative z-30 flex w-[44px] shrink-0 flex-col items-center border-r border-[#2A2E39] bg-[#131722] py-1">
+    <div className="nb-leftbar relative z-30 flex w-[44px] shrink-0 flex-col items-center border-r border-[rgba(255,255,255,0.06)] bg-[#0D1120] py-1">
       {TOOL_GROUPS.map((g, gi) => {
         const current = lastUsed[g.id];
         const meta = TOOL_META[current];
@@ -1097,7 +1097,7 @@ function LeftBar(props: {
             {flyout === g.id && (
               <div
                 ref={flyoutRef}
-                className="trex-menu absolute left-[40px] z-50 min-w-[200px] rounded-md border border-[#363A45] bg-[#1E222D] py-1 shadow-xl shadow-black/50"
+                className="trex-menu absolute left-[40px] z-50 min-w-[200px] rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl shadow-black/50"
                 style={{ top: Math.min(0, -gi * 4) }}
               >
                 {g.tools.map((t) => {
@@ -1209,7 +1209,7 @@ function StatusBar(props: {
   };
 
   return (
-    <div className="nb-statusbar flex h-[30px] shrink-0 items-center gap-0 border-t border-[#1e2533] bg-[#0f1117] px-2 text-[11px] text-[#4a5568]">
+    <div className="nb-statusbar flex h-[30px] shrink-0 items-center gap-0 border-t border-[rgba(255,255,255,0.05)] bg-[#090D18] px-2 text-[11px] text-[#4a5568]">
       {/* connection status */}
       <span className="flex items-center gap-1.5 pr-3 font-semibold" style={{ color: props.connColor }}>
         <span className="h-[7px] w-[7px] rounded-full flex-shrink-0"
@@ -1404,7 +1404,7 @@ function FloatingToolbar(props: {
   return (
     <div
       ref={props.barRef}
-      className="trex-menu pointer-events-auto absolute z-40 flex items-center gap-0.5 rounded-md border border-[#363A45] bg-[#1E222D] p-0.5 shadow-xl shadow-black/50 [&_button]:h-7 [&_button]:min-w-[28px]"
+      className="trex-menu pointer-events-auto absolute z-40 flex items-center gap-0.5 rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] p-0.5 shadow-xl shadow-black/50 [&_button]:h-7 [&_button]:min-w-[28px]"
       style={{ left: 0, top: 0, visibility: "hidden" }}
     >
       {/* color */}
@@ -1418,7 +1418,7 @@ function FloatingToolbar(props: {
           <span className="h-4 w-4 rounded-[4px] border border-black/30" style={{ background: m.style.color }} />
         </button>
         {pop === "color" && (
-          <div ref={popRef} className="trex-menu absolute left-0 top-[calc(100%+6px)] w-[196px] rounded-md border border-[#363A45] bg-[#1E222D] p-1 shadow-xl">
+          <div ref={popRef} className="trex-menu absolute left-0 top-[calc(100%+6px)] w-[196px] rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] p-1 shadow-xl">
             <ColorSwatchGrid value={m.style.color} onPick={(c) => { props.onStyle({ color: c, fillColor: c }); setPop(null); }} />
           </div>
         )}
@@ -1435,7 +1435,7 @@ function FloatingToolbar(props: {
           {m.style.lineWidth}px
         </button>
         {pop === "width" && (
-          <div ref={popRef} className="trex-menu absolute left-0 top-[calc(100%+6px)] w-[120px] rounded-md border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+          <div ref={popRef} className="trex-menu absolute left-0 top-[calc(100%+6px)] w-[120px] rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl">
             {[1, 2, 3, 4].map((w) => (
               <button
                 key={w}
@@ -1462,7 +1462,7 @@ function FloatingToolbar(props: {
           {LINE_STYLES.find((s) => s.value === m.style.lineStyle)?.preview ?? "————"}
         </button>
         {pop === "style" && (
-          <div ref={popRef} className="trex-menu absolute left-0 top-[calc(100%+6px)] w-[130px] rounded-md border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+          <div ref={popRef} className="trex-menu absolute left-0 top-[calc(100%+6px)] w-[130px] rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl">
             {LINE_STYLES.map((s) => (
               <button
                 key={s.value}
@@ -1517,7 +1517,7 @@ function ContextMenu(props: {
   return (
     <div
       ref={ref}
-      className="trex-menu absolute z-50 w-[210px] rounded-md border border-[#363A45] bg-[#1E222D] py-1 shadow-xl shadow-black/50"
+      className="trex-menu absolute z-50 w-[210px] rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl shadow-black/50"
       style={{ left: Math.min(x, window.innerWidth - 260), top: y }}
     >
       {drawingId ? (
@@ -1619,19 +1619,19 @@ function ChartSettingsDialog(props: {
       <div className="grid grid-cols-2 gap-x-4">
         <Field label="Up color">
           <div className="flex items-center gap-2">
-            <input type="color" value={s.candleUpColor} onChange={(e) => set({ candleUpColor: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-[#363A45] bg-transparent" />
+            <input type="color" value={s.candleUpColor} onChange={(e) => set({ candleUpColor: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-[rgba(255,255,255,0.08)] bg-transparent" />
             <input className={inputCls} value={s.candleUpColor} onChange={(e) => set({ candleUpColor: e.target.value })} />
           </div>
         </Field>
         <Field label="Down color">
           <div className="flex items-center gap-2">
-            <input type="color" value={s.candleDownColor} onChange={(e) => set({ candleDownColor: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-[#363A45] bg-transparent" />
+            <input type="color" value={s.candleDownColor} onChange={(e) => set({ candleDownColor: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-[rgba(255,255,255,0.08)] bg-transparent" />
             <input className={inputCls} value={s.candleDownColor} onChange={(e) => set({ candleDownColor: e.target.value })} />
           </div>
         </Field>
         <Field label="Background">
           <div className="flex items-center gap-2">
-            <input type="color" value={s.backgroundColor} onChange={(e) => set({ backgroundColor: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-[#363A45] bg-transparent" />
+            <input type="color" value={s.backgroundColor} onChange={(e) => set({ backgroundColor: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-[rgba(255,255,255,0.08)] bg-transparent" />
             <input className={inputCls} value={s.backgroundColor} onChange={(e) => set({ backgroundColor: e.target.value })} />
           </div>
         </Field>
@@ -1639,7 +1639,7 @@ function ChartSettingsDialog(props: {
           <input className={inputCls} value={s.gridColor} onChange={(e) => set({ gridColor: e.target.value })} />
         </Field>
       </div>
-      <div className="mt-1 border-t border-[#2A2E39] pt-2">
+      <div className="mt-1 border-t border-[rgba(255,255,255,0.06)] pt-2">
         <Toggle label="Show grid" checked={s.showGrid} onChange={(v) => set({ showGrid: v })} />
         <Toggle label="Show volume" checked={s.showVolume} onChange={(v) => set({ showVolume: v })} />
         <Toggle label="Show crosshair" checked={s.showCrosshair} onChange={(v) => set({ showCrosshair: v })} />
@@ -1681,9 +1681,9 @@ function FibLevelsEditor({ levels, onChange }: { levels: FibLevel[]; onChange: (
   return (
     <div className="mt-2">
       <div className="mb-1 text-[11px] font-medium text-[#787B86]">Fibonacci levels</div>
-      <div className="trex-scroll max-h-[220px] overflow-y-auto rounded border border-[#2A2E39]">
+      <div className="trex-scroll max-h-[220px] overflow-y-auto rounded border border-[rgba(255,255,255,0.06)]">
         {levels.map((l, i) => (
-          <div key={i} className="flex items-center gap-2 border-b border-[#2A2E39] px-2 py-1.5 last:border-b-0">
+          <div key={i} className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.06)] px-2 py-1.5 last:border-b-0">
             <input
               type="checkbox"
               checked={l.enabled}
@@ -1701,7 +1701,7 @@ function FibLevelsEditor({ levels, onChange }: { levels: FibLevel[]; onChange: (
               type="color"
               value={l.color}
               onChange={(e) => update(i, { color: e.target.value })}
-              className="h-7 w-9 cursor-pointer rounded border border-[#363A45] bg-transparent"
+              className="h-7 w-9 cursor-pointer rounded border border-[rgba(255,255,255,0.08)] bg-transparent"
             />
             <span className="flex-1 text-right font-mono text-[11px] text-[#787B86]">{(l.value * 100).toFixed(1)}%</span>
           </div>
@@ -1730,7 +1730,7 @@ function DrawingSettingsDialog(props: {
   return (
     <Modal open onClose={props.onClose} title={`${TOOL_META[m.tool].label} settings`} width={420}>
       <Field label="Color">
-        <div className="rounded border border-[#2A2E39] bg-[#131722]">
+        <div className="rounded border border-[rgba(255,255,255,0.06)] bg-[#0B0F1A]">
           <ColorSwatchGrid value={st.color} onPick={(c) => props.onStyle({ color: c, fillColor: c })} />
         </div>
       </Field>
@@ -1740,7 +1740,7 @@ function DrawingSettingsDialog(props: {
             {[1, 2, 3, 4].map((w) => (
               <button key={w} type="button" onClick={() => props.onStyle({ lineWidth: w })}
                 className={cn("flex h-8 flex-1 items-center justify-center rounded border text-[11px]",
-                  st.lineWidth === w ? "border-[#2962FF] text-[#2962FF]" : "border-[#363A45] text-[#B2B5BE] hover:border-[#787B86]")}>
+                  st.lineWidth === w ? "border-[#2962FF] text-[#2962FF]" : "border-[rgba(255,255,255,0.08)] text-[#B2B5BE] hover:border-[#787B86]")}>
                 {w}px
               </button>
             ))}
@@ -1751,7 +1751,7 @@ function DrawingSettingsDialog(props: {
             {LINE_STYLES.map((s) => (
               <button key={s.value} type="button" onClick={() => props.onStyle({ lineStyle: s.value })}
                 className={cn("flex h-8 flex-1 items-center justify-center rounded border font-mono text-[10px]",
-                  st.lineStyle === s.value ? "border-[#2962FF] text-[#2962FF]" : "border-[#363A45] text-[#B2B5BE] hover:border-[#787B86]")}>
+                  st.lineStyle === s.value ? "border-[#2962FF] text-[#2962FF]" : "border-[rgba(255,255,255,0.08)] text-[#B2B5BE] hover:border-[#787B86]")}>
                 {s.preview}
               </button>
             ))}
@@ -1788,7 +1788,7 @@ function DrawingSettingsDialog(props: {
       )}
 
       {m.tool === "trendline" && (
-        <div className="border-t border-[#2A2E39] pt-1">
+        <div className="border-t border-[rgba(255,255,255,0.06)] pt-1">
           <Toggle label="Extend left" checked={st.extendLeft} onChange={(v) => props.onStyle({ extendLeft: v })} />
           <Toggle label="Extend right" checked={st.extendRight} onChange={(v) => props.onStyle({ extendRight: v })} />
         </div>
@@ -1806,7 +1806,7 @@ function DrawingSettingsDialog(props: {
       )}
 
       {(m.tool === "longPosition" || m.tool === "shortPosition") && pos && (
-        <div className="grid grid-cols-2 gap-x-4 border-t border-[#2A2E39] pt-3">
+        <div className="grid grid-cols-2 gap-x-4 border-t border-[rgba(255,255,255,0.06)] pt-3">
           <Field label="Entry price">
             <input type="number" step="any" className={inputCls} value={pos.entryPrice}
               onChange={(e) => props.onProps({ positionData: { ...pos, entryPrice: parseFloat(e.target.value) || pos.entryPrice } })} />
@@ -1915,7 +1915,7 @@ function IndicatorsModal(props: {
       })}
 
       {props.mode === "server" && props.serverAvailableIndicators.length > 0 && (
-        <div className="mb-2 border-t border-[#2A2E39] pt-2">
+        <div className="mb-2 border-t border-[rgba(255,255,255,0.06)] pt-2">
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Available from server</div>
           {props.serverAvailableIndicators
             .filter((d) => !query || d.label.toLowerCase().includes(query) || d.key.toLowerCase().includes(query))
@@ -1944,7 +1944,7 @@ function IndicatorsModal(props: {
       )}
 
       {props.mode === "server" && serverMatches.length > 0 && (
-        <div className="mb-2 border-t border-[#2A2E39] pt-2">
+        <div className="mb-2 border-t border-[rgba(255,255,255,0.06)] pt-2">
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Active from server</div>
           {serverMatches.map((d) => {
             const vis = props.serverVis[d.key] ?? d.visible;
@@ -1962,7 +1962,7 @@ function IndicatorsModal(props: {
       )}
 
       {customMatches.length > 0 && (
-        <div className="border-t border-[#2A2E39] pt-2">
+        <div className="border-t border-[rgba(255,255,255,0.06)] pt-2">
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Custom (Builder)</div>
           {customMatches.map((d) => (
             <div key={d.key} className="flex items-center gap-2.5 rounded px-2 py-1.5 text-[12.5px] text-[#D1D4DC] hover:bg-[#2A2E39]">
@@ -2150,7 +2150,7 @@ function BuilderZone(props: {
       onDrop={(e) => props.onDropZone(props.pane, e)}
       className={cn(
         "mb-3 rounded-lg border p-2 transition-colors",
-        props.isOver ? "border-[#2962FF] bg-[rgba(41,98,255,0.06)]" : "border-dashed border-[#363A45]"
+        props.isOver ? "border-[#2962FF] bg-[rgba(41,98,255,0.06)]" : "border-dashed border-[rgba(255,255,255,0.08)]"
       )}
     >
       <div className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">{props.title}</div>
@@ -2187,9 +2187,9 @@ function BuilderZone(props: {
           }}
           onClick={() => props.onSelect(c.uid)}
           className={cn(
-            "mb-1 flex cursor-pointer items-center gap-2 rounded-md border bg-[#1E222D] px-2 py-1.5 transition-all",
+            "mb-1 flex cursor-pointer items-center gap-2 rounded-md border bg-[#111827] px-2 py-1.5 transition-all",
             props.overCard === c.uid && "border-t-2 border-t-[#2962FF]",
-            props.selUid === c.uid ? "border-[#2962FF]" : "border-[#2A2E39] hover:border-[#4a4e59]"
+            props.selUid === c.uid ? "border-[#2962FF]" : "border-[rgba(255,255,255,0.06)] hover:border-[#4a4e59]"
           )}
         >
           <span className="cursor-grab text-[#56585f]"><IconGrip /></span>
@@ -2428,9 +2428,9 @@ function BuilderPage(props: {
   };
 
   return (
-    <div className="trex-fade absolute inset-0 z-[80] flex flex-col bg-[#131722]">
+    <div className="trex-fade absolute inset-0 z-[80] flex flex-col bg-[#0B0F1A]">
       {/* header */}
-      <div className="flex h-[46px] shrink-0 items-center gap-2 border-b border-[#2A2E39] px-3">
+      <div className="flex h-[46px] shrink-0 items-center gap-2 border-b border-[rgba(255,255,255,0.06)] px-3">
         <IconBtn tip="Back to chart" onClick={props.onBack}><IconArrowLeft /></IconBtn>
         <span className="flex items-center gap-2 text-[14px] font-bold text-[#D1D4DC]"><IconBuilder /> Indicator Builder</span>
         <span className="ml-2 text-[11.5px] text-[#787B86]">Drag components onto a pane, tune them, then export or apply.</span>
@@ -2444,7 +2444,7 @@ function BuilderPage(props: {
 
       <div className="flex min-h-0 flex-1">
         {/* palette */}
-        <div className="trex-scroll w-[230px] shrink-0 overflow-y-auto border-r border-[#2A2E39] p-3">
+        <div className="trex-scroll w-[230px] shrink-0 overflow-y-auto border-r border-[rgba(255,255,255,0.06)] p-3">
           <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Presets</div>
           {PRESETS.map((p) => (
             <div
@@ -2455,7 +2455,7 @@ function BuilderPage(props: {
                 e.dataTransfer.setData("text/plain", p.id);
                 e.dataTransfer.effectAllowed = "copyMove";
               }}
-              className="mb-2 cursor-grab rounded-md border border-[#2A2E39] bg-[#1E222D] p-2.5 transition-colors hover:border-[#2962FF] active:cursor-grabbing"
+              className="mb-2 cursor-grab rounded-md border border-[rgba(255,255,255,0.06)] bg-[#111827] p-2.5 transition-colors hover:border-[#2962FF] active:cursor-grabbing"
             >
               <div className="mb-0.5 flex items-center gap-2 text-[12.5px] font-semibold text-[#D1D4DC]">
                 <span className="text-[#FCD535]">{p.icon}</span>{p.label}
@@ -2474,7 +2474,7 @@ function BuilderPage(props: {
                 e.dataTransfer.setData("text/plain", p.kind); // Firefox quirk
                 e.dataTransfer.effectAllowed = "copyMove";
               }}
-              className="mb-2 cursor-grab rounded-md border border-[#2A2E39] bg-[#1E222D] p-2.5 transition-colors hover:border-[#2962FF] active:cursor-grabbing"
+              className="mb-2 cursor-grab rounded-md border border-[rgba(255,255,255,0.06)] bg-[#111827] p-2.5 transition-colors hover:border-[#2962FF] active:cursor-grabbing"
             >
               <div className="mb-0.5 flex items-center gap-2 text-[12.5px] font-semibold text-[#D1D4DC]">
                 <span className="text-[#2962FF]">{p.icon}</span>{p.label}
@@ -2482,7 +2482,7 @@ function BuilderPage(props: {
               <div className="text-[11px] leading-snug text-[#787B86]">{p.blurb}</div>
             </div>
           ))}
-          <div className="mt-3 rounded-md border border-[#2A2E39] bg-[rgba(41,98,255,0.05)] p-2.5 text-[11px] leading-relaxed text-[#9598A1]">
+          <div className="mt-3 rounded-md border border-[rgba(255,255,255,0.06)] bg-[rgba(41,98,255,0.05)] p-2.5 text-[11px] leading-relaxed text-[#9598A1]">
             Exported JSON uses the exact <span className="font-mono text-[#B2B5BE]">SeriesDefinition</span> schema the
             WebSocket server sends — drop it straight into your backend.
           </div>
@@ -2508,11 +2508,11 @@ function BuilderPage(props: {
           />
 
           <div className="mb-1.5 mt-4 px-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Live preview</div>
-          <div ref={previewRef} className="h-[260px] w-full overflow-hidden rounded-lg border border-[#2A2E39]" />
+          <div ref={previewRef} className="h-[260px] w-full overflow-hidden rounded-lg border border-[rgba(255,255,255,0.06)]" />
         </div>
 
         {/* properties */}
-        <div className="trex-scroll w-[280px] shrink-0 overflow-y-auto border-l border-[#2A2E39] p-3">
+        <div className="trex-scroll w-[280px] shrink-0 overflow-y-auto border-l border-[rgba(255,255,255,0.06)] p-3">
           <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Properties</div>
           {!sel && <div className="text-[12px] text-[#56585f]">Select a component to edit it.</div>}
           {sel && (
@@ -2535,7 +2535,7 @@ function BuilderPage(props: {
                 </Field>
               </div>
               <Field label="Color">
-                <div className="rounded border border-[#2A2E39] bg-[#131722]">
+                <div className="rounded border border-[rgba(255,255,255,0.06)] bg-[#0B0F1A]">
                   <ColorSwatchGrid value={sel.color} onPick={(c) => update(sel.uid, { color: c })} />
                 </div>
               </Field>
@@ -2552,7 +2552,7 @@ function BuilderPage(props: {
                 </Field>
               </div>
 
-              <div className="mb-2 mt-1 border-t border-[#2A2E39] pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Calculation</div>
+              <div className="mb-2 mt-1 border-t border-[rgba(255,255,255,0.06)] pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Calculation</div>
               <div className="grid grid-cols-2 gap-x-3">
                 <Field label="Source">
                   <select className={inputCls} value={sel.calc.source} onChange={(e) => updateCalc(sel.uid, { source: e.target.value as PriceSource })}>
@@ -2576,11 +2576,11 @@ function BuilderPage(props: {
                 <div className="grid grid-cols-2 gap-x-3">
                   <Field label="Positive color">
                     <input type="color" value={sel.colorPos} onChange={(e) => update(sel.uid, { colorPos: e.target.value })}
-                      className="h-8 w-full cursor-pointer rounded border border-[#363A45] bg-transparent" />
+                      className="h-8 w-full cursor-pointer rounded border border-[rgba(255,255,255,0.08)] bg-transparent" />
                   </Field>
                   <Field label="Negative color">
                     <input type="color" value={sel.colorNeg} onChange={(e) => update(sel.uid, { colorNeg: e.target.value })}
-                      className="h-8 w-full cursor-pointer rounded border border-[#363A45] bg-transparent" />
+                      className="h-8 w-full cursor-pointer rounded border border-[rgba(255,255,255,0.08)] bg-transparent" />
                   </Field>
                 </div>
               )}
@@ -2824,7 +2824,7 @@ const ComparePanel = memo(function ComparePanel(props: {
   const allHidden   = eng?.allHidden()   ?? false;
 
   return (
-    <div className="flex min-w-0 overflow-hidden rounded-[2px] bg-[#131722] ring-1 ring-[#2A2E39]">
+    <div className="flex min-w-0 overflow-hidden rounded-[2px] bg-[#0B0F1A] ring-1 ring-[#2A2E39]">
       {/* ── Full LeftBar (identical to main chart) ── */}
       <LeftBar
         tool={activeTool}
@@ -2854,7 +2854,7 @@ const ComparePanel = memo(function ComparePanel(props: {
               {sym}<IconChevronDown />
             </button>
             {symOpen && (
-              <div className="absolute left-0 top-7 z-20 max-h-[220px] w-[180px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+              <div className="absolute left-0 top-7 z-20 max-h-[220px] w-[180px] overflow-y-auto rounded border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl">
                 {symbolPool.map((s) => (
                   <button key={s.symbol} type="button" onClick={() => changeSym(s.symbol)}
                     className={cn("flex w-full items-center justify-between px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
@@ -2873,7 +2873,7 @@ const ComparePanel = memo(function ComparePanel(props: {
               {tf}<IconChevronDown />
             </button>
             {tfOpen && (
-              <div className="absolute left-0 top-7 z-20 w-[100px] rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+              <div className="absolute left-0 top-7 z-20 w-[100px] rounded border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl">
                 {TIMEFRAMES.map((t) => (
                   <button key={t.value} type="button" onClick={() => changeTf(t.value)}
                     className={cn("flex w-full px-3 py-1 text-left text-[11px] hover:bg-[#2A2E39]",
@@ -2894,7 +2894,7 @@ const ComparePanel = memo(function ComparePanel(props: {
                 {activeKeys.length > 0 ? `Indicators (${activeKeys.length})` : "Indicators"}
               </button>
               {indOpen && (
-                <div className="absolute left-0 top-7 z-20 max-h-[260px] w-[220px] overflow-y-auto rounded border border-[#363A45] bg-[#1E222D] py-1 shadow-xl">
+                <div className="absolute left-0 top-7 z-20 max-h-[260px] w-[220px] overflow-y-auto rounded border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl">
                   {props.serverAvailableIndicators.map((def) => (
                     <label key={def.key}
                       className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-[11px] text-[#D1D4DC] hover:bg-[#2A2E39]">
@@ -3885,7 +3885,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   /* ═══════════════════════════ render ═══════════════════════════════ */
 
   return (
-    <div ref={appRef} className="flex h-full min-h-0 flex-col bg-[#131722] text-[#D1D4DC]">
+    <div ref={appRef} className="flex h-full min-h-0 flex-col bg-[#0B0F1A] text-[#C9D1E0]">
       <TopBar
         symbol={symbol}
         timeframe={timeframe}
@@ -3995,7 +3995,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           )}
         >
           {/* main (editable) chart */}
-          <div className="relative min-w-0 bg-[#131722]">
+          <div className="relative min-w-0 bg-[#0B0F1A]">
             <div ref={chartHostRef} className="absolute inset-0" />
 
             {/* Skeleton overlay while connecting to server */}
@@ -4067,7 +4067,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
               type="button"
               data-tip="Go to realtime"
               onClick={() => engineRef.current?.scrollToRealTime()}
-              className="trex-fade absolute bottom-10 right-[76px] z-30 flex h-8 w-8 items-center justify-center rounded-full border border-[#363A45] bg-[#1E222D] text-[#2962FF] shadow-lg shadow-black/40 hover:bg-[#2A2E39]"
+              className="trex-fade absolute bottom-10 right-[76px] z-30 flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[#111827] text-[#2962FF] shadow-lg shadow-black/40 hover:bg-[#2A2E39]"
             >
               <span className="rotate-180 inline-flex"><IconArrowLeft /></span>
             </button>

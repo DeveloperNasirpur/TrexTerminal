@@ -277,7 +277,6 @@ export interface ChartSettings {
   candleStyle: CandleStyle;
 }
 
-// Exact TradingView dark theme palette.
 export const DEFAULT_SETTINGS: ChartSettings = {
   wsUrl: "ws://localhost:8765",
   mode: "demo",
@@ -286,11 +285,11 @@ export const DEFAULT_SETTINGS: ChartSettings = {
   showGrid: true,
   showVolume: true,
   showCrosshair: true,
-  candleUpColor: "#089981",
-  candleDownColor: "#F23645",
-  backgroundColor: "#131722",
-  gridColor: "rgba(42, 46, 57, 0.55)",
-  candleStyle: "solid",
+  candleUpColor: "#00C9A7",
+  candleDownColor: "#FF6B8A",
+  backgroundColor: "#0B0F1A",
+  gridColor: "rgba(255,255,255,0.03)",
+  candleStyle: "hollow",
 };
 
 export interface CandleTheme {

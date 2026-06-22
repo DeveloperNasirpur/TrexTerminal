@@ -259,15 +259,15 @@ export class ChartEngine {
     this.chart = createChart(container, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: settings.backgroundColor },
-        textColor: "#B2B5BE",
+        background: { type: ColorType.VerticalGradient, topColor: this.bgTop(settings.backgroundColor), bottomColor: settings.backgroundColor },
+        textColor: "#8A8FA8",
         fontFamily: "'Inter', -apple-system, sans-serif",
         fontSize: 11,
         attributionLogo: false,
         panes: {
           enableResize: true,
-          separatorColor: "#2A2E39",
-          separatorHoverColor: "rgba(41, 98, 255, 0.25)",
+          separatorColor: "rgba(255,255,255,0.06)",
+          separatorHoverColor: "rgba(41, 98, 255, 0.3)",
         },
       },
       grid: {
@@ -277,33 +277,33 @@ export class ChartEngine {
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: {
-          color: "#9598A1",
+          color: "rgba(255,255,255,0.18)",
           width: 1,
-          style: LineStyle.LargeDashed,
-          labelBackgroundColor: "#363A45",
+          style: LineStyle.Dashed,
+          labelBackgroundColor: "#1E2640",
           visible: settings.showCrosshair,
           labelVisible: settings.showCrosshair,
         },
         horzLine: {
-          color: "#9598A1",
+          color: "rgba(255,255,255,0.18)",
           width: 1,
-          style: LineStyle.LargeDashed,
-          labelBackgroundColor: "#363A45",
+          style: LineStyle.Dashed,
+          labelBackgroundColor: "#1E2640",
           visible: settings.showCrosshair,
           labelVisible: settings.showCrosshair,
         },
       },
       rightPriceScale: {
-        borderColor: "#2A2E39",
-        scaleMargins: { top: 0.08, bottom: 0.2 },
+        borderColor: "rgba(255,255,255,0.06)",
+        scaleMargins: { top: 0.06, bottom: 0.22 },
         entireTextOnly: true,
       },
       timeScale: {
-        borderColor: "#2A2E39",
+        borderColor: "rgba(255,255,255,0.06)",
         timeVisible: true,
         secondsVisible: false,
-        rightOffset: 6,
-        barSpacing: 7,
+        rightOffset: 8,
+        barSpacing: 8,
         minBarSpacing: 0.5,
         shiftVisibleRangeOnNewBar: true,
         rightBarStaysOnScroll: true,
@@ -365,6 +365,13 @@ export class ChartEngine {
   }
 
   /* ════════════════════════ series creation ═══════════════════════ */
+
+  /** Lighten the background slightly for the gradient top edge. */
+  private bgTop(hex: string): string {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    const lift = 18;
+    return `rgb(${Math.min(255, r + lift)},${Math.min(255, g + lift)},${Math.min(255, b + lift)})`;
+  }
 
   private candleOpts(up: string, down: string, style: CandleStyle) {
     // Wick colors slightly softer than body for cleaner look
@@ -701,8 +708,8 @@ export class ChartEngine {
     this.transformAll();
     this.mainSeries.setData(this.displayed.map((c) => this.toSeriesBar(c)));
     if (this.volumeSeries) {
-      const up = this.hexA(this.settings.candleUpColor, 0.45);
-      const dn = this.hexA(this.settings.candleDownColor, 0.45);
+      const up = this.hexA(this.settings.candleUpColor, 0.28);
+      const dn = this.hexA(this.settings.candleDownColor, 0.22);
       this.volumeSeries.setData(
         this.candles.map((c) => ({
           time: c.time,
@@ -754,7 +761,7 @@ export class ChartEngine {
   setSettings(next: ChartSettings): void {
     this.settings = { ...next };
     this.chart.applyOptions({
-      layout: { background: { type: ColorType.Solid, color: next.backgroundColor } },
+      layout: { background: { type: ColorType.VerticalGradient, topColor: this.bgTop(next.backgroundColor), bottomColor: next.backgroundColor } },
       grid: {
         vertLines: { color: next.gridColor, visible: next.showGrid },
         horzLines: { color: next.gridColor, visible: next.showGrid },
