@@ -1073,10 +1073,35 @@ export class ChartEngine {
 
   fitContent(): void { this.chart.timeScale().fitContent(); this.requestRedraw(); }
 
-  /** Re-apply pane stretch factors — call after the chart container resizes (e.g. layout change). */
+  /** Re-apply pane stretch factors — call after the chart container resizes (e.g. layout/fullscreen change). */
   refreshPaneLayout(): void {
     const defs = [...this.indicators.values()].map((e) => e.def);
-    this.applyPaneStretch(defs);
+    if (defs.filter(d => d.pane === "sub").length === 0) return;
+
+    const reqByPane = new Map<string, number>();
+    for (const d of defs) {
+      if (d.pane !== "sub") continue;
+      const h = Math.max(60, d.subPaneHeight || 120);
+      reqByPane.set(d.paneId, Math.max(reqByPane.get(d.paneId) ?? 0, h));
+    }
+    const MAIN_STRETCH = 4;
+    const applyNow = () => {
+      if (this.disposed) return;
+      const panes = this.chart.panes();
+      if (panes.length <= 1) return;
+      try {
+        panes[0].setStretchFactor(MAIN_STRETCH);
+        for (let i = 1; i < panes.length; i++) {
+          const pid = this.subPaneOrder[i - 1];
+          const reqPx = reqByPane.get(pid) ?? 120;
+          panes[i].setStretchFactor(Math.max(0.5, reqPx / 120));
+        }
+      } catch { /* stretch API unavailable */ }
+    };
+    // Apply immediately, then again after two more frames to catch any
+    // post-resize reset that lightweight-charts may do internally.
+    applyNow();
+    requestAnimationFrame(() => { applyNow(); requestAnimationFrame(applyNow); });
     this.overlayDirty = true;
     this.requestRedraw();
   }

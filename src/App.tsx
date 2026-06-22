@@ -3707,8 +3707,15 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   }, []);
 
   // Re-apply pane stretch after fullscreen transition (container size changes).
+  // Called at 80ms, 250ms, and 500ms because the browser fullscreen animation
+  // can take up to ~400ms before the final layout settles.
   useEffect(() => {
-    const onFs = () => setTimeout(() => engineRef.current?.refreshPaneLayout(), 80);
+    const onFs = () => {
+      const refresh = () => engineRef.current?.refreshPaneLayout();
+      setTimeout(refresh, 80);
+      setTimeout(refresh, 250);
+      setTimeout(refresh, 500);
+    };
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
