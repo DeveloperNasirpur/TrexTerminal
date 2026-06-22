@@ -77,7 +77,7 @@ const APP_VERSION = PROTOCOL_VERSION;
 /** Visible build marker in the status bar — lets you confirm at a glance
  *  that you've loaded the latest file (bump on each shipped change). */
 const BUILD_TAG = "0613-DOCS8";
-import { DemoFeed } from "./mockServer";
+import { DemoFeed, DemoBt } from "./mockServer";
 import { loadWorkspace, saveWorkspace, type WorkspaceState } from "./persistence";
 import {
   DEMO_SYMBOLS,
@@ -661,6 +661,8 @@ interface TopBarProps {
   onZoomOut: () => void;
   onFit: () => void;
   onSwitchMode: (mode: "demo" | "server", url?: string) => void;
+  onRunDemoBacktest: () => void;
+  btActive: boolean;
 }
 
 const RECENT_SYMS_KEY = "trex.recent.symbols";
@@ -960,6 +962,28 @@ function TopBar(p: TopBarProps) {
           </div>
         </Menu>
       </div>
+
+      {/* Demo backtest button — only visible in demo mode */}
+      {p.mode === "demo" && (
+        <button
+          type="button"
+          onClick={p.onRunDemoBacktest}
+          className="flex h-[28px] items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition-all duration-200"
+          style={{
+            borderColor: p.btActive ? "rgba(14,203,129,0.35)" : "rgba(255,255,255,0.10)",
+            background: p.btActive ? "rgba(14,203,129,0.08)" : "rgba(255,255,255,0.04)",
+            color: p.btActive ? "#0ecb81" : "#8892A4",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = p.btActive ? "rgba(14,203,129,0.14)" : "rgba(255,255,255,0.08)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = p.btActive ? "rgba(14,203,129,0.08)" : "rgba(255,255,255,0.04)"; }}
+          title="Run a simulated backtest in demo mode"
+        >
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor">
+            <path d="M2 1.5l6 3.5-6 3.5V1.5z"/>
+          </svg>
+          {p.btActive ? "Backtesting…" : "Demo Backtest"}
+        </button>
+      )}
     </div>
   );
 }
@@ -2961,6 +2985,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const chartHostRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<ChartEngine | null>(null);
   const feedRef = useRef<DemoFeed | null>(null);
+  const demoBtRef = useRef<DemoBt | null>(null);
   const wsRef = useRef<WSClient | null>(null);
   const startedRef = useRef(false);
   const lastBarTimeRef = useRef<number>(0);
@@ -3450,6 +3475,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
 
   const stopFeeds = useCallback(() => {
     feedRef.current?.stop();
+    demoBtRef.current?.stop();
+    demoBtRef.current = null;
     wsRef.current?.disconnect();
     wsRef.current = null;
   }, []);
@@ -3473,6 +3500,14 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       customDefs: customDefsRef.current.filter((d) => d.visible !== false),
     });
   }, [stopFeeds]);
+
+  const runDemoBacktest = useCallback(() => {
+    if (demoBtRef.current) { demoBtRef.current.stop(); demoBtRef.current = null; }
+    setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null);
+    const bt = new DemoBt((m) => handleMessageRef.current(m));
+    demoBtRef.current = bt;
+    bt.start();
+  }, []);
 
   const startServer = useCallback((url: string) => {
     stopFeeds();
@@ -3705,6 +3740,12 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     else el.requestFullscreen().catch(() => showToast("Fullscreen blocked by the browser", "warning"));
   }, []);
+
+  // Re-apply pane stretch when BtPanel appears/disappears (chart area changes height).
+  useEffect(() => {
+    setTimeout(() => engineRef.current?.refreshPaneLayout(), 50);
+    setTimeout(() => engineRef.current?.refreshPaneLayout(), 200);
+  }, [!!btPlayback]);
 
   // Re-apply pane stretch after fullscreen transition (container size changes).
   // Called at 80ms, 250ms, and 500ms because the browser fullscreen animation
@@ -3956,6 +3997,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         onZoomOut={() => engineRef.current?.zoomOut()}
         onFit={() => engineRef.current?.fitContent()}
         onSwitchMode={switchMode}
+        onRunDemoBacktest={runDemoBacktest}
+        btActive={!!(btPlayback || btProgress)}
       />
 
       {/* ── Backtest Playback Bar ── */}
@@ -4028,7 +4071,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         {/* ── workspace: main chart + optional compare panels ── */}
         <div
           className={cn(
-            "grid min-w-0 flex-1 gap-px bg-[#2A2E39]",
+            "grid min-w-0 flex-1 gap-px overflow-hidden bg-[#2A2E39]",
             layout === "single" && "grid-cols-1 grid-rows-1",
             layout === "split2" && "grid-cols-2 grid-rows-1",
             layout === "grid4" && "grid-cols-2 grid-rows-2"
