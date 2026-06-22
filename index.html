@@ -58,12 +58,16 @@
       .trex-footer a { color: #848e9c; text-decoration: none; transition: color 0.15s; cursor: pointer; }
       .trex-footer a:hover { color: #f0b90b; }
       .trex-features { position: absolute; top: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
-      .trex-feature { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(30, 35, 41, 0.6); border: 1px solid rgba(43, 47, 54, 0.5); border-radius: 20px; font-size: 11px; color: #848e9c; backdrop-filter: blur(10px); animation: featureIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+      .trex-feature { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(15, 18, 26, 0.75); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; font-size: 11px; font-weight: 500; color: #848e9c; backdrop-filter: blur(12px); animation: featureIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
       .trex-feature:nth-child(1) { animation-delay: 0.3s; }
       .trex-feature:nth-child(2) { animation-delay: 0.45s; }
       .trex-feature:nth-child(3) { animation-delay: 0.6s; }
+      .trex-feature:nth-child(4) { animation-delay: 0.75s; }
       @keyframes featureIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-      .trex-feature-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+      .trex-feature-dot { width: 6px; height: 6px; border-radius: 50%; background: #f0b90b; box-shadow: 0 0 6px rgba(240,185,11,0.6); flex-shrink: 0; }
+      .trex-feature-dot.green { background: #0ecb81; box-shadow: 0 0 6px rgba(14,203,129,0.6); }
+      .trex-feature-dot.blue { background: #2962FF; box-shadow: 0 0 6px rgba(41,98,255,0.6); }
+      .trex-feature-dot.red { background: #f23645; box-shadow: 0 0 6px rgba(242,54,69,0.6); }
       @media (max-width: 640px) { .trex-features { display: none; } }
       .trex-watermark { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #30363d; letter-spacing: 2px; z-index: 2; }
     </style>
@@ -71,9 +75,10 @@
   <body>
     <div id="trex-loader">
       <div class="trex-features">
-        <div class="trex-feature"><span class="trex-feature-icon">⚡</span><span>60 FPS Rendering</span></div>
-        <div class="trex-feature"><span class="trex-feature-icon">🔌</span><span>Real-time WebSocket</span></div>
-        <div class="trex-feature"><span class="trex-feature-icon">✏️</span><span>14 Drawing Tools</span></div>
+        <div class="trex-feature"><span class="trex-feature-dot"></span><span>60 FPS Rendering</span></div>
+        <div class="trex-feature"><span class="trex-feature-dot green"></span><span>Real-time WebSocket</span></div>
+        <div class="trex-feature"><span class="trex-feature-dot blue"></span><span>14 Drawing Tools</span></div>
+        <div class="trex-feature"><span class="trex-feature-dot red"></span><span>Advanced Backtesting</span></div>
       </div>
       <div class="trex-card">
         <div class="trex-logo">

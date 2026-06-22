@@ -909,7 +909,11 @@ function TopBar(p: TopBarProps) {
           onClick={() => setConnOpen((v) => !v)}
           className="flex h-[30px] items-center gap-1.5 rounded-full border border-[#2A2E39] bg-[#1E222D] px-2.5 text-[11px] font-semibold text-[#B2B5BE] hover:border-[#363A45]"
         >
-          <span className="h-2 w-2 rounded-full" style={{ background: p.connColor, boxShadow: `0 0 6px ${p.connColor}` }} />
+          <span className="h-2 w-2 rounded-full" style={{
+            background: p.connColor,
+            boxShadow: `0 0 6px ${p.connColor}80`,
+            animation: (p.connLabel === "CONNECTING" || p.connLabel === "RECONNECTING") ? "bt-pulse 1s ease-in-out infinite" : "none",
+          }} />
           {p.connLabel}
           {p.latency !== null && <span className="font-mono text-[#787B86]">{p.latency}ms</span>}
           <IconChevronDown />
@@ -1191,23 +1195,87 @@ function StatusBar(props: {
   fpsRef: React.RefObject<HTMLSpanElement | null>;
   clockRef: React.RefObject<HTMLSpanElement | null>;
   bars: number;
+  drawingCount?: number;
+  magnet?: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
+  const copySymbol = () => {
+    navigator.clipboard?.writeText(props.symbol).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
   return (
-    <div className="nb-statusbar flex h-[28px] shrink-0 items-center gap-3 border-t border-[#2A2E39] bg-[#131722] px-3 text-[11px] text-[#787B86]">
-      <span className="flex items-center gap-1.5 font-medium" style={{ color: props.connColor }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: props.connColor }} />
+    <div className="nb-statusbar flex h-[30px] shrink-0 items-center gap-0 border-t border-[#1e2533] bg-[#0f1117] px-2 text-[11px] text-[#4a5568]">
+      {/* connection status */}
+      <span className="flex items-center gap-1.5 pr-3 font-semibold" style={{ color: props.connColor }}>
+        <span className="h-[7px] w-[7px] rounded-full flex-shrink-0"
+          style={{ background: props.connColor, boxShadow: `0 0 5px ${props.connColor}80` }} />
         {props.connLabel}
       </span>
-      {props.latency !== null && <span className="font-mono">{props.latency} ms</span>}
-      <span className="font-semibold text-[#B2B5BE]">{props.symbol} · {props.timeframe}</span>
+      <span className="h-3 w-px bg-[#1e2533] mr-2" />
 
-      <span className="min-w-0 flex-1 truncate text-center text-[#9598A1]">{props.hint}</span>
+      {/* latency */}
+      {props.latency !== null && (
+        <>
+          <span className="font-mono pr-3" style={{ color: props.latency < 50 ? "#089981" : props.latency < 150 ? "#FF9800" : "#F23645" }}>
+            {props.latency}ms
+          </span>
+          <span className="h-3 w-px bg-[#1e2533] mr-2" />
+        </>
+      )}
 
-      <span className="font-mono">{fmtNum(props.bars, 0)} bars</span>
-      <span className="font-mono"><span ref={props.fpsRef}>60</span> fps</span>
-      <span className="font-mono text-[#B2B5BE]" ref={props.clockRef} />
-      <span className="rounded bg-[#2A2E39] px-1.5 py-px text-[10px] font-semibold tracking-wide text-[#9598A1]">UTC</span>
-      <span className="rounded bg-[rgba(41,98,255,0.18)] px-1.5 py-px text-[10px] font-semibold tracking-wide text-[#2962FF]">build {BUILD_TAG}</span>
+      {/* symbol – click to copy */}
+      <button
+        type="button"
+        onClick={copySymbol}
+        title="Click to copy symbol"
+        className="flex items-center gap-1 pr-3 font-semibold text-[#8892a4] transition-colors hover:text-[#d1d4dc]"
+      >
+        {copied ? <span style={{ color: "#089981" }}>✓ Copied</span> : <>{props.symbol} · {props.timeframe}</>}
+      </button>
+      <span className="h-3 w-px bg-[#1e2533] mr-2" />
+
+      {/* drawing count */}
+      {props.drawingCount !== undefined && props.drawingCount > 0 && (
+        <>
+          <span className="flex items-center gap-1 pr-3">
+            <span style={{ color: "#2962FF", fontSize: 9 }}>✏</span>
+            <span className="font-mono" style={{ color: "#5a6478" }}>{props.drawingCount}</span>
+          </span>
+          <span className="h-3 w-px bg-[#1e2533] mr-2" />
+        </>
+      )}
+
+      {/* magnet indicator */}
+      {props.magnet && (
+        <>
+          <span className="pr-3" style={{ color: "#f0b90b", fontSize: 10 }} title="Magnet mode on">⦿ SNAP</span>
+          <span className="h-3 w-px bg-[#1e2533] mr-2" />
+        </>
+      )}
+
+      {/* hint */}
+      <span className="min-w-0 flex-1 truncate text-center" style={{ color: "#3d4757" }}>{props.hint}</span>
+
+      {/* bars */}
+      <span className="font-mono pl-3 pr-3" style={{ color: "#3d4757" }}>{fmtNum(props.bars, 0)} bars</span>
+      <span className="h-3 w-px bg-[#1e2533] mr-2" />
+
+      {/* fps – color coded */}
+      <span className="font-mono pr-1" style={{ color: "#3d4757" }}>
+        <span ref={props.fpsRef} />
+        {" fps"}
+      </span>
+      <span className="h-3 w-px bg-[#1e2533] mx-2" />
+
+      {/* clock */}
+      <span className="font-mono pr-2" style={{ color: "#3d4757" }} ref={props.clockRef} />
+      <span className="rounded px-1.5 py-px text-[9px] font-bold tracking-widest" style={{ background: "#1a2030", color: "#3d4757" }}>UTC</span>
+      <span className="ml-1.5 rounded px-1.5 py-px text-[9px] font-bold tracking-wider" style={{ background: "rgba(41,98,255,0.12)", color: "#2962FF" }}>
+        {BUILD_TAG}
+      </span>
     </div>
   );
 }
@@ -3999,6 +4067,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         fpsRef={fpsRef}
         clockRef={clockRef}
         bars={bars}
+        drawingCount={eng?.getDrawingsSnapshot?.()?.length}
+        magnet={magnet}
       />
 
       {/* ── dialogs ── */}
