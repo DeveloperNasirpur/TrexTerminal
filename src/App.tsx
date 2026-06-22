@@ -2647,7 +2647,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     ...DEFAULT_SETTINGS,
     ...(saved.settings ?? {}),
     mode: initialMode === "server" ? "server" : "demo",
-    wsUrl: (typeof window !== "undefined" && window.__trexWsUrl) || DEFAULT_SETTINGS.wsUrl,
+    wsUrl: (typeof window !== "undefined" && window.__trexWsUrl) || saved.wsUrl || DEFAULT_SETTINGS.wsUrl,
   }));
   const [symbol, setSymbol] = useState(saved.symbol ?? DEFAULT_SETTINGS.symbol);
   const [timeframe, setTimeframe] = useState(saved.timeframe ?? DEFAULT_SETTINGS.timeframe);
@@ -2671,7 +2671,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   // state only — never market data, which always comes fresh from the feed.
   useEffect(() => {
     const id = window.setTimeout(() => {
-      saveWorkspace({ symbol, timeframe, chartType, settings, favorites, layout, compareSymbols });
+      saveWorkspace({ symbol, timeframe, chartType, settings, favorites, layout, compareSymbols, wsUrl: settings.wsUrl, lastMode: mode as "demo" | "server" });
     }, 400);
     return () => window.clearTimeout(id);
   }, [symbol, timeframe, chartType, settings, favorites, layout, compareSymbols]);
@@ -3139,10 +3139,9 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       (m) => handleMessageRef.current(m),
       (ok) => {
         setConnStatus(ok ? "online" : "offline");
-        if (!ok) { setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null); }
+        if (!ok) { setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null); showToast("Connection lost — reconnecting…", "warning"); }
         if (ok) {
-          // Re-send handshake on every (re)connect so the server session gets
-          // the current symbol/timeframe even after a reconnect.
+          showToast("Connected to server", "success");
           ws.send(makeHello("trex-terminal", APP_VERSION, 5000));
           ws.send({ type: "symbol", symbol: symbolRef.current });
           ws.send({ type: "timeframe", timeframe: tfRef.current });
@@ -3673,6 +3672,38 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           <div className="relative min-w-0 bg-[#131722]">
             <div ref={chartHostRef} className="absolute inset-0" />
 
+            {/* Skeleton overlay while connecting to server */}
+            {connStatus === "connecting" && (
+              <div style={{
+                position: "absolute", inset: 0, zIndex: 10,
+                background: "#131722",
+                display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center",
+                gap: 20,
+              }}>
+                {/* animated skeleton bars */}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 80, padding: "0 20px" }}>
+                  {[60,40,70,55,80,45,65,50,75,60,85,70,55,65,78].map((h, i) => (
+                    <div key={i} style={{
+                      width: 14, height: `${h}%`, borderRadius: "3px 3px 0 0",
+                      background: "linear-gradient(180deg, #1e2a3a 0%, #152030 100%)",
+                      animation: `bt-shimmer 1.6s ease-in-out ${i * 0.06}s infinite`,
+                      backgroundSize: "400px 100%",
+                      backgroundImage: "linear-gradient(90deg, #1c2535 25%, #253045 50%, #1c2535 75%)",
+                    }} />
+                  ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#4a5568", fontSize: 13 }}>
+                  <span style={{
+                    display: "inline-block", width: 8, height: 8, borderRadius: "50%",
+                    background: "#f0b90b", boxShadow: "0 0 8px #f0b90b",
+                    animation: "bt-pulse 1.2s ease-in-out infinite",
+                  }} />
+                  Connecting to server…
+                </div>
+              </div>
+            )}
+
             <FloatingFavorites
               favorites={favorites}
               tool={tool}
@@ -3771,6 +3802,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           state={btState ?? { balance: 0, margin_used: 0, unrealized_pnl: 0, equity: 0, positions: [], orders: [], trade_history: [] }}
           result={btResult}
           progress={btProgress}
+          initialHeight={(() => { try { const h = Number(localStorage.getItem("trex.bt.height")); return h > 0 ? h : undefined; } catch { return undefined; } })()}
+          initialTab={(() => { try { return localStorage.getItem("trex.bt.tab") ?? undefined; } catch { return undefined; } })()}
         />
       )}
 
