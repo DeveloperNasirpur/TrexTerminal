@@ -237,6 +237,8 @@ export class ChartEngine {
   /** set by the ResizeObserver; triggers a one-off canvas re-measure */
   private overlayDirty = true;
   private resizeObserver: ResizeObserver;
+  /** debounce timer for re-applying pane stretch after container resize */
+  private stretchDebounce: ReturnType<typeof setTimeout> | null = null;
   private paneLayoutJson = "";
   private behindRealtime = false;
   private lastSelectionBoxJson = "";
@@ -348,6 +350,14 @@ export class ChartEngine {
     this.resizeObserver = new ResizeObserver(() => {
       this.overlayDirty = true;   // next frame re-measures + resizes
       this.requestRedraw();
+      // Re-apply pane stretch after any container resize (layout change,
+      // fullscreen, window resize). Debounced so it fires once after the
+      // resize animation settles rather than on every intermediate frame.
+      if (this.stretchDebounce !== null) clearTimeout(this.stretchDebounce);
+      this.stretchDebounce = setTimeout(() => {
+        this.stretchDebounce = null;
+        this.refreshPaneLayout();
+      }, 120);
     });
     this.resizeObserver.observe(container);
     this.syncOverlaySize();       // prime cssW/cssH for the first frame
@@ -2822,6 +2832,7 @@ export class ChartEngine {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     this.clearHistoryPending();
+    if (this.stretchDebounce !== null) clearTimeout(this.stretchDebounce);
     this.resizeObserver.disconnect();
     this.container.removeEventListener("pointerdown", this.hPointerDown, true);
     this.container.removeEventListener("pointermove", this.hPointerMove);
