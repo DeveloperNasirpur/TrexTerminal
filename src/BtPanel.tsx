@@ -85,45 +85,64 @@ export interface BtResult {
 // ── Design Tokens ──────────────────────────────────────────────────
 
 const C = {
-  bg0:     "#0b0e11",   // deepest background
-  bg1:     "#12161c",   // panel background
-  bg2:     "#161b24",   // tab bar, table header
-  bg3:     "#1a2130",   // card background
-  bg4:     "#1e2736",   // card hover / row hover
-  border:  "#1e2839",   // subtle border
-  border2: "#263044",   // slightly lighter border
+  bg0:     "#080b0f",
+  bg1:     "#0d1117",
+  bg2:     "#111720",
+  bg3:     "#151d29",
+  bg4:     "#1a2333",
+  bg5:     "#1e2a3a",
+  border:  "#1c2535",
+  border2: "#253045",
+  border3: "#2e3d55",
 
-  text:    "#d1d5db",   // primary text
-  text2:   "#9ca3af",   // secondary text
-  muted:   "#6b7280",   // placeholders / labels
-  accent:  "#f0b90b",   // yellow accent (active tab, badge)
+  text:    "#e2e8f0",
+  text2:   "#94a3b8",
+  muted:   "#4a5568",
+  accent:  "#f0b90b",
+  accentD: "#c99607",
 
-  long:    "#0ecb81",   // profit green
-  longBg:  "#0ecb8115", // green tint background
-  short:   "#f6465d",   // loss red
-  shortBg: "#f6465d15", // red tint background
-  tp:      "#26a69a",   // take-profit teal
-  sl:      "#ef5350",   // stop-loss red
+  long:    "#00d4a3",
+  longDim: "#00d4a318",
+  longMid: "#00d4a330",
+  short:   "#ff4d6d",
+  shortDim:"#ff4d6d18",
+  shortMid:"#ff4d6d30",
+  tp:      "#22d3ee",
+  sl:      "#fb923c",
 
-  statCard: "#131820",  // stats card bg
+  card:    "#0f1621",
 };
 
-// ── Global styles (injected once) ──────────────────────────────────
+// ── Global styles ──────────────────────────────────────────────────
 
-const STYLE_ID = "bt-panel-styles";
+const STYLE_ID = "bt-panel-v3";
 if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
   const s = document.createElement("style");
   s.id = STYLE_ID;
   s.textContent = `
-    .bt-tr:hover td { background: ${C.bg4} !important; }
-    .bt-tab:hover { color: ${C.text} !important; }
-    .bt-tab-active { border-bottom-color: ${C.accent} !important; color: ${C.text} !important; }
-    .bt-stat-card:hover { border-color: ${C.border2} !important; background: ${C.bg4} !important; }
-    .bt-asset-card:hover { border-color: ${C.border2} !important; background: ${C.bg4} !important; }
-    .bt-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+    @keyframes bt-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes bt-fadein { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+    .bt-row { transition: background 0.12s; }
+    .bt-row:hover { background: ${C.bg5} !important; }
+    .bt-row:hover .bt-row-accent { opacity: 1 !important; }
+
+    .bt-card { transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s; }
+    .bt-card:hover { border-color: ${C.border3} !important; transform: translateY(-1px); box-shadow: 0 4px 20px #00000040 !important; }
+
+    .bt-tab { transition: color 0.12s, background 0.12s; }
+    .bt-tab:hover { color: ${C.text} !important; background: ${C.bg4}20 !important; }
+    .bt-tab-active { color: ${C.text} !important; }
+
+    .bt-stat:hover { background: ${C.bg5} !important; border-color: ${C.border3} !important; }
+
+    .bt-scrollbar::-webkit-scrollbar { width: 3px; height: 3px; }
     .bt-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .bt-scrollbar::-webkit-scrollbar-thumb { background: #263044; border-radius: 2px; }
-    .bt-scrollbar::-webkit-scrollbar-thumb:hover { background: #3b4a60; }
+    .bt-scrollbar::-webkit-scrollbar-thumb { background: ${C.border2}; border-radius: 2px; }
+    .bt-scrollbar::-webkit-scrollbar-thumb:hover { background: ${C.border3}; }
+
+    .bt-pnl-bar { animation: bt-fadein 0.3s ease; }
+    .bt-dot-pulse { animation: bt-pulse 1.8s ease-in-out infinite; }
   `;
   document.head.appendChild(s);
 }
@@ -138,61 +157,100 @@ function fmt(n: number | null | undefined, digits = 2): string {
   });
 }
 
-function pnlColor(n: number): string {
-  if (n > 0) return C.long;
-  if (n < 0) return C.short;
-  return C.text;
+function pnlColor(n: number) { return n > 0 ? C.long : n < 0 ? C.short : C.text2; }
+function pnlDim(n: number)   { return n > 0 ? C.longDim : n < 0 ? C.shortDim : "transparent"; }
+function sign(n: number)     { return n >= 0 ? "+" : ""; }
+
+function timeAgo(t: string | null): string {
+  if (!t) return "—";
+  return t.replace("T", " ").slice(0, 16);
 }
 
-function pnlBg(n: number): string {
-  if (n > 0) return C.longBg;
-  if (n < 0) return C.shortBg;
-  return "transparent";
-}
+// ── Sub-components ─────────────────────────────────────────────────
 
-// ── Shared sub-components ──────────────────────────────────────────
-
-function SideBadge({ side }: { side: string }) {
+function SidePill({ side }: { side: string }) {
   const isLong = side === "LONG";
   return (
     <span style={{
       display: "inline-flex",
       alignItems: "center",
-      gap: 3,
-      padding: "2px 7px",
-      borderRadius: 4,
+      gap: 4,
+      padding: "3px 9px",
+      borderRadius: 5,
       fontSize: 10,
-      fontWeight: 700,
-      letterSpacing: "0.04em",
-      background: isLong ? C.longBg : C.shortBg,
+      fontWeight: 800,
+      letterSpacing: "0.08em",
+      background: isLong ? C.longDim : C.shortDim,
       color: isLong ? C.long : C.short,
-      border: `1px solid ${isLong ? C.long + "30" : C.short + "30"}`,
+      border: `1px solid ${isLong ? C.long + "28" : C.short + "28"}`,
     }}>
-      {isLong ? "▲" : "▼"} {side}
+      {isLong
+        ? <svg width="8" height="8" viewBox="0 0 8 8"><path d="M4 1L7 7H1Z" fill={C.long}/></svg>
+        : <svg width="8" height="8" viewBox="0 0 8 8"><path d="M4 7L7 1H1Z" fill={C.short}/></svg>
+      }
+      {side}
     </span>
   );
 }
 
-function StateTag({ state }: { state: string }) {
-  const cfg: Record<string, { color: string; bg: string }> = {
-    TRIGGERED:          { color: C.long,   bg: C.longBg },
-    TRIGGERED_BY_CLOSE: { color: C.long,   bg: C.longBg },
-    STOPPED:            { color: C.short,  bg: C.shortBg },
-    STOPPED_BY_CLOSE:   { color: C.short,  bg: C.shortBg },
-    LIQUID:             { color: "#f59e0b", bg: "#f59e0b15" },
-    OPEN:               { color: C.text2,  bg: "transparent" },
-  };
-  const { color, bg } = cfg[state] ?? { color: C.muted, bg: "transparent" };
-  const label = state.replace(/_BY_CLOSE$/, " ✓").replace(/_/g, " ");
+function LevBadge({ lev }: { lev: number }) {
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: "2px 6px",
+      borderRadius: 4,
+      fontSize: 10,
+      fontWeight: 700,
+      background: "#f0b90b12",
+      color: C.accent,
+      border: `1px solid ${C.accent}20`,
+    }}>
+      {lev}×
+    </span>
+  );
+}
+
+function TypeBadge({ type }: { type: string }) {
+  const isLimit = type === "LIMIT";
   return (
     <span style={{
       display: "inline-block",
       padding: "2px 7px",
       borderRadius: 4,
       fontSize: 10,
-      fontWeight: 600,
+      fontWeight: 700,
+      background: isLimit ? "#22d3ee10" : "#a78bfa10",
+      color: isLimit ? C.tp : "#a78bfa",
+      border: `1px solid ${isLimit ? C.tp + "25" : "#a78bfa25"}`,
+    }}>
+      {type}
+    </span>
+  );
+}
+
+function StatePill({ state }: { state: string }) {
+  const map: Record<string, [string, string]> = {
+    TRIGGERED:          [C.long,    C.longDim],
+    TRIGGERED_BY_CLOSE: [C.long,    C.longDim],
+    STOPPED:            [C.short,   C.shortDim],
+    STOPPED_BY_CLOSE:   [C.short,   C.shortDim],
+    LIQUID:             ["#f59e0b", "#f59e0b15"],
+    OPEN:               [C.text2,   "transparent"],
+  };
+  const [color, bg] = map[state] ?? [C.muted, "transparent"];
+  const label = state === "TRIGGERED_BY_CLOSE" ? "TP ✓"
+              : state === "STOPPED_BY_CLOSE"   ? "SL ✓"
+              : state.replace(/_/g, " ");
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: "2px 8px",
+      borderRadius: 4,
+      fontSize: 10,
+      fontWeight: 700,
       background: bg,
       color,
+      border: `1px solid ${color}25`,
     }}>
       {label}
     </span>
@@ -207,91 +265,175 @@ function EmptyState({ icon, text }: { icon: string; text: string }) {
       alignItems: "center",
       justifyContent: "center",
       height: "100%",
-      minHeight: 80,
-      gap: 8,
-      color: C.muted,
+      minHeight: 100,
+      gap: 10,
     }}>
-      <span style={{ fontSize: 22, opacity: 0.5 }}>{icon}</span>
-      <span style={{ fontSize: 12 }}>{text}</span>
+      <div style={{ fontSize: 28, opacity: 0.18 }}>{icon}</div>
+      <div style={{ fontSize: 12, color: C.muted, letterSpacing: "0.02em" }}>{text}</div>
     </div>
   );
 }
 
-// Shared table styles
-const TH: React.CSSProperties = {
-  padding: "0 12px",
-  height: 32,
-  fontSize: 10,
-  fontWeight: 600,
-  color: C.muted,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  background: C.bg2,
-  borderBottom: `1px solid ${C.border}`,
-  textAlign: "left",
-  whiteSpace: "nowrap",
-  position: "sticky",
-  top: 0,
-  zIndex: 1,
-};
-
-const TD: React.CSSProperties = {
-  padding: "6px 12px",
-  fontSize: 12,
-  color: C.text,
-  borderBottom: `1px solid ${C.border}`,
-  whiteSpace: "nowrap",
-};
+// ── Column header row ──────────────────────────────────────────────
 
 // ── Positions Tab ──────────────────────────────────────────────────
 
 function PositionsTab({ positions }: { positions: BtPosition[] }) {
   if (!positions.length)
-    return <EmptyState icon="📭" text="No open positions" />;
+    return <EmptyState icon="◈" text="No open positions" />;
 
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr>
-          {["Symbol", "Side", "Size", "Entry", "Mark Price", "Liq. Price", "Margin", "Lev", "Unrealized PnL", "ROE %", "Take Profit", "Stop Loss", "Opened", "Bars"].map(h => (
-            <th key={h} style={TH}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {positions.map((p, i) => (
-          <tr key={p.id} className="bt-tr" style={{ background: i % 2 === 0 ? C.bg0 : C.bg1 }}>
-            <td style={{ ...TD, fontWeight: 600, color: C.text }}>{p.symbol}</td>
-            <td style={TD}><SideBadge side={p.side} /></td>
-            <td style={{ ...TD, color: C.text2 }}>${fmt(p.margin * p.leverage)}</td>
-            <td style={{ ...TD, color: C.text2 }}>{fmt(p.entry, 4)}</td>
-            <td style={{ ...TD, fontWeight: 500 }}>{fmt(p.mark, 4)}</td>
-            <td style={{ ...TD, color: C.muted }}>{p.liquidy != null ? fmt(p.liquidy, 4) : "—"}</td>
-            <td style={{ ...TD, color: C.text2 }}>${fmt(p.margin)}</td>
-            <td style={{ ...TD, color: C.text2 }}>{p.leverage}×</td>
-            <td style={{
-              ...TD,
-              color: pnlColor(p.pnl_usdt),
-              background: pnlBg(p.pnl_usdt),
-              fontWeight: 600,
-            }}>
-              {p.pnl_usdt >= 0 ? "+" : ""}{fmt(p.pnl_usdt)}
-            </td>
-            <td style={{ ...TD, color: pnlColor(p.pnl_pct), fontWeight: 500 }}>
-              {p.pnl_pct >= 0 ? "+" : ""}{fmt(p.pnl_pct, 2)}%
-            </td>
-            <td style={{ ...TD, color: p.take_profit ? C.tp : C.muted }}>
-              {p.take_profit != null ? fmt(p.take_profit, 4) : "—"}
-            </td>
-            <td style={{ ...TD, color: p.stop_price ? C.sl : C.muted }}>
-              {p.stop_price != null ? fmt(p.stop_price, 4) : "—"}
-            </td>
-            <td style={{ ...TD, color: C.muted, fontSize: 11 }}>{p.open_time ?? "—"}</td>
-            <td style={{ ...TD, color: C.muted }}>{p.bars}</td>
-          </tr>
+    <div style={{ fontSize: 12 }}>
+      {/* Header */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "18px 110px 80px 70px 100px 100px 90px 70px 120px 90px 90px 90px 120px",
+        padding: "0 0 0 14px",
+        height: 30,
+        alignItems: "center",
+        background: C.bg2,
+        borderBottom: `1px solid ${C.border}`,
+        position: "sticky",
+        top: 0,
+        zIndex: 2,
+        gap: "0 8px",
+      }}>
+        {["", "SYMBOL", "SIDE", "LEV", "ENTRY", "MARK", "LIQ PRICE", "MARGIN", "UNREALIZED PnL", "ROE %", "TAKE PROFIT", "STOP LOSS", "OPENED"].map(h => (
+          <span key={h} style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>{h}</span>
         ))}
-      </tbody>
-    </table>
+      </div>
+
+      {positions.map((p) => {
+        const isLong = p.side === "LONG";
+        const accentCol = isLong ? C.long : C.short;
+        const pnlPos = p.pnl_usdt > 0;
+        const priceUp = p.mark >= p.entry;
+
+        return (
+          <div
+            key={p.id}
+            className="bt-row"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "18px 110px 80px 70px 100px 100px 90px 70px 120px 90px 90px 90px 120px",
+              padding: "0 0 0 0",
+              alignItems: "center",
+              minHeight: 46,
+              borderBottom: `1px solid ${C.border}`,
+              background: C.bg1,
+              gap: "0 8px",
+              position: "relative",
+            }}
+          >
+            {/* Left accent bar */}
+            <div
+              className="bt-row-accent"
+              style={{
+                width: 3,
+                alignSelf: "stretch",
+                background: accentCol,
+                opacity: 0.7,
+                borderRadius: "0 2px 2px 0",
+                transition: "opacity 0.15s",
+              }}
+            />
+
+            <span style={{ fontWeight: 700, color: C.text, fontSize: 12, letterSpacing: "0.02em" }}>
+              {p.symbol}
+            </span>
+            <span><SidePill side={p.side} /></span>
+            <span><LevBadge lev={p.leverage} /></span>
+
+            {/* Entry */}
+            <span style={{ color: C.text2, fontFeatureSettings: '"tnum"' }}>
+              {fmt(p.entry, 4)}
+            </span>
+
+            {/* Mark — colored vs entry */}
+            <span style={{
+              color: priceUp ? C.long : C.short,
+              fontWeight: 600,
+              fontFeatureSettings: '"tnum"',
+            }}>
+              {fmt(p.mark, 4)}
+              <span style={{ fontSize: 9, marginLeft: 3, opacity: 0.7 }}>
+                {priceUp ? "▲" : "▼"}
+              </span>
+            </span>
+
+            {/* Liq price */}
+            <span style={{ color: p.liquidy ? C.sl : C.muted, fontFeatureSettings: '"tnum"' }}>
+              {p.liquidy != null ? fmt(p.liquidy, 4) : "—"}
+            </span>
+
+            {/* Margin */}
+            <span style={{ color: C.text2, fontFeatureSettings: '"tnum"' }}>
+              ${fmt(p.margin)}
+            </span>
+
+            {/* Unrealized PnL with mini bar */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 3, padding: "4px 0" }}>
+              <span style={{
+                color: pnlColor(p.pnl_usdt),
+                fontWeight: 700,
+                fontSize: 12,
+                fontFeatureSettings: '"tnum"',
+              }}>
+                {sign(p.pnl_usdt)}${fmt(Math.abs(p.pnl_usdt))}
+              </span>
+              {/* mini bar */}
+              <div style={{
+                height: 2,
+                borderRadius: 1,
+                background: C.border2,
+                width: 80,
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  height: "100%",
+                  width: `${Math.min(100, Math.abs(p.pnl_pct) * 3)}%`,
+                  background: pnlPos ? C.long : C.short,
+                  borderRadius: 1,
+                }} />
+              </div>
+            </div>
+
+            {/* ROE */}
+            <span style={{
+              color: pnlColor(p.pnl_pct),
+              fontWeight: 700,
+              padding: "2px 6px",
+              borderRadius: 4,
+              background: pnlDim(p.pnl_pct),
+              fontSize: 12,
+              fontFeatureSettings: '"tnum"',
+            }}>
+              {sign(p.pnl_pct)}{fmt(p.pnl_pct, 2)}%
+            </span>
+
+            {/* TP */}
+            <span style={{ color: p.take_profit ? C.tp : C.muted, fontFeatureSettings: '"tnum"', fontSize: 11 }}>
+              {p.take_profit != null
+                ? <><span style={{ fontSize: 9, marginRight: 3, color: C.tp, opacity: 0.6 }}>TP</span>{fmt(p.take_profit, 4)}</>
+                : "—"}
+            </span>
+
+            {/* SL */}
+            <span style={{ color: p.stop_price ? C.sl : C.muted, fontFeatureSettings: '"tnum"', fontSize: 11 }}>
+              {p.stop_price != null
+                ? <><span style={{ fontSize: 9, marginRight: 3, color: C.sl, opacity: 0.6 }}>SL</span>{fmt(p.stop_price, 4)}</>
+                : "—"}
+            </span>
+
+            {/* Opened */}
+            <span style={{ color: C.muted, fontSize: 10 }}>
+              {timeAgo(p.open_time)}
+              <span style={{ marginLeft: 6, color: C.border3, fontSize: 9 }}>{p.bars}b</span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -299,48 +441,74 @@ function PositionsTab({ positions }: { positions: BtPosition[] }) {
 
 function OrdersTab({ orders }: { orders: BtOrder[] }) {
   if (!orders.length)
-    return <EmptyState icon="📋" text="No pending orders" />;
+    return <EmptyState icon="◎" text="No pending orders" />;
 
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr>
-          {["Symbol", "Type", "Side", "Limit Price", "Size (USDT)", "Take Profit", "Stop Loss", "Placed"].map(h => (
-            <th key={h} style={TH}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {orders.map((o, i) => (
-          <tr key={o.id} className="bt-tr" style={{ background: i % 2 === 0 ? C.bg0 : C.bg1 }}>
-            <td style={{ ...TD, fontWeight: 600 }}>{o.symbol}</td>
-            <td style={{ ...TD }}>
-              <span style={{
-                padding: "2px 7px",
-                borderRadius: 4,
-                fontSize: 10,
-                fontWeight: 600,
-                background: "#ffffff0a",
-                color: C.text2,
-                border: `1px solid ${C.border2}`,
-              }}>
-                {o.type}
-              </span>
-            </td>
-            <td style={TD}><SideBadge side={o.side} /></td>
-            <td style={{ ...TD, fontWeight: 500 }}>{fmt(o.entry, 4)}</td>
-            <td style={{ ...TD, color: C.text2 }}>${fmt(o.usdt)}</td>
-            <td style={{ ...TD, color: o.take_profit ? C.tp : C.muted }}>
-              {o.take_profit != null ? fmt(o.take_profit, 4) : "—"}
-            </td>
-            <td style={{ ...TD, color: o.stop_price ? C.sl : C.muted }}>
-              {o.stop_price != null ? fmt(o.stop_price, 4) : "—"}
-            </td>
-            <td style={{ ...TD, color: C.muted, fontSize: 11 }}>{o.placed_time ?? "—"}</td>
-          </tr>
+    <div style={{ fontSize: 12 }}>
+      {/* Header */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "18px 120px 80px 80px 110px 110px 100px 100px 140px",
+        padding: "0 0 0 14px",
+        height: 30,
+        alignItems: "center",
+        background: C.bg2,
+        borderBottom: `1px solid ${C.border}`,
+        position: "sticky",
+        top: 0,
+        zIndex: 2,
+        gap: "0 8px",
+      }}>
+        {["", "SYMBOL", "TYPE", "SIDE", "LIMIT PRICE", "SIZE (USDT)", "TAKE PROFIT", "STOP LOSS", "PLACED"].map(h => (
+          <span key={h} style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>{h}</span>
         ))}
-      </tbody>
-    </table>
+      </div>
+
+      {orders.map((o) => {
+        const isLong = o.side === "LONG";
+        const accentCol = isLong ? C.long : C.short;
+
+        return (
+          <div
+            key={o.id}
+            className="bt-row"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "18px 120px 80px 80px 110px 110px 100px 100px 140px",
+              alignItems: "center",
+              minHeight: 44,
+              borderBottom: `1px solid ${C.border}`,
+              background: C.bg1,
+              gap: "0 8px",
+            }}
+          >
+            {/* Left accent */}
+            <div style={{
+              width: 3,
+              alignSelf: "stretch",
+              background: accentCol,
+              opacity: 0.5,
+              borderRadius: "0 2px 2px 0",
+            }} />
+
+            <span style={{ fontWeight: 700, color: C.text }}>{o.symbol}</span>
+            <span><TypeBadge type={o.type} /></span>
+            <span><SidePill side={o.side} /></span>
+            <span style={{ color: C.text, fontWeight: 600, fontFeatureSettings: '"tnum"' }}>
+              {fmt(o.entry, 4)}
+            </span>
+            <span style={{ color: C.text2, fontFeatureSettings: '"tnum"' }}>${fmt(o.usdt)}</span>
+            <span style={{ color: o.take_profit ? C.tp : C.muted, fontSize: 11, fontFeatureSettings: '"tnum"' }}>
+              {o.take_profit != null ? fmt(o.take_profit, 4) : "—"}
+            </span>
+            <span style={{ color: o.stop_price ? C.sl : C.muted, fontSize: 11, fontFeatureSettings: '"tnum"' }}>
+              {o.stop_price != null ? fmt(o.stop_price, 4) : "—"}
+            </span>
+            <span style={{ color: C.muted, fontSize: 10 }}>{timeAgo(o.placed_time)}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -348,95 +516,239 @@ function OrdersTab({ orders }: { orders: BtOrder[] }) {
 
 function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
   if (!history.length)
-    return <EmptyState icon="📜" text="No closed trades yet" />;
+    return <EmptyState icon="≡" text="No closed trades yet" />;
 
   const sorted = [...history].reverse();
+  const total = sorted.length;
+
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr>
-          {["#", "Symbol", "Side", "Entry", "Margin", "Lev", "Realized PnL", "ROE %", "Result", "Opened", "Closed"].map(h => (
-            <th key={h} style={TH}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map((p, i) => (
-          <tr key={p.id} className="bt-tr" style={{ background: i % 2 === 0 ? C.bg0 : C.bg1 }}>
-            <td style={{ ...TD, color: C.muted, fontSize: 11 }}>{sorted.length - i}</td>
-            <td style={{ ...TD, fontWeight: 600 }}>{p.symbol}</td>
-            <td style={TD}><SideBadge side={p.side} /></td>
-            <td style={{ ...TD, color: C.text2 }}>{fmt(p.entry, 4)}</td>
-            <td style={{ ...TD, color: C.text2 }}>${fmt(p.margin)}</td>
-            <td style={{ ...TD, color: C.text2 }}>{p.leverage}×</td>
-            <td style={{
-              ...TD,
-              color: pnlColor(p.pnl_usdt),
-              background: pnlBg(p.pnl_usdt),
-              fontWeight: 600,
-            }}>
-              {p.pnl_usdt >= 0 ? "+" : ""}{fmt(p.pnl_usdt)} USDT
-            </td>
-            <td style={{ ...TD, color: pnlColor(p.pnl_pct), fontWeight: 500 }}>
-              {p.pnl_pct >= 0 ? "+" : ""}{fmt(p.pnl_pct, 2)}%
-            </td>
-            <td style={TD}><StateTag state={p.state} /></td>
-            <td style={{ ...TD, color: C.muted, fontSize: 11 }}>{p.open_time ?? "—"}</td>
-            <td style={{ ...TD, color: C.muted, fontSize: 11 }}>{p.close_time ?? "—"}</td>
-          </tr>
+    <div style={{ fontSize: 12 }}>
+      {/* Header */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "40px 18px 120px 80px 80px 100px 70px 140px 90px 140px 140px",
+        padding: "0 0 0 8px",
+        height: 30,
+        alignItems: "center",
+        background: C.bg2,
+        borderBottom: `1px solid ${C.border}`,
+        position: "sticky",
+        top: 0,
+        zIndex: 2,
+        gap: "0 8px",
+      }}>
+        {["#", "", "SYMBOL", "SIDE", "LEV", "ENTRY", "MARGIN", "REALIZED PnL", "ROE %", "OPENED", "CLOSED"].map(h => (
+          <span key={h} style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>{h}</span>
         ))}
-      </tbody>
-    </table>
+      </div>
+
+      {sorted.map((p, i) => {
+        const isLong = p.side === "LONG";
+        const accentCol = isLong ? C.long : C.short;
+        const isWin = p.pnl_usdt > 0;
+
+        return (
+          <div
+            key={p.id}
+            className="bt-row"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "40px 18px 120px 80px 80px 100px 70px 140px 90px 140px 140px",
+              alignItems: "center",
+              minHeight: 44,
+              borderBottom: `1px solid ${C.border}`,
+              background: i % 2 === 0 ? C.bg1 : C.bg0,
+              gap: "0 8px",
+              padding: "0 0 0 8px",
+            }}
+          >
+            {/* Row number */}
+            <span style={{ color: C.muted, fontSize: 10, textAlign: "right", paddingRight: 8 }}>
+              {total - i}
+            </span>
+
+            {/* Left accent */}
+            <div style={{
+              width: 3,
+              alignSelf: "stretch",
+              background: accentCol,
+              opacity: 0.6,
+              borderRadius: "0 2px 2px 0",
+            }} />
+
+            <span style={{ fontWeight: 700, color: C.text }}>{p.symbol}</span>
+            <span><SidePill side={p.side} /></span>
+            <span><LevBadge lev={p.leverage} /></span>
+            <span style={{ color: C.text2, fontFeatureSettings: '"tnum"' }}>{fmt(p.entry, 4)}</span>
+            <span style={{ color: C.text2, fontFeatureSettings: '"tnum"' }}>${fmt(p.margin)}</span>
+
+            {/* Realized PnL — full colored cell */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "5px 8px",
+              borderRadius: 5,
+              background: pnlDim(p.pnl_usdt),
+              border: `1px solid ${isWin ? C.long + "20" : C.short + "20"}`,
+            }}>
+              {/* Win/loss icon */}
+              <span style={{ fontSize: 10, color: pnlColor(p.pnl_usdt) }}>
+                {isWin ? "▲" : "▼"}
+              </span>
+              <span style={{
+                color: pnlColor(p.pnl_usdt),
+                fontWeight: 700,
+                fontFeatureSettings: '"tnum"',
+              }}>
+                {sign(p.pnl_usdt)}${fmt(Math.abs(p.pnl_usdt))}
+              </span>
+            </div>
+
+            {/* ROE */}
+            <span style={{
+              color: pnlColor(p.pnl_pct),
+              fontWeight: 700,
+              fontFeatureSettings: '"tnum"',
+            }}>
+              {sign(p.pnl_pct)}{fmt(p.pnl_pct, 2)}%
+            </span>
+
+            <span style={{ color: C.muted, fontSize: 10 }}>{timeAgo(p.open_time)}</span>
+
+            {/* Closed with state */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: C.muted, fontSize: 10 }}>{timeAgo(p.close_time)}</span>
+              <StatePill state={p.state} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 // ── Assets Tab ─────────────────────────────────────────────────────
 
 function AssetsTab({ state }: { state: BtState }) {
-  const cards: { label: string; value: number; prefix?: string; suffix?: string; colorFn?: (n: number) => string }[] = [
-    { label: "Wallet Balance",  value: state.balance,       prefix: "$", suffix: "USDT" },
-    { label: "Margin Used",     value: state.margin_used,   prefix: "$", suffix: "USDT" },
-    { label: "Unrealized PnL",  value: state.unrealized_pnl, prefix: "$", suffix: "USDT", colorFn: pnlColor },
-    { label: "Total Equity",    value: state.equity,         prefix: "$", suffix: "USDT" },
+  const freeMargin = state.balance - state.margin_used;
+  const marginRatio = state.balance > 0 ? (state.margin_used / state.balance) * 100 : 0;
+
+  const cards = [
+    {
+      label: "Wallet Balance",
+      value: state.balance,
+      sub: "Available funds",
+      color: C.text,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="5" width="16" height="12" rx="2" stroke={C.accent} strokeWidth="1.5"/>
+          <path d="M14 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" fill={C.accent}/>
+          <path d="M2 8h16" stroke={C.accent} strokeWidth="1.5"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Margin Used",
+      value: state.margin_used,
+      sub: `${fmt(marginRatio, 1)}% of balance`,
+      color: C.text2,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="7" stroke="#a78bfa" strokeWidth="1.5"/>
+          <path d="M10 6v4l3 2" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      ),
+      bar: { value: marginRatio, color: "#a78bfa" },
+    },
+    {
+      label: "Unrealized PnL",
+      value: state.unrealized_pnl,
+      sub: state.unrealized_pnl >= 0 ? "In profit" : "In loss",
+      color: pnlColor(state.unrealized_pnl),
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <polyline points="2,14 7,8 11,11 18,4" stroke={pnlColor(state.unrealized_pnl)} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <polyline points="14,4 18,4 18,8" stroke={pnlColor(state.unrealized_pnl)} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Total Equity",
+      value: state.equity,
+      sub: `Free margin $${fmt(freeMargin)}`,
+      color: state.equity >= state.balance ? C.long : C.short,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L12.5 7.5H18L13.5 11L15.5 17L10 13.5L4.5 17L6.5 11L2 7.5H7.5Z" stroke={C.accent} strokeWidth="1.5" strokeLinejoin="round"/>
+        </svg>
+      ),
+    },
   ];
 
-  const icons = ["💰", "🔒", "📈", "⚖️"];
-
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(4, 1fr)",
-      gap: 12,
-      padding: "16px 20px",
-    }}>
-      {cards.map(({ label, value, prefix, suffix, colorFn }, i) => {
-        const color = colorFn ? colorFn(value) : C.text;
-        const isMinus = value < 0;
-        return (
+    <div style={{ padding: "16px 20px" }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: 12,
+      }}>
+        {cards.map(({ label, value, sub, color, icon, bar }) => (
           <div
             key={label}
-            className="bt-asset-card"
+            className="bt-card"
             style={{
-              background: C.bg3,
+              background: C.card,
               border: `1px solid ${C.border}`,
-              borderRadius: 8,
-              padding: "14px 16px",
-              transition: "border-color 0.15s, background 0.15s",
+              borderRadius: 10,
+              padding: "16px 18px",
+              boxShadow: "0 2px 12px #00000030",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <span style={{ fontSize: 16, opacity: 0.8 }}>{icons[i]}</span>
-              <span style={{ fontSize: 11, color: C.muted, fontWeight: 500, letterSpacing: "0.02em" }}>
-                {label}
-              </span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+              <span style={{ fontSize: 11, color: C.muted, fontWeight: 500, lineHeight: 1.3 }}>{label}</span>
+              <div style={{
+                width: 36, height: 36,
+                borderRadius: 8,
+                background: C.bg4,
+                border: `1px solid ${C.border2}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {icon}
+              </div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color, letterSpacing: "-0.01em" }}>
-              {prefix}{isMinus ? "-" : ""}{Math.abs(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+            <div style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color,
+              letterSpacing: "-0.02em",
+              fontFeatureSettings: '"tnum"',
+              lineHeight: 1.1,
+            }}>
+              {value < 0 ? "-" : ""} ${fmt(Math.abs(value))}
             </div>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{suffix}</div>
+
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 5 }}>{sub}</div>
+
+            {bar && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ height: 3, borderRadius: 2, background: C.border2, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${Math.min(100, bar.value)}%`,
+                    background: bar.color,
+                    borderRadius: 2,
+                    transition: "width 0.5s ease",
+                  }} />
+                </div>
+              </div>
+            )}
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
@@ -446,63 +758,73 @@ function AssetsTab({ state }: { state: BtState }) {
 function EquityCurve({ curve, initial }: { curve: number[]; initial: number }) {
   if (curve.length < 2) return null;
 
-  const W = 340, H = 100, PAD = 8;
-  const min = curve.reduce((a, b) => Math.min(a, b));
-  const max = curve.reduce((a, b) => Math.max(a, b));
+  const W = 380, H = 110, PX = 10, PY = 8;
+  const min = Math.min(...curve);
+  const max = Math.max(...curve);
   const range = max - min || 1;
 
-  const xs = curve.map((_, i) => PAD + ((W - PAD * 2) * i) / (curve.length - 1));
-  const ys = curve.map(v => PAD + (H - PAD * 2) * (1 - (v - min) / range));
-  const pts = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
+  const xs = curve.map((_, i) => PX + ((W - PX * 2) * i) / (curve.length - 1));
+  const ys = curve.map(v => PY + (H - PY * 2) * (1 - (v - min) / range));
 
-  const baselineRaw = PAD + (H - PAD * 2) * (1 - (initial - min) / range);
-  const baseline = Math.max(PAD, Math.min(H - PAD, baselineRaw));
+  const polyPoints = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
+  const areaD = `M ${xs[0]},${H - PY} ` + xs.map((x, i) => `L ${x},${ys[i]}`).join(" ") + ` L ${xs[xs.length-1]},${H - PY} Z`;
 
+  const baselineY = Math.max(PY, Math.min(H - PY, PY + (H - PY * 2) * (1 - (initial - min) / range)));
   const last = curve[curve.length - 1];
   const isProfit = last >= initial;
   const lineColor = isProfit ? C.long : C.short;
-  const fillColor = isProfit ? "#0ecb8120" : "#f6465d20";
+  const gradId = `ec-${isProfit ? "g" : "r"}`;
 
-  // Area fill path
-  const areaPath = `M ${xs[0]},${H - PAD} L ${pts.split(" ").join(" L ")} L ${xs[xs.length - 1]},${H - PAD} Z`;
+  const endX = xs[xs.length - 1];
+  const endY = ys[ys.length - 1];
 
-  // Grid lines (3 horizontal)
-  const gridYs = [PAD, (H - PAD) / 2, H - PAD];
+  // Vertical grid lines (5)
+  const vGridXs = [0, 1, 2, 3, 4].map(i => PX + (W - PX * 2) * i / 4);
 
   return (
-    <svg width={W} height={H} style={{ display: "block", borderRadius: 6, overflow: "hidden" }}>
-      {/* Background */}
-      <rect width={W} height={H} fill="#0d1117" />
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block", borderRadius: 6 }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={lineColor} stopOpacity="0.3"/>
+          <stop offset="100%" stopColor={lineColor} stopOpacity="0.02"/>
+        </linearGradient>
+      </defs>
 
-      {/* Grid lines */}
-      {gridYs.map((y, i) => (
-        <line key={i} x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="#1e2839" strokeWidth={1} />
+      <rect width={W} height={H} fill="#080b0f" rx="6"/>
+
+      {/* Vertical grid */}
+      {vGridXs.map((x, i) => (
+        <line key={i} x1={x} y1={PY} x2={x} y2={H - PY} stroke={C.border} strokeWidth={0.5} strokeDasharray="2,4"/>
       ))}
 
-      {/* Baseline */}
-      <line
-        x1={PAD} y1={baseline} x2={W - PAD} y2={baseline}
-        stroke={isProfit ? "#0ecb8140" : "#f6465d40"}
-        strokeWidth={1}
-        strokeDasharray="4,3"
+      {/* Horizontal grid (3) */}
+      {[PY, (H) / 2, H - PY].map((y, i) => (
+        <line key={i} x1={PX} y1={y} x2={W - PX} y2={y} stroke={C.border} strokeWidth={0.5}/>
+      ))}
+
+      {/* Baseline (initial_balance) */}
+      <line x1={PX} y1={baselineY} x2={W - PX} y2={baselineY}
+        stroke={isProfit ? C.long : C.short} strokeWidth={0.8}
+        strokeDasharray="5,4" opacity={0.35}
       />
 
       {/* Area fill */}
-      <path d={areaPath} fill={fillColor} />
+      <path d={areaD} fill={`url(#${gradId})`}/>
 
-      {/* Line */}
+      {/* Main line */}
       <polyline
-        points={pts}
+        points={polyPoints}
         fill="none"
         stroke={lineColor}
-        strokeWidth={1.5}
+        strokeWidth={1.8}
         strokeLinejoin="round"
         strokeLinecap="round"
       />
 
-      {/* End dot */}
-      <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r={3} fill={lineColor} />
-      <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r={5} fill={lineColor} opacity={0.25} />
+      {/* End dot — pulsing outer ring */}
+      <circle cx={endX} cy={endY} r={7} fill={lineColor} opacity={0.15} className="bt-dot-pulse"/>
+      <circle cx={endX} cy={endY} r={4} fill={lineColor} opacity={0.3}/>
+      <circle cx={endX} cy={endY} r={2.5} fill={lineColor}/>
     </svg>
   );
 }
@@ -512,176 +834,192 @@ function EquityCurve({ curve, initial }: { curve: number[]; initial: number }) {
 function ResultsTab({ result }: { result: BtResult }) {
   const isProfit = result.return_pct >= 0;
   const returnColor = isProfit ? C.long : C.short;
-  const winRatePct = Math.min(100, Math.max(0, result.win_rate));
+  const winPct = Math.min(100, Math.max(0, result.win_rate));
 
   return (
-    <div
-      className="bt-scrollbar"
-      style={{
-        padding: "16px 20px",
-        display: "flex",
-        gap: 20,
-        flexWrap: "wrap",
-        alignItems: "flex-start",
-        overflowX: "auto",
-      }}
-    >
-      {/* ── Hero: return + equity curve ─────────────────────────── */}
+    <div className="bt-scrollbar" style={{
+      padding: "16px 20px",
+      overflowY: "auto",
+      display: "flex",
+      gap: 16,
+      flexWrap: "wrap",
+      alignItems: "flex-start",
+    }}>
+
+      {/* ── Hero ─────────────────────────────────────────────────── */}
       <div style={{
-        background: C.bg3,
+        background: C.card,
         border: `1px solid ${C.border}`,
-        borderRadius: 10,
-        padding: "16px 20px",
-        minWidth: 380,
+        borderRadius: 12,
+        padding: "18px 20px",
+        minWidth: 400,
         flexShrink: 0,
+        boxShadow: "0 4px 24px #00000040",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+            <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
               Net Return
             </div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: returnColor, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            <div style={{
+              fontSize: 38,
+              fontWeight: 900,
+              color: returnColor,
+              letterSpacing: "-0.03em",
+              lineHeight: 1,
+              fontFeatureSettings: '"tnum"',
+            }}>
               {isProfit ? "+" : ""}{fmt(result.return_pct, 2)}%
             </div>
-            <div style={{ fontSize: 13, color: C.text2, marginTop: 6, fontWeight: 500 }}>
-              ${fmt(result.initial_balance)} → ${fmt(result.final_balance)}{" "}
-              <span style={{ color: returnColor, fontWeight: 600 }}>
-                ({result.total_pnl_usdt >= 0 ? "+" : ""}{fmt(result.total_pnl_usdt)} USDT)
+            <div style={{ fontSize: 12, color: C.text2, marginTop: 8, fontWeight: 500 }}>
+              <span style={{ color: C.muted }}>${fmt(result.initial_balance)}</span>
+              <span style={{ margin: "0 6px", color: C.border3 }}>→</span>
+              <span style={{ fontWeight: 700, color: returnColor }}>${fmt(result.final_balance)}</span>
+              <span style={{ marginLeft: 8, color: returnColor, fontWeight: 600, fontSize: 11 }}>
+                ({sign(result.total_pnl_usdt)}${fmt(Math.abs(result.total_pnl_usdt))} USDT)
               </span>
             </div>
           </div>
-          <div style={{
-            padding: "4px 12px",
-            borderRadius: 6,
-            background: isProfit ? C.longBg : C.shortBg,
-            color: returnColor,
-            fontSize: 11,
-            fontWeight: 700,
-            border: `1px solid ${returnColor}30`,
-          }}>
-            {result.total_trades} trades
+          <div style={{ textAlign: "right" }}>
+            <div style={{
+              display: "inline-block",
+              padding: "5px 12px",
+              borderRadius: 7,
+              background: isProfit ? C.longDim : C.shortDim,
+              color: returnColor,
+              fontSize: 12,
+              fontWeight: 700,
+              border: `1px solid ${returnColor}30`,
+              marginBottom: 6,
+            }}>
+              {result.total_trades} trades
+            </div>
+            <div style={{ fontSize: 10, color: C.muted }}>
+              {result.winning_trades}W / {result.losing_trades}L
+            </div>
           </div>
         </div>
-
-        {/* Equity curve */}
         <EquityCurve curve={result.equity_curve} initial={result.initial_balance} />
       </div>
 
-      {/* ── Trade stats ─────────────────────────────────────────── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 200, flex: 1 }}>
-        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
+      {/* ── Trade stats ──────────────────────────────────────────── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 220, flex: 1 }}>
+        <div style={{ fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
           Trade Statistics
         </div>
 
-        {/* Win rate bar */}
+        {/* Win rate */}
         <div style={{
-          background: C.bg3,
+          background: C.card,
           border: `1px solid ${C.border}`,
-          borderRadius: 8,
-          padding: "12px 14px",
+          borderRadius: 9,
+          padding: "14px 16px",
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: C.muted }}>Win Rate</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ fontSize: 11, color: C.text2 }}>Win Rate</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: C.text, fontFeatureSettings: '"tnum"' }}>
               {fmt(result.win_rate, 1)}%
             </span>
           </div>
-          <div style={{ height: 5, borderRadius: 3, background: C.shortBg, overflow: "hidden" }}>
+          <div style={{ position: "relative", height: 6, borderRadius: 3, background: C.shortDim, overflow: "hidden" }}>
             <div style={{
-              height: "100%",
-              width: `${winRatePct}%`,
+              position: "absolute",
+              left: 0, top: 0, bottom: 0,
+              width: `${winPct}%`,
               background: `linear-gradient(90deg, ${C.long}, ${C.tp})`,
               borderRadius: 3,
-              transition: "width 0.6s ease",
+              transition: "width 0.8s cubic-bezier(.4,0,.2,1)",
             }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-            <span style={{ fontSize: 10, color: C.long }}>▲ {result.winning_trades} wins</span>
-            <span style={{ fontSize: 10, color: C.short }}>▼ {result.losing_trades} losses</span>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 7 }}>
+            <span style={{ fontSize: 10, color: C.long, fontWeight: 600 }}>▲ {result.winning_trades} wins</span>
+            <span style={{ fontSize: 10, color: C.short, fontWeight: 600 }}>▼ {result.losing_trades} losses</span>
           </div>
         </div>
 
-        {/* Stats grid */}
-        {[
-          ["Profit Factor",  fmt(result.profit_factor, 2),          result.profit_factor >= 1 ? C.long : C.short],
-          ["Risk / Reward",  `1 : ${fmt(result.risk_reward, 2)}`,   result.risk_reward >= 1 ? C.long : C.text],
-          ["Avg Win",        `+$${fmt(result.avg_win)}`,            C.long],
-          ["Avg Loss",       `-$${fmt(Math.abs(result.avg_loss))}`, C.short],
-          ["Largest Win",    `+$${fmt(result.largest_win)}`,        C.long],
-          ["Largest Loss",   `-$${fmt(Math.abs(result.largest_loss))}`, C.short],
-        ].map(([label, val, color]) => (
+        {/* Stat rows */}
+        {([
+          ["Profit Factor",  fmt(result.profit_factor, 2),                result.profit_factor >= 1 ? C.long : C.short],
+          ["Risk / Reward",  `1 : ${fmt(result.risk_reward, 2)}`,          result.risk_reward >= 1 ? C.long : C.text2],
+          ["Avg Win",        `+$${fmt(result.avg_win)}`,                   C.long],
+          ["Avg Loss",       `-$${fmt(Math.abs(result.avg_loss))}`,        C.short],
+          ["Largest Win",    `+$${fmt(result.largest_win)}`,               C.long],
+          ["Largest Loss",   `-$${fmt(Math.abs(result.largest_loss))}`,    C.short],
+        ] as [string, string, string][]).map(([label, val, color]) => (
           <div
-            key={label as string}
-            className="bt-stat-card"
+            key={label}
+            className="bt-stat"
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "8px 14px",
-              background: C.statCard,
+              padding: "9px 14px",
+              background: C.card,
               border: `1px solid ${C.border}`,
               borderRadius: 7,
-              transition: "border-color 0.15s, background 0.15s",
+              transition: "background 0.12s, border-color 0.12s",
             }}
           >
             <span style={{ fontSize: 11, color: C.muted }}>{label}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: color as string }}>{val}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color, fontFeatureSettings: '"tnum"' }}>{val}</span>
           </div>
         ))}
       </div>
 
-      {/* ── Risk metrics ────────────────────────────────────────── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 200, flex: 1 }}>
-        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
+      {/* ── Risk metrics ─────────────────────────────────────────── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 220, flex: 1 }}>
+        <div style={{ fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
           Risk Metrics
         </div>
 
-        {/* Max drawdown card */}
+        {/* Max drawdown */}
         <div style={{
-          background: C.bg3,
-          border: `1px solid ${C.border}`,
-          borderRadius: 8,
-          padding: "12px 14px",
+          background: C.card,
+          border: `1px solid ${C.short}20`,
+          borderRadius: 9,
+          padding: "14px 16px",
         }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Max Drawdown</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.short }}>
-            -{fmt(result.max_drawdown_pct, 1)}%
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+            <span style={{ fontSize: 11, color: C.text2 }}>Max Drawdown</span>
+            <span style={{ fontSize: 22, fontWeight: 800, color: C.short, fontFeatureSettings: '"tnum"' }}>
+              -{fmt(result.max_drawdown_pct, 1)}%
+            </span>
           </div>
-          <div style={{ fontSize: 11, color: C.text2, marginTop: 3 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
             -${fmt(result.max_drawdown_usdt)} USDT
           </div>
-          <div style={{ height: 4, borderRadius: 2, background: C.border, marginTop: 10, overflow: "hidden" }}>
+          <div style={{ height: 4, borderRadius: 2, background: C.border2, overflow: "hidden" }}>
             <div style={{
               height: "100%",
               width: `${Math.min(100, result.max_drawdown_pct)}%`,
-              background: `linear-gradient(90deg, ${C.short}, #ff6b6b)`,
+              background: `linear-gradient(90deg, ${C.short}, #ff8080)`,
               borderRadius: 2,
             }} />
           </div>
         </div>
 
-        {[
-          ["Gross Profit",   `+$${fmt(result.gross_profit)}`,           C.long],
-          ["Gross Loss",     `-$${fmt(Math.abs(result.gross_loss))}`,   C.short],
-          ["Initial Balance",`$${fmt(result.initial_balance)}`,         C.text2],
-          ["Final Balance",  `$${fmt(result.final_balance)}`,           isProfit ? C.long : C.short],
-        ].map(([label, val, color]) => (
+        {([
+          ["Gross Profit",    `+$${fmt(result.gross_profit)}`,            C.long],
+          ["Gross Loss",      `-$${fmt(Math.abs(result.gross_loss))}`,    C.short],
+          ["Initial Balance", `$${fmt(result.initial_balance)}`,          C.text2],
+          ["Final Balance",   `$${fmt(result.final_balance)}`,            isProfit ? C.long : C.short],
+        ] as [string, string, string][]).map(([label, val, color]) => (
           <div
-            key={label as string}
-            className="bt-stat-card"
+            key={label}
+            className="bt-stat"
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "8px 14px",
-              background: C.statCard,
+              padding: "9px 14px",
+              background: C.card,
               border: `1px solid ${C.border}`,
               borderRadius: 7,
-              transition: "border-color 0.15s, background 0.15s",
+              transition: "background 0.12s, border-color 0.12s",
             }}
           >
             <span style={{ fontSize: 11, color: C.muted }}>{label}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: color as string }}>{val}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color, fontFeatureSettings: '"tnum"' }}>{val}</span>
           </div>
         ))}
       </div>
@@ -689,16 +1027,16 @@ function ResultsTab({ result }: { result: BtResult }) {
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────
+// ── Main Component ─────────────────────────────────────────────────
 
 type Tab = "positions" | "orders" | "history" | "assets" | "results";
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "positions", label: "Positions",    icon: "◈" },
-  { id: "orders",    label: "Open Orders",  icon: "◎" },
-  { id: "history",   label: "Trade History", icon: "≡" },
-  { id: "assets",    label: "Assets",       icon: "◆" },
-  { id: "results",   label: "Results",      icon: "▦" },
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "positions", label: "Positions",     icon: <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="3" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M4 3V2a2 2 0 0 1 4 0v1" stroke="currentColor" strokeWidth="1.3"/></svg> },
+  { id: "orders",    label: "Open Orders",   icon: <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M3 6h6M3 4h4M3 8h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg> },
+  { id: "history",   label: "Trade History", icon: <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v5l3 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/></svg> },
+  { id: "assets",    label: "Assets",        icon: <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 9l3-3 2 2 5-5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+  { id: "results",   label: "Results",       icon: <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="6" width="2.5" height="5" rx="0.8" fill="currentColor"/><rect x="4.75" y="3" width="2.5" height="8" rx="0.8" fill="currentColor"/><rect x="8.5" y="1" width="2.5" height="10" rx="0.8" fill="currentColor"/></svg> },
 ];
 
 interface Props {
@@ -709,7 +1047,7 @@ interface Props {
 
 export const BtPanel = memo(function BtPanel({ state, result, progress }: Props) {
   const [tab, setTab]       = useState<Tab>("positions");
-  const [height, setHeight] = useState(260);
+  const [height, setHeight] = useState(280);
   const dragging            = useRef(false);
   const startY              = useRef(0);
   const startH              = useRef(0);
@@ -734,8 +1072,7 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!dragging.current) return;
-      const delta = startY.current - e.clientY;
-      setHeight(Math.max(140, Math.min(640, startH.current + delta)));
+      setHeight(Math.max(160, Math.min(700, startH.current + startY.current - e.clientY)));
     };
     const onUp = () => { dragging.current = false; };
     window.addEventListener("mousemove", onMove);
@@ -748,49 +1085,36 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
 
   const posCount = state.positions.length;
   const ordCount = state.orders.length;
-
   const isRunning = progress != null && progress.pct < 100;
 
   return (
-    <div
-      style={{
-        height,
-        background: C.bg1,
-        borderTop: `1px solid ${C.border}`,
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-        position: "relative",
-        userSelect: "none",
-      }}
-    >
+    <div style={{
+      height,
+      background: C.bg1,
+      borderTop: `1px solid ${C.border}`,
+      display: "flex",
+      flexDirection: "column",
+      flexShrink: 0,
+      position: "relative",
+      userSelect: "none",
+    }}>
       {/* Drag handle */}
       <div
         onMouseDown={onDragStart}
-        style={{
-          height: 5,
-          cursor: "row-resize",
-          background: "transparent",
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 20,
-          transition: "background 0.15s",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = C.accent + "40")}
+        style={{ height: 4, cursor: "row-resize", position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }}
+        onMouseEnter={e => (e.currentTarget.style.background = C.accent + "50")}
         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
       />
 
-      {/* Progress bar — full width, above tab bar */}
+      {/* Progress bar */}
       {isRunning && (
-        <div style={{ height: 2, background: C.border, flexShrink: 0 }}>
+        <div style={{ height: 2, background: C.bg3, flexShrink: 0 }}>
           <div style={{
             height: "100%",
             width: `${progress!.pct}%`,
             background: `linear-gradient(90deg, ${C.accent}, #f5a623)`,
-            transition: "width 0.2s ease",
-            boxShadow: `0 0 8px ${C.accent}60`,
+            transition: "width 0.15s linear",
+            boxShadow: `0 0 10px ${C.accent}80`,
           }} />
         </div>
       )}
@@ -801,10 +1125,9 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
         alignItems: "center",
         background: C.bg2,
         borderBottom: `1px solid ${C.border}`,
-        paddingLeft: 4,
+        paddingLeft: 2,
         height: 38,
         flexShrink: 0,
-        gap: 0,
       }}>
         {TABS.map(t => {
           if (t.id === "results" && !result) return null;
@@ -820,7 +1143,7 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
                 padding: "0 14px",
                 background: "transparent",
                 border: "none",
-                borderBottom: `2px solid transparent`,
+                borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
                 color: active ? C.text : C.muted,
                 fontSize: 12,
                 fontWeight: active ? 600 : 400,
@@ -828,22 +1151,24 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                transition: "color 0.15s, border-color 0.15s",
+                transition: "color 0.12s, border-color 0.12s, background 0.12s",
                 whiteSpace: "nowrap",
+                borderRadius: 0,
               }}
             >
-              <span style={{ fontSize: 10, opacity: active ? 1 : 0.6 }}>{t.icon}</span>
+              <span style={{ opacity: active ? 1 : 0.5, display: "flex", alignItems: "center" }}>
+                {t.icon}
+              </span>
               {t.label}
               {badge != null && badge > 0 && (
                 <span style={{
-                  background: active ? C.accent + "25" : "#ffffff12",
+                  background: active ? C.accent + "22" : C.bg4,
                   color: active ? C.accent : C.text2,
                   fontSize: 10,
                   fontWeight: 700,
-                  padding: "1px 6px",
+                  padding: "1px 7px",
                   borderRadius: 10,
-                  minWidth: 18,
-                  textAlign: "center",
+                  border: `1px solid ${active ? C.accent + "30" : C.border2}`,
                   lineHeight: "16px",
                 }}>
                   {badge}
@@ -857,32 +1182,27 @@ export const BtPanel = memo(function BtPanel({ state, result, progress }: Props)
         {isRunning && (
           <div style={{
             marginLeft: "auto",
-            marginRight: 12,
+            marginRight: 14,
             display: "flex",
             alignItems: "center",
             gap: 8,
             fontSize: 11,
             color: C.muted,
           }}>
-            <span style={{
+            <span className="bt-dot-pulse" style={{
               display: "inline-block",
-              width: 6,
-              height: 6,
+              width: 6, height: 6,
               borderRadius: "50%",
               background: C.accent,
-              boxShadow: `0 0 6px ${C.accent}`,
-              animation: "none",
+              boxShadow: `0 0 8px ${C.accent}`,
             }} />
-            {progress!.pct.toFixed(1)}%
+            Running {progress!.pct.toFixed(1)}%
           </div>
         )}
       </div>
 
-      {/* Content area */}
-      <div
-        className="bt-scrollbar"
-        style={{ flex: 1, overflow: "auto" }}
-      >
+      {/* Content */}
+      <div className="bt-scrollbar" style={{ flex: 1, overflow: "auto" }}>
         {tab === "positions" && <PositionsTab positions={state.positions} />}
         {tab === "orders"    && <OrdersTab orders={state.orders} />}
         {tab === "history"   && <TradeHistoryTab history={state.trade_history} />}
