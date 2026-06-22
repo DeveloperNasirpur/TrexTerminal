@@ -252,6 +252,18 @@
       @keyframes ldp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.78)}}
       .dl{color:rgba(255,255,255,.15);text-decoration:none;transition:color .15s;cursor:pointer}
       .dl:hover{color:#f0b90b}
+
+      /* Build badge — bottom right corner */
+      .build-badge{
+        position:fixed;bottom:16px;right:20px;z-index:20;
+        display:flex;align-items:center;gap:6px;
+        background:rgba(13,17,23,.75);backdrop-filter:blur(8px);
+        border:1px solid rgba(255,255,255,.07);border-radius:8px;
+        padding:5px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;
+        color:rgba(255,255,255,.2);pointer-events:none;user-select:none
+      }
+      .build-badge .bv{color:rgba(255,255,255,.35);font-weight:600}
+      .build-badge .bd{color:rgba(255,255,255,.12)}
     </style>
   </head>
   <body>
@@ -549,7 +561,7 @@
               <div id="hint">Choose Demo for instant start · Server for live data</div>
 
               <div class="footer">
-                <div class="footer-l"><div class="ld"></div>v1.0 · Protocol v2</div>
+                <div class="footer-l"><div class="ld"></div>v__APP_VERSION__ · Protocol v2</div>
                 <a class="dl" href="#" id="dl" onclick="window.__trexAction='docs';return false">📖 API Docs</a>
               </div>
 
@@ -558,6 +570,13 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- Build version badge -->
+    <div class="build-badge">
+      <span class="bv">v__APP_VERSION__</span>
+      <span class="bd">·</span>
+      <span class="bd">build __BUILD_DATE__</span>
     </div>
 
     <div id="root"></div>
