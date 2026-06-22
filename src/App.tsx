@@ -133,6 +133,8 @@ if (typeof document !== "undefined" && !document.getElementById("trex-app-anim")
   s.textContent = `
     @keyframes bt-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
     @keyframes bt-shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+    @keyframes bt-fadein { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes toast-shrink { from{width:100%} to{width:0%} }
   `;
   document.head.appendChild(s);
 }
@@ -218,17 +220,15 @@ function useOutsideClose(open: boolean, onClose: () => void) {
 }
 
 /* ═══════════════════════════ toasts ═══════════════════════════════ */
-// Module-level pub/sub: any code (engine callbacks, WS handler, menus)
-// can fire a toast without prop drilling or context re-renders.
 
 type ToastKind = "info" | "success" | "error" | "warning";
-interface ToastItem { id: number; text: string; kind: ToastKind }
+interface ToastItem { id: number; text: string; kind: ToastKind; duration: number }
 
 let toastSeq = 1;
 let toastPush: ((t: ToastItem) => void) | null = null;
 
-export function showToast(text: string, kind: ToastKind = "info") {
-  toastPush?.({ id: toastSeq++, text, kind });
+export function showToast(text: string, kind: ToastKind = "info", duration = 3400) {
+  toastPush?.({ id: toastSeq++, text, kind, duration });
 }
 
 function ToastHost() {
@@ -236,30 +236,156 @@ function ToastHost() {
   useEffect(() => {
     toastPush = (t) => {
       setItems((xs) => [...xs.slice(-4), t]);
-      setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== t.id)), 3200);
+      setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== t.id)), t.duration);
     };
     return () => { toastPush = null; };
   }, []);
-  const colors: Record<ToastKind, string> = {
-    info: "border-[#2962FF]",
-    success: "border-[#089981]",
-    error: "border-[#F23645]",
-    warning: "border-[#FF9800]",
+
+  const dismiss = (id: number) => setItems((xs) => xs.filter((x) => x.id !== id));
+
+  const meta: Record<ToastKind, { border: string; icon: string; color: string }> = {
+    info:    { border: "#2962FF", icon: "ℹ", color: "#2962FF" },
+    success: { border: "#089981", icon: "✓", color: "#089981" },
+    error:   { border: "#F23645", icon: "✕", color: "#F23645" },
+    warning: { border: "#FF9800", icon: "⚠", color: "#FF9800" },
   };
+
   return (
-    <div className="absolute top-3 right-3 z-[60] flex flex-col gap-2 pointer-events-none">
-      {items.map((t) => (
-        <div
-          key={t.id}
-          className={cn(
-            "trex-toast pointer-events-auto min-w-[200px] max-w-[340px] rounded-md border-l-[3px]",
-            "bg-[#1E222D] px-3 py-2 text-[12px] text-[#D1D4DC] shadow-lg shadow-black/40",
-            colors[t.kind]
-          )}
-        >
-          {t.text}
+    <div style={{ position: "absolute", top: 12, right: 12, zIndex: 60, display: "flex", flexDirection: "column", gap: 8, pointerEvents: "none" }}>
+      {items.map((t) => {
+        const m = meta[t.kind];
+        return (
+          <div key={t.id} style={{
+            pointerEvents: "auto",
+            display: "flex", alignItems: "flex-start", gap: 10,
+            minWidth: 220, maxWidth: 360,
+            background: "#1a1f2e",
+            border: `1px solid ${m.border}30`,
+            borderLeft: `3px solid ${m.border}`,
+            borderRadius: 8,
+            padding: "10px 12px",
+            fontSize: 12, color: "#d1d4dc",
+            boxShadow: "0 4px 20px #00000060",
+            animation: "bt-fadein 0.2s ease",
+            position: "relative", overflow: "hidden",
+          }}>
+            {/* icon */}
+            <span style={{ color: m.color, fontSize: 13, fontWeight: 700, flexShrink: 0, marginTop: 0.5 }}>{m.icon}</span>
+            {/* text */}
+            <span style={{ flex: 1, lineHeight: 1.5 }}>{t.text}</span>
+            {/* close */}
+            <button
+              onClick={() => dismiss(t.id)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#4a5568", fontSize: 14, lineHeight: 1, padding: 0, flexShrink: 0 }}
+            >×</button>
+            {/* progress bar */}
+            <div style={{
+              position: "absolute", bottom: 0, left: 0, right: 0, height: 2,
+              background: m.border + "20",
+            }}>
+              <div style={{
+                height: "100%",
+                background: m.border + "60",
+                animation: `toast-shrink ${t.duration}ms linear forwards`,
+              }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══════════════════════ Keyboard shortcuts modal ════════════════ */
+
+function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const ref = useOutsideClose(open, onClose);
+  if (!open) return null;
+
+  const groups: { title: string; rows: [string, string][] }[] = [
+    {
+      title: "Navigation",
+      rows: [
+        ["Scroll", "Zoom in / out"],
+        ["Drag", "Pan chart"],
+        ["Shift + Drag", "Box zoom"],
+        ["Double-click", "Fullscreen"],
+        ["R", "Fit content to screen"],
+      ],
+    },
+    {
+      title: "Drawing Tools",
+      rows: [
+        ["Alt + T", "Trend line"],
+        ["Alt + H", "Horizontal line"],
+        ["Alt + V", "Vertical line"],
+        ["Alt + F", "Fibonacci retracement"],
+        ["Alt + R", "Rectangle"],
+        ["M", "Toggle magnet"],
+        ["Enter", "Finish polyline"],
+        ["Delete / Backspace", "Delete selected"],
+        ["Escape", "Cancel / deselect / close"],
+      ],
+    },
+    {
+      title: "History",
+      rows: [
+        ["Ctrl + Z", "Undo"],
+        ["Ctrl + Y  /  Ctrl + Shift + Z", "Redo"],
+      ],
+    },
+    {
+      title: "Other",
+      rows: [["?", "Show / hide this panel"]],
+    },
+  ];
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "#00000070", backdropFilter: "blur(3px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div ref={ref} style={{
+        background: "#141921",
+        border: "1px solid #1e2839",
+        borderRadius: 12,
+        width: 560,
+        maxHeight: "80vh",
+        overflow: "auto",
+        boxShadow: "0 24px 60px #000000a0",
+        padding: "20px 24px",
+      }}>
+        {/* header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0" }}>Keyboard Shortcuts</div>
+            <div style={{ fontSize: 11, color: "#4a5568", marginTop: 2 }}>Press <kbd style={{ background: "#1e2839", border: "1px solid #253045", borderRadius: 4, padding: "1px 6px", fontSize: 10, color: "#94a3b8" }}>?</kbd> to toggle</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#4a5568", fontSize: 20, lineHeight: 1 }}>×</button>
         </div>
-      ))}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+          {groups.map(g => (
+            <div key={g.title} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#4a5568", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10, borderBottom: "1px solid #1e2839", paddingBottom: 6 }}>
+                {g.title}
+              </div>
+              {g.rows.map(([key, desc]) => (
+                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", gap: 16 }}>
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>{desc}</span>
+                  <kbd style={{
+                    background: "#1a2333", border: "1px solid #253045",
+                    borderRadius: 5, padding: "2px 8px",
+                    fontSize: 10, color: "#d1d4dc", fontFamily: "monospace",
+                    whiteSpace: "nowrap", flexShrink: 0,
+                  }}>{key}</kbd>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -534,6 +660,17 @@ interface TopBarProps {
   onSwitchMode: (mode: "demo" | "server", url?: string) => void;
 }
 
+const RECENT_SYMS_KEY = "trex.recent.symbols";
+function loadRecentSyms(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_SYMS_KEY) ?? "[]"); } catch { return []; }
+}
+function pushRecentSym(sym: string) {
+  try {
+    const prev = loadRecentSyms().filter(s => s !== sym);
+    localStorage.setItem(RECENT_SYMS_KEY, JSON.stringify([sym, ...prev].slice(0, 8)));
+  } catch { /**/ }
+}
+
 function TopBar(p: TopBarProps) {
   const [symbolOpen, setSymbolOpen] = useState(false);
   const [tfOpen, setTfOpen] = useState(false);
@@ -542,9 +679,22 @@ function TopBar(p: TopBarProps) {
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [connOpen, setConnOpen] = useState(false);
   const [symQuery, setSymQuery] = useState("");
+  const [recentSyms, setRecentSyms] = useState<string[]>([]);
   const [urlDraft, setUrlDraft] = useState(p.wsUrl);
 
   useEffect(() => setUrlDraft(p.wsUrl), [p.wsUrl]);
+
+  // load recent symbols when dropdown opens
+  useEffect(() => {
+    if (symbolOpen) setRecentSyms(loadRecentSyms().filter(s => s !== p.symbol));
+  }, [symbolOpen, p.symbol]);
+
+  const selectSymbol = (sym: string) => {
+    pushRecentSym(sym);
+    p.onSymbol(sym);
+    setSymbolOpen(false);
+    setSymQuery("");
+  };
 
   // In server mode use symbols received from server; fall back to demo symbols
   const symbolPool = p.mode === "server" && p.serverSymbols.length > 0
@@ -573,28 +723,44 @@ function TopBar(p: TopBarProps) {
           <IconSearch />
           {p.symbol}
         </button>
-        <Menu open={symbolOpen} onClose={() => setSymbolOpen(false)} width={240}>
+        <Menu open={symbolOpen} onClose={() => setSymbolOpen(false)} width={260}>
           <div className="px-2 pb-1 pt-1.5">
             <input
               autoFocus
               value={symQuery}
               onChange={(e) => setSymQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && symQuery.trim()) {
-                  p.onSymbol(symQuery.trim().toUpperCase());
-                  setSymbolOpen(false); setSymQuery("");
-                }
+                if (e.key === "Enter" && symQuery.trim()) selectSymbol(symQuery.trim().toUpperCase());
               }}
               placeholder="Search symbol…"
               className={inputCls}
             />
           </div>
+          {/* Recent symbols */}
+          {!symQuery && recentSyms.length > 0 && (
+            <>
+              <MenuLabel>Recent</MenuLabel>
+              <div className="flex flex-wrap gap-1 px-2 pb-2">
+                {recentSyms.map(s => (
+                  <button key={s} onClick={() => selectSymbol(s)} style={{
+                    padding: "2px 8px", fontSize: 11, fontWeight: 600,
+                    background: "#1a2333", border: "1px solid #253045",
+                    borderRadius: 5, color: "#94a3b8", cursor: "pointer",
+                    transition: "border-color 0.12s, color 0.12s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#f0b90b50"; (e.currentTarget as HTMLElement).style.color = "#e2e8f0"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#253045"; (e.currentTarget as HTMLElement).style.color = "#94a3b8"; }}
+                  >{s}</button>
+                ))}
+              </div>
+            </>
+          )}
           <MenuLabel>{p.mode === "demo" ? "Demo symbols" : "Symbols"}</MenuLabel>
           {filteredSyms.map((s) => (
             <MenuItem
               key={s.symbol}
               active={s.symbol === p.symbol}
-              onClick={() => { p.onSymbol(s.symbol); setSymbolOpen(false); setSymQuery(""); }}
+              onClick={() => selectSymbol(s.symbol)}
               right={s.symbol === p.symbol ? <IconCheck /> : undefined}
             >
               <span className="flex-1">{s.symbol}</span>
@@ -602,8 +768,8 @@ function TopBar(p: TopBarProps) {
             </MenuItem>
           ))}
           {symQuery.trim() && !filteredSyms.some((s) => s.symbol === symQuery.trim().toUpperCase()) && (
-            <MenuItem onClick={() => { p.onSymbol(symQuery.trim().toUpperCase()); setSymbolOpen(false); setSymQuery(""); }}>
-              Use “{symQuery.trim().toUpperCase()}”
+            <MenuItem onClick={() => selectSymbol(symQuery.trim().toUpperCase())}>
+              Use "{symQuery.trim().toUpperCase()}"
             </MenuItem>
           )}
         </Menu>
@@ -2712,6 +2878,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const [indicatorsOpen, setIndicatorsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [drawSettingsOpen, setDrawSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   /* render-time ref mirrors so the stable message handler never goes stale */
   const modeRef = useRef(mode); modeRef.current = mode;
@@ -3515,6 +3682,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         // which autofocuses). Blur first so the keystroke can't get
         // swallowed by the input, then close in priority order.
         if (typing && t) t.blur();
+        if (shortcutsOpen) { setShortcutsOpen(false); return; }
         if (drawSettingsOpen) { setDrawSettingsOpen(false); return; }
         if (settingsOpen) { setSettingsOpen(false); return; }
         if (indicatorsOpen) { setIndicatorsOpen(false); return; }
@@ -3528,6 +3696,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       }
       if (typing) return;
 
+      if (e.key === "?" || e.key === "/") { setShortcutsOpen((v) => !v); return; }
+      if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) { engineRef.current?.fitContent(); return; }
       if (e.key === "Delete" || e.key === "Backspace") {
         engineRef.current?.deleteSelected();
         return;
@@ -3544,7 +3714,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tool, ctxMenu, drawSettingsOpen, settingsOpen, indicatorsOpen, setTool, toggleMagnet, undo, redo]);
+  }, [tool, ctxMenu, drawSettingsOpen, settingsOpen, indicatorsOpen, shortcutsOpen, setTool, toggleMagnet, undo, redo]);
 
   /* ═══════════════════ render helpers / status ═════════════════════ */
 
@@ -3832,6 +4002,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       />
 
       {/* ── dialogs ── */}
+      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <ChartSettingsDialog open={settingsOpen} settings={settings} onClose={() => setSettingsOpen(false)} onChange={applySettings} />
       <DrawingSettingsDialog
         open={drawSettingsOpen && !!selection}
