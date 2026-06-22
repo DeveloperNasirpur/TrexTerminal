@@ -295,16 +295,16 @@ export class ChartEngine {
       },
       rightPriceScale: {
         borderColor: "rgba(255,255,255,0.06)",
-        scaleMargins: { top: 0.06, bottom: 0.22 },
+        scaleMargins: { top: 0.07, bottom: 0.25 },
         entireTextOnly: true,
       },
       timeScale: {
         borderColor: "rgba(255,255,255,0.06)",
         timeVisible: true,
         secondsVisible: false,
-        rightOffset: 8,
-        barSpacing: 8,
-        minBarSpacing: 0.5,
+        rightOffset: 12,
+        barSpacing: 12,
+        minBarSpacing: 1,
         shiftVisibleRangeOnNewBar: true,
         rightBarStaysOnScroll: true,
       },
@@ -374,19 +374,16 @@ export class ChartEngine {
   }
 
   private candleOpts(up: string, down: string, style: CandleStyle) {
-    // Wick colors slightly softer than body for cleaner look
-    const wickUp = this.hexA(up, 0.75);
-    const wickDown = this.hexA(down, 0.75);
+    const wickUp = this.hexA(up, 0.65);
+    const wickDown = this.hexA(down, 0.65);
     switch (style) {
       case "hollow":
-        // Bullish = hollow body (transparent fill, colored border); bearish = solid
-        return { upColor: "rgba(0,0,0,0)", downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown };
+        return { upColor: "rgba(0,0,0,0)", downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown, borderVisible: true };
       case "hollow-all":
-        // Both directions hollow — only border + wick visible
-        return { upColor: "rgba(0,0,0,0)", downColor: "rgba(0,0,0,0)", borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown };
+        return { upColor: "rgba(0,0,0,0)", downColor: "rgba(0,0,0,0)", borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown, borderVisible: true };
       case "solid":
       default:
-        return { upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown };
+        return { upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown, borderVisible: false };
     }
   }
 
