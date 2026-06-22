@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
       *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-      html,body{height:100%;width:100%;overflow:hidden;background:#030508;color:#e2e8f0;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+      html,body{height:100%;width:100%;overflow:hidden;background:#0d1117;color:#e2e8f0;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
       #root{height:100%;width:100%}
 
       /* ─── Loader ─────────────────────────────────────────────── */
@@ -20,22 +20,23 @@
       .bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 
       /* Noise / base */
-      .bg::before{content:'';position:absolute;inset:0;background:#030508}
+      .bg::before{content:'';position:absolute;inset:0;background:linear-gradient(160deg,#0d1117 0%,#111827 45%,#0d1117 100%)}
 
       /* Orbs */
-      .o{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
-      .o1{width:800px;height:600px;top:-18%;left:-12%;background:radial-gradient(circle,rgba(240,185,11,.17) 0%,transparent 55%);animation:od 18s ease-in-out infinite alternate}
-      .o2{width:650px;height:550px;bottom:-20%;right:-8%;background:radial-gradient(circle,rgba(0,200,130,.11) 0%,transparent 55%);animation:od 24s ease-in-out infinite alternate-reverse}
-      .o3{width:450px;height:380px;top:25%;right:28%;background:radial-gradient(circle,rgba(41,98,255,.09) 0%,transparent 55%);animation:od 20s ease-in-out infinite alternate}
-      @keyframes od{0%{transform:translate(0,0) scale(1)}100%{transform:translate(40px,28px) scale(1.09)}}
+      .o{position:absolute;border-radius:50%;filter:blur(100px);will-change:transform}
+      .o1{width:900px;height:700px;top:-22%;left:-15%;background:radial-gradient(circle,rgba(41,98,255,.13) 0%,transparent 55%);animation:od 20s ease-in-out infinite alternate}
+      .o2{width:700px;height:600px;bottom:-22%;right:-10%;background:radial-gradient(circle,rgba(0,201,167,.10) 0%,transparent 55%);animation:od 26s ease-in-out infinite alternate-reverse}
+      .o3{width:500px;height:420px;top:20%;right:25%;background:radial-gradient(circle,rgba(240,185,11,.07) 0%,transparent 55%);animation:od 22s ease-in-out infinite alternate}
+      .o4{width:350px;height:300px;bottom:10%;left:30%;background:radial-gradient(circle,rgba(242,54,69,.06) 0%,transparent 55%);animation:od 16s ease-in-out infinite alternate-reverse}
+      @keyframes od{0%{transform:translate(0,0) scale(1)}100%{transform:translate(45px,32px) scale(1.08)}}
 
       /* Dot grid */
       .bg::after{
         content:'';position:absolute;inset:0;
-        background-image:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1px);
-        background-size:40px 40px;
-        mask-image:radial-gradient(ellipse 75% 75% at 35% 50%,rgba(0,0,0,.35) 0%,transparent 70%);
-        -webkit-mask-image:radial-gradient(ellipse 75% 75% at 35% 50%,rgba(0,0,0,.35) 0%,transparent 70%)
+        background-image:radial-gradient(circle,rgba(255,255,255,.055) 1px,transparent 1px);
+        background-size:36px 36px;
+        mask-image:radial-gradient(ellipse 80% 70% at 35% 50%,rgba(0,0,0,.4) 0%,transparent 70%);
+        -webkit-mask-image:radial-gradient(ellipse 80% 70% at 35% 50%,rgba(0,0,0,.4) 0%,transparent 70%)
       }
 
       /* Chart decoration */
@@ -123,21 +124,21 @@
       .card{
         width:100%;max-width:420px;
         border-radius:28px;
-        /* gradient border */
+        /* gradient border matching chart accent colors */
         padding:1.5px;
-        background:linear-gradient(145deg,rgba(240,185,11,.28),rgba(255,255,255,.05) 40%,rgba(0,200,130,.2) 72%,rgba(41,98,255,.18));
-        box-shadow:0 40px 100px rgba(0,0,0,.85),0 0 120px rgba(240,185,11,.04)
+        background:linear-gradient(145deg,rgba(41,98,255,.35),rgba(255,255,255,.06) 35%,rgba(0,201,167,.25) 68%,rgba(240,185,11,.2));
+        box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 80px rgba(41,98,255,.05)
       }
       .card-in{
-        background:rgba(6,8,18,.97);
+        background:rgba(13,17,23,.98);
         border-radius:27px;
         padding:32px 30px 28px;
         position:relative;overflow:hidden
       }
-      /* subtle inner glow top */
+      /* subtle inner glow top — blue like chart grid lines */
       .card-in::before{
-        content:'';position:absolute;top:0;left:0;right:0;height:120px;
-        background:radial-gradient(ellipse 70% 100% at 50% -20%,rgba(240,185,11,.06),transparent);
+        content:'';position:absolute;top:0;left:0;right:0;height:130px;
+        background:radial-gradient(ellipse 70% 100% at 50% -20%,rgba(41,98,255,.07),transparent);
         pointer-events:none
       }
 
@@ -163,7 +164,7 @@
       .mode-s.sel{background:linear-gradient(135deg,rgba(59,130,246,.65),rgba(59,130,246,.12));box-shadow:0 0 0 1px rgba(59,130,246,.2),0 14px 40px rgba(0,0,0,.5),0 0 55px rgba(59,130,246,.14);transform:translateY(-2px)}
 
       .mode-in{
-        background:rgba(5,7,16,.98);border-radius:15.5px;
+        background:rgba(13,17,28,.98);border-radius:15.5px;
         padding:20px 16px 18px;
         display:flex;flex-direction:column;align-items:center;
         text-align:center;position:relative;
@@ -261,6 +262,7 @@
         <div class="o o1"></div>
         <div class="o o2"></div>
         <div class="o o3"></div>
+        <div class="o o4"></div>
         <div class="chart-deco">
           <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
             <defs>
