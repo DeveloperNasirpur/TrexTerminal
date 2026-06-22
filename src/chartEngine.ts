@@ -1073,6 +1073,14 @@ export class ChartEngine {
 
   fitContent(): void { this.chart.timeScale().fitContent(); this.requestRedraw(); }
 
+  /** Re-apply pane stretch factors — call after the chart container resizes (e.g. layout change). */
+  refreshPaneLayout(): void {
+    const defs = [...this.indicators.values()].map((e) => e.def);
+    this.applyPaneStretch(defs);
+    this.overlayDirty = true;
+    this.requestRedraw();
+  }
+
   scrollToRealTime(): void { this.chart.timeScale().scrollToRealTime(); this.requestRedraw(); }
 
   resetPriceScale(): void {

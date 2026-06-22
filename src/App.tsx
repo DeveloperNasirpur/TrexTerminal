@@ -3787,6 +3787,9 @@ export default function App({ initialMode }: { initialMode: string | null }) {
 
   const changeLayout = useCallback((newLayout: "single" | "split2" | "grid4") => {
     setLayout(newLayout);
+    // After the CSS grid settles, re-apply pane stretch so indicator sub-panes
+    // keep the right proportions in the newly-sized main chart container.
+    setTimeout(() => engineRef.current?.refreshPaneLayout(), 80);
     if (modeRef.current === "server" && wsRef.current) {
       const count = newLayout === "split2" ? 1 : newLayout === "grid4" ? 3 : 0;
       const syms = compareSymbolsRef.current;
