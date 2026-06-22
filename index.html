@@ -147,8 +147,8 @@
         text-transform:uppercase;color:rgba(255,255,255,.12);margin-bottom:20px
       }
 
-      /* Mode cards */
-      .modes{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+      /* Mode cards — 2-column grid, vertical layout */
+      .modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
 
       .mode{
         border-radius:17px;padding:1.5px;cursor:pointer;
@@ -156,45 +156,49 @@
         transition:all .22s cubic-bezier(.4,0,.2,1);
         user-select:none;position:relative
       }
-      .mode:hover{transform:translateY(-2px)}
-      .mode-d:hover{background:linear-gradient(135deg,rgba(240,185,11,.38),rgba(240,185,11,.06));box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 28px rgba(240,185,11,.1)}
-      .mode-s:hover{background:linear-gradient(135deg,rgba(59,130,246,.38),rgba(59,130,246,.06));box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 28px rgba(59,130,246,.12)}
-      .mode-d.sel{background:linear-gradient(135deg,rgba(240,185,11,.6),rgba(240,185,11,.1));box-shadow:0 0 0 1px rgba(240,185,11,.18),0 12px 36px rgba(0,0,0,.5),0 0 50px rgba(240,185,11,.12);transform:translateY(-1px)}
-      .mode-s.sel{background:linear-gradient(135deg,rgba(59,130,246,.6),rgba(59,130,246,.1));box-shadow:0 0 0 1px rgba(59,130,246,.18),0 12px 36px rgba(0,0,0,.5),0 0 50px rgba(59,130,246,.12);transform:translateY(-1px)}
+      .mode:hover{transform:translateY(-3px)}
+      .mode-d:hover{background:linear-gradient(135deg,rgba(240,185,11,.4),rgba(240,185,11,.07));box-shadow:0 10px 32px rgba(0,0,0,.5),0 0 30px rgba(240,185,11,.12)}
+      .mode-s:hover{background:linear-gradient(135deg,rgba(59,130,246,.4),rgba(59,130,246,.07));box-shadow:0 10px 32px rgba(0,0,0,.5),0 0 30px rgba(59,130,246,.14)}
+      .mode-d.sel{background:linear-gradient(135deg,rgba(240,185,11,.65),rgba(240,185,11,.12));box-shadow:0 0 0 1px rgba(240,185,11,.2),0 14px 40px rgba(0,0,0,.5),0 0 55px rgba(240,185,11,.14);transform:translateY(-2px)}
+      .mode-s.sel{background:linear-gradient(135deg,rgba(59,130,246,.65),rgba(59,130,246,.12));box-shadow:0 0 0 1px rgba(59,130,246,.2),0 14px 40px rgba(0,0,0,.5),0 0 55px rgba(59,130,246,.14);transform:translateY(-2px)}
 
       .mode-in{
         background:rgba(5,7,16,.98);border-radius:15.5px;
-        padding:16px 18px;
-        display:flex;align-items:center;gap:15px;position:relative
+        padding:20px 16px 18px;
+        display:flex;flex-direction:column;align-items:center;
+        text-align:center;position:relative;
+        gap:0
       }
 
-      .mode-icon{
-        width:46px;height:46px;border-radius:13px;flex-shrink:0;
-        display:flex;align-items:center;justify-content:center;
-        transition:all .22s
+      /* chip */
+      .mode-chip{
+        display:inline-flex;align-items:center;gap:4px;
+        padding:3px 9px;border-radius:99px;margin-bottom:14px;
+        font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase
       }
-      .mode-d .mode-icon{background:rgba(240,185,11,.07)}
-      .mode-s .mode-icon{background:rgba(59,130,246,.07)}
-      .mode-d:hover .mode-icon,.mode-d.sel .mode-icon{background:rgba(240,185,11,.13);box-shadow:0 0 20px rgba(240,185,11,.18)}
-      .mode-s:hover .mode-icon,.mode-s.sel .mode-icon{background:rgba(59,130,246,.13);box-shadow:0 0 20px rgba(59,130,246,.2)}
-      .mode-icon svg{width:22px;height:22px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+      .mode-d .mode-chip{background:rgba(240,185,11,.1);color:rgba(240,185,11,.7);border:1px solid rgba(240,185,11,.2)}
+      .mode-s .mode-chip{background:rgba(59,130,246,.1);color:rgba(59,130,246,.7);border:1px solid rgba(59,130,246,.22)}
+      .chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 4px currentColor}
+
+      .mode-icon{
+        width:52px;height:52px;border-radius:14px;
+        display:flex;align-items:center;justify-content:center;
+        transition:all .22s;margin-bottom:12px
+      }
+      .mode-d .mode-icon{background:rgba(240,185,11,.08);box-shadow:0 0 20px rgba(240,185,11,.07)}
+      .mode-s .mode-icon{background:rgba(59,130,246,.08);box-shadow:0 0 20px rgba(59,130,246,.07)}
+      .mode-d:hover .mode-icon,.mode-d.sel .mode-icon{background:rgba(240,185,11,.15);box-shadow:0 0 28px rgba(240,185,11,.22)}
+      .mode-s:hover .mode-icon,.mode-s.sel .mode-icon{background:rgba(59,130,246,.15);box-shadow:0 0 28px rgba(59,130,246,.24)}
+      .mode-icon svg{width:24px;height:24px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
       .mode-d .mode-icon svg{stroke:#f0b90b}
       .mode-s .mode-icon svg{stroke:#60a5fa}
 
-      .mode-txt{flex:1;min-width:0}
-      .mode-name{font-size:14.5px;font-weight:700;color:#e2e8f0;margin-bottom:3px;letter-spacing:-.2px}
-      .mode-sub{font-size:11.5px;color:rgba(255,255,255,.22)}
-
-      .mode-pill{
-        flex-shrink:0;padding:3px 10px;border-radius:99px;
-        font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase
-      }
-      .mode-d .mode-pill{background:rgba(240,185,11,.08);color:rgba(240,185,11,.55);border:1px solid rgba(240,185,11,.14)}
-      .mode-s .mode-pill{background:rgba(59,130,246,.08);color:rgba(59,130,246,.55);border:1px solid rgba(59,130,246,.14)}
+      .mode-name{font-size:13.5px;font-weight:700;color:#e2e8f0;margin-bottom:4px;letter-spacing:-.2px}
+      .mode-sub{font-size:11px;color:rgba(255,255,255,.22);line-height:1.45}
 
       /* Check */
       .chk{
-        position:absolute;top:11px;right:11px;width:19px;height:19px;
+        position:absolute;top:10px;right:10px;width:19px;height:19px;
         border-radius:50%;display:flex;align-items:center;justify-content:center;
         opacity:0;transform:scale(.3) rotate(-40deg);
         transition:all .22s cubic-bezier(.34,1.56,.64,1)
@@ -339,20 +343,19 @@
                 <div class="mode mode-d" id="md">
                   <div class="mode-in">
                     <div class="chk"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+                    <div class="mode-chip"><span class="chip-dot"></span>Instant</div>
                     <div class="mode-icon">
                       <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="rgba(240,185,11,.15)" stroke="#f0b90b"/></svg>
                     </div>
-                    <div class="mode-txt">
-                      <div class="mode-name">Demo Mode</div>
-                      <div class="mode-sub">Simulated live data · No setup</div>
-                    </div>
-                    <div class="mode-pill">Free</div>
+                    <div class="mode-name">Demo Mode</div>
+                    <div class="mode-sub">Simulated live data · No setup</div>
                   </div>
                 </div>
 
                 <div class="mode mode-s" id="ms">
                   <div class="mode-in">
                     <div class="chk"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+                    <div class="mode-chip"><span class="chip-dot"></span>Live</div>
                     <div class="mode-icon">
                       <svg viewBox="0 0 24 24">
                         <rect x="2" y="3" width="20" height="7" rx="2" fill="rgba(59,130,246,.12)" stroke="#60a5fa"/>
@@ -361,11 +364,8 @@
                         <circle cx="6" cy="17.5" r="1.2" fill="#60a5fa" stroke="none"/>
                       </svg>
                     </div>
-                    <div class="mode-txt">
-                      <div class="mode-name">Server Mode</div>
-                      <div class="mode-sub">WebSocket backend · Live feed</div>
-                    </div>
-                    <div class="mode-pill">Live</div>
+                    <div class="mode-name">Server Mode</div>
+                    <div class="mode-sub">WebSocket backend · Live feed</div>
                   </div>
                 </div>
 
