@@ -1,5 +1,9 @@
 import { Component, ErrorInfo, ReactNode, useState, useEffect, useRef, useCallback } from "react";
 import { createRoot } from "react-dom/client";
+// Self-hosted fonts — inlined by vite-plugin-singlefile so no external requests
+import "@fontsource-variable/inter";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
 import "./index.css";
 import App from "./App";
 import DocsPage from "./DocsPage";
