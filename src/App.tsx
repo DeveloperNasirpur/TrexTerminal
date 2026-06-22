@@ -708,9 +708,9 @@ function TopBar(p: TopBarProps) {
   );
 
   return (
-    <div className="nb-topbar relative z-40 flex h-[40px] shrink-0 items-center gap-0.5 border-b border-[rgba(255,255,255,0.06)] bg-[#0D1120] px-1.5">
+    <div className="nb-topbar relative z-40 flex h-[40px] shrink-0 items-center gap-0.5 bg-[#0D1120] px-1.5">
       {/* ── Trex brand logo ── */}
-      <div className="mr-1 flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-gradient-to-br from-[#f0b90b] to-[#fcd535] shadow-[0_4px_12px_rgba(240,185,11,0.35)]">
+      <div className="mr-1 flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[7px] bg-gradient-to-br from-[#f0b90b] to-[#fcd535] shadow-[0_2px_10px_rgba(240,185,11,0.45),0_0_20px_rgba(240,185,11,0.18)]">
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="#0b0e11" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="3,17 9,11 13,15 21,7" />
           <polyline points="17,7 21,7 21,11" />
@@ -721,7 +721,10 @@ function TopBar(p: TopBarProps) {
         <button
           type="button"
           onClick={() => setSymbolOpen((v) => !v)}
-          className="flex h-[34px] items-center gap-1.5 rounded-[6px] px-2.5 text-[13px] font-bold text-[#E2E8F0] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+          className="flex h-[30px] items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 text-[13px] font-bold text-[#E2E8F0] hover:border-[rgba(41,98,255,0.4)] hover:bg-[rgba(41,98,255,0.08)] hover:text-white transition-all duration-200"
+          style={{ boxShadow: "0 0 0 0 transparent", letterSpacing: "0.01em" }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 0 14px rgba(41,98,255,0.15)"}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 0 transparent"}
         >
           <IconSearch />
           {p.symbol}
@@ -790,9 +793,9 @@ function TopBar(p: TopBarProps) {
               type="button"
               onClick={() => p.onTimeframe(tf)}
               className={cn(
-                "h-[34px] min-w-[30px] rounded-[3px] px-2 text-[12px] font-semibold transition-colors",
+                "h-[30px] min-w-[30px] rounded-[5px] px-2 text-[12px] font-semibold transition-all duration-150",
                 p.timeframe === tf
-                  ? "text-[#5B8BFF] after:absolute after:bottom-0 after:left-1 after:right-1 after:h-[2px] after:rounded-t-full after:bg-[#2962FF]"
+                  ? "trex-tf-active"
                   : "text-[#8892A4] hover:bg-[rgba(255,255,255,0.05)] hover:text-[#C9D1E0]"
               )}
             >
@@ -859,7 +862,7 @@ function TopBar(p: TopBarProps) {
       <button
         type="button"
         onClick={p.onOpenIndicators}
-        className="flex h-[34px] items-center gap-1.5 rounded-[3px] px-2.5 text-[12.5px] font-medium text-[#B2B5BE] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
+        className="flex h-[30px] items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.03)] px-3 text-[12px] font-semibold text-[#9BA7BC] hover:border-[rgba(0,201,167,0.35)] hover:bg-[rgba(0,201,167,0.07)] hover:text-[#C9D1E0] transition-all duration-200"
       >
         <IconIndicator />
         Indicators
@@ -910,15 +913,22 @@ function TopBar(p: TopBarProps) {
         <button
           type="button"
           onClick={() => setConnOpen((v) => !v)}
-          className="flex h-[28px] items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2.5 text-[11px] font-semibold text-[#8892A4] hover:bg-[rgba(255,255,255,0.07)] hover:text-[#C9D1E0] transition-all"
+          className="flex h-[28px] items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition-all duration-200"
+          style={{
+            borderColor: p.mode === "demo" ? "rgba(252,213,53,0.25)" : `${p.connColor}30`,
+            background: p.mode === "demo" ? "rgba(252,213,53,0.06)" : "rgba(255,255,255,0.04)",
+            color: p.mode === "demo" ? "#FCD535" : "#8892A4",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = p.mode === "demo" ? "rgba(252,213,53,0.10)" : "rgba(255,255,255,0.07)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = p.mode === "demo" ? "rgba(252,213,53,0.06)" : "rgba(255,255,255,0.04)"; }}
         >
-          <span className="h-2 w-2 rounded-full" style={{
+          <span className="h-[7px] w-[7px] rounded-full" style={{
             background: p.connColor,
-            boxShadow: `0 0 6px ${p.connColor}80`,
+            boxShadow: `0 0 6px ${p.connColor}90`,
             animation: (p.connLabel === "CONNECTING" || p.connLabel === "RECONNECTING") ? "bt-pulse 1s ease-in-out infinite" : "none",
           }} />
-          {p.connLabel}
-          {p.latency !== null && <span className="font-mono text-[#787B86]">{p.latency}ms</span>}
+          {p.mode === "demo" ? "DEMO" : p.connLabel}
+          {p.latency !== null && <span className="font-mono opacity-60">{p.latency}ms</span>}
           <IconChevronDown />
         </button>
         <Menu open={connOpen} onClose={() => setConnOpen(false)} anchor="right" width={272}>
@@ -1076,9 +1086,9 @@ function LeftBar(props: {
               onClick={() => { props.onTool(current); setFlyout(null); }}
               onContextMenu={(e) => { e.preventDefault(); if (g.tools.length > 1) setFlyout(g.id); }}
               className={cn(
-                "relative flex h-[34px] w-[34px] items-center justify-center rounded-[4px] transition-colors duration-100",
+                "relative flex h-[34px] w-[34px] items-center justify-center rounded-[4px] transition-all duration-150",
                 activeInGroup
-                  ? "bg-[rgba(41,98,255,0.15)] text-[#5B8BFF] shadow-[inset_2px_0_0_#2962FF]"
+                  ? "trex-tool-active"
                   : "text-[#8892A4] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#C9D1E0]"
               )}
             >
