@@ -3706,6 +3706,13 @@ export default function App({ initialMode }: { initialMode: string | null }) {
     else el.requestFullscreen().catch(() => showToast("Fullscreen blocked by the browser", "warning"));
   }, []);
 
+  // Re-apply pane stretch after fullscreen transition (container size changes).
+  useEffect(() => {
+    const onFs = () => setTimeout(() => engineRef.current?.refreshPaneLayout(), 80);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
   const changeSymbol = useCallback((s: string) => {
     pointsCacheRef.current = {};   // stale indicator data must not leak to new symbol
     setSymbol(s);
