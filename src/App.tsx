@@ -459,12 +459,12 @@ function IconBtn(props: {
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "relative flex h-[34px] min-w-[34px] items-center justify-center rounded-[3px] px-1.5",
-        "text-[#B2B5BE] transition-colors duration-100",
-        "hover:bg-[#2A2E39] hover:text-[#D1D4DC]",
-        active && "bg-[rgba(41,98,255,0.18)] text-[#2962FF] hover:bg-[rgba(41,98,255,0.24)] hover:text-[#2962FF]",
-        danger && "hover:text-[#F23645]",
-        disabled && "opacity-35 pointer-events-none",
+        "relative flex h-[32px] min-w-[32px] items-center justify-center rounded-[5px] px-1.5",
+        "text-[#8892A4] transition-all duration-150",
+        "hover:bg-[rgba(255,255,255,0.06)] hover:text-[#C9D1E0]",
+        active && "bg-[rgba(41,98,255,0.14)] text-[#5B8BFF] hover:bg-[rgba(41,98,255,0.2)] hover:text-[#5B8BFF]",
+        danger && "hover:text-[#F23645] hover:bg-[rgba(242,54,69,0.1)]",
+        disabled && "opacity-30 pointer-events-none",
         className
       )}
     >
@@ -473,7 +473,7 @@ function IconBtn(props: {
   );
 }
 
-function VSep() { return <div className="mx-1.5 h-[18px] w-px bg-[#2A2E39]" />; }
+function VSep() { return <div className="mx-1 h-4 w-px" style={{ background: "rgba(255,255,255,0.07)" }} />; }
 
 function Menu(props: {
   open: boolean;
@@ -514,10 +514,10 @@ function MenuItem(props: {
       type="button"
       onClick={props.onClick}
       className={cn(
-        "flex w-full items-center gap-3 px-3 py-[7px] text-left text-[12.5px]",
-        "text-[#D1D4DC] transition-colors hover:bg-[#2A2E39]",
-        props.active && "text-[#2962FF]",
-        props.danger && "text-[#F23645] hover:bg-[rgba(242,54,69,0.12)]"
+        "relative flex w-full items-center gap-3 px-3 py-[7px] text-left text-[12.5px]",
+        "text-[#C9D1E0] transition-colors hover:bg-[rgba(255,255,255,0.05)]",
+        props.active && "text-[#5B8BFF] bg-[rgba(41,98,255,0.08)]",
+        props.danger && "text-[#F23645] hover:bg-[rgba(242,54,69,0.1)]"
       )}
     >
       {props.icon && <span className="flex h-5 w-5 shrink-0 items-center justify-center opacity-80">{props.icon}</span>}
@@ -528,22 +528,23 @@ function MenuItem(props: {
 }
 
 function MenuLabel({ children }: { children: ReactNode }) {
-  return <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">{children}</div>;
+  return <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5A6480]">{children}</div>;
 }
 
 function Modal(props: { open: boolean; onClose: () => void; title: string; width?: number; children: ReactNode; footer?: ReactNode }) {
   if (!props.open) return null;
   return (
     <div
-      className="trex-fade absolute inset-0 z-[70] flex items-center justify-center bg-black/55 backdrop-blur-[1px]"
+      className="trex-fade absolute inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-[3px]"
       onPointerDown={(e) => { if (e.target === e.currentTarget) props.onClose(); }}
     >
       <div
-        className="trex-menu flex max-h-[85%] flex-col overflow-hidden rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#111827] shadow-2xl shadow-black/60"
+        className="trex-menu flex max-h-[85%] flex-col overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0F1525] shadow-2xl shadow-black/70"
         style={{ width: props.width ?? 440 }}
       >
+        <div style={{ height: 2, background: "linear-gradient(90deg,#00C9A7,#2962FF,#FF6B8A)", flexShrink: 0 }} />
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-[rgba(255,255,255,0.06)] px-4">
-          <span className="text-[13px] font-semibold text-[#D1D4DC]">{props.title}</span>
+          <span className="text-[13px] font-semibold text-[#E2E8F0]">{props.title}</span>
           <IconBtn tip="Close" onClick={props.onClose}><IconX /></IconBtn>
         </div>
         <div className="trex-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3">{props.children}</div>
@@ -562,7 +563,7 @@ function Btn(props: { onClick?: () => void; primary?: boolean; danger?: boolean;
       className={cn(
         "h-8 rounded px-3.5 text-[12.5px] font-medium transition-colors",
         props.primary
-          ? "bg-[#2962FF] text-white hover:bg-[#1E53E5]"
+          ? "bg-gradient-to-r from-[#2962FF] to-[#1a4fd8] text-white hover:from-[#1E53E5] hover:to-[#1541bb] shadow-[0_2px_8px_rgba(41,98,255,0.35)]"
           : props.danger
           ? "bg-[rgba(242,54,69,0.14)] text-[#F23645] hover:bg-[rgba(242,54,69,0.22)]"
           : "bg-[#2A2E39] text-[#D1D4DC] hover:bg-[#363A45]",
@@ -720,7 +721,7 @@ function TopBar(p: TopBarProps) {
         <button
           type="button"
           onClick={() => setSymbolOpen((v) => !v)}
-          className="flex h-[34px] items-center gap-1.5 rounded-[3px] px-2.5 text-[13px] font-bold text-[#D1D4DC] hover:bg-[#2A2E39]"
+          className="flex h-[34px] items-center gap-1.5 rounded-[6px] px-2.5 text-[13px] font-bold text-[#E2E8F0] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
         >
           <IconSearch />
           {p.symbol}
@@ -791,8 +792,8 @@ function TopBar(p: TopBarProps) {
               className={cn(
                 "h-[34px] min-w-[30px] rounded-[3px] px-2 text-[12px] font-semibold transition-colors",
                 p.timeframe === tf
-                  ? "bg-[rgba(41,98,255,0.18)] text-[#2962FF]"
-                  : "text-[#B2B5BE] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
+                  ? "text-[#5B8BFF] after:absolute after:bottom-0 after:left-1 after:right-1 after:h-[2px] after:rounded-t-full after:bg-[#2962FF]"
+                  : "text-[#8892A4] hover:bg-[rgba(255,255,255,0.05)] hover:text-[#C9D1E0]"
               )}
             >
               {meta.label}
@@ -909,7 +910,7 @@ function TopBar(p: TopBarProps) {
         <button
           type="button"
           onClick={() => setConnOpen((v) => !v)}
-          className="flex h-[30px] items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.06)] bg-[#111827] px-2.5 text-[11px] font-semibold text-[#B2B5BE] hover:border-[rgba(255,255,255,0.08)]"
+          className="flex h-[28px] items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2.5 text-[11px] font-semibold text-[#8892A4] hover:bg-[rgba(255,255,255,0.07)] hover:text-[#C9D1E0] transition-all"
         >
           <span className="h-2 w-2 rounded-full" style={{
             background: p.connColor,
@@ -1065,7 +1066,7 @@ function LeftBar(props: {
         const dividerBefore = g.id === "lines" || g.id === "fib" || g.id === "position";
         return (
           <Fragment key={g.id}>
-            {dividerBefore && <div className="my-1 h-px w-6 bg-[#2A2E39]" />}
+            {dividerBefore && <div className="my-1 h-px w-5 mx-auto" style={{ background: "rgba(255,255,255,0.06)" }} />}
             <div className="relative">
             <button
               type="button"
@@ -1077,8 +1078,8 @@ function LeftBar(props: {
               className={cn(
                 "relative flex h-[34px] w-[34px] items-center justify-center rounded-[4px] transition-colors duration-100",
                 activeInGroup
-                  ? "bg-[rgba(41,98,255,0.16)] text-[#2962FF]"
-                  : "text-[#B2B5BE] hover:bg-[#2A2E39] hover:text-[#D1D4DC]"
+                  ? "bg-[rgba(41,98,255,0.15)] text-[#5B8BFF] shadow-[inset_2px_0_0_#2962FF]"
+                  : "text-[#8892A4] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#C9D1E0]"
               )}
             >
               {meta.icon}
