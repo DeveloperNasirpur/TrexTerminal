@@ -12,12 +12,12 @@ declare global {
 }
 
 function setLoaderHidden(hidden: boolean) {
-  const loader = document.getElementById("trex-loader");
+  const loader = document.getElementById("L");
   if (loader) loader.style.display = hidden ? "none" : "";
 }
 
 function removeLoader() {
-  const loader = document.getElementById("trex-loader");
+  const loader = document.getElementById("L");
   if (loader) {
     loader.classList.add("fade-out");
     setTimeout(() => loader.remove(), 500);
@@ -25,10 +25,10 @@ function removeLoader() {
 }
 
 function setLoaderStatus(status: "idle" | "connecting" | "connected" | "failed", message?: string) {
-  const hint = document.getElementById("trex-hint");
-  const statusEl = document.getElementById("trex-status");
-  const launchBtn = document.getElementById("trex-launch-btn");
-  const launchText = document.getElementById("trex-launch-text");
+  const hint = document.getElementById("hint");
+  const statusEl = document.getElementById("st");
+  const launchBtn = document.getElementById("lb");
+  const launchText = document.getElementById("lt");
 
   switch (status) {
     case "connecting":
