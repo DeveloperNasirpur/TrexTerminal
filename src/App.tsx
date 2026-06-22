@@ -1065,7 +1065,7 @@ function LeftBar(props: {
   };
 
   return (
-    <div className="nb-leftbar relative z-30 flex w-[52px] shrink-0 flex-col items-center border-r bg-[#0D1120] pb-1" style={{ paddingTop: 20 }}>
+    <div className="nb-leftbar relative z-30 flex w-[52px] shrink-0 flex-col items-center border-r bg-[#0D1120] pb-1" style={{ paddingTop: 48 }}>
       {TOOL_GROUPS.map((g, gi) => {
         const current = lastUsed[g.id];
         const meta = TOOL_META[current];
