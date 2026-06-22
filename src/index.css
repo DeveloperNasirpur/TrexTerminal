@@ -309,6 +309,62 @@ body {
   box-shadow: 0 0 5px var(--lb-color, transparent);
 }
 
+/* ── LeftBar flyout menu ──────────────────────────────────────────── */
+.trex-lb-flyout {
+  min-width: 210px;
+  background: #0d111e;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+  animation: trex-lb-flyout-in 0.15s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes trex-lb-flyout-in {
+  from { opacity: 0; transform: translateX(-8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* left arrow connector */
+.trex-lb-flyout-arrow {
+  position: absolute;
+  left: -7px; top: 14px;
+  width: 0; height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 7px solid rgba(255,255,255,0.09);
+  filter: drop-shadow(-2px 0 2px rgba(0,0,0,0.3));
+}
+
+/* group header */
+.trex-lb-flyout-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid;
+}
+.trex-lb-flyout-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* menu item */
+.trex-lb-flyout-item {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.12s;
+}
+.trex-lb-flyout-item:hover {
+  background: rgba(255,255,255,0.05) !important;
+}
+
 /* bottom footer section */
 .trex-lb-footer {
   display: flex;
