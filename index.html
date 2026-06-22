@@ -3,488 +3,432 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trex Trading Terminal</title>
+    <title>Trex Terminal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
-      *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-      html, body { height:100%; width:100%; overflow:hidden; background:#04060e; color:#e2e8f0; font-family:'Inter',-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
-      #root { height:100%; width:100%; }
+      *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+      html,body{height:100%;width:100%;overflow:hidden;background:#030508;color:#e2e8f0;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+      #root{height:100%;width:100%}
 
-      /* ── Loader ─────────────────────────────────────────────────── */
-      #trex-loader { position:fixed; inset:0; z-index:10000; transition:opacity 0.5s ease; overflow:hidden; }
-      #trex-loader.fade-out { opacity:0; pointer-events:none; }
+      /* ─── Loader ─────────────────────────────────────────────── */
+      #L{position:fixed;inset:0;z-index:10000;overflow:hidden;transition:opacity .5s ease}
+      #L.fade-out{opacity:0;pointer-events:none}
 
-      /* ── Background ─────────────────────────────────────────────── */
-      .bg { position:absolute; inset:0; pointer-events:none; }
+      /* ─── Background ──────────────────────────────────────────── */
+      .bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 
-      .bg-noise {
-        position:absolute; inset:0;
-        background:#04060e;
-      }
+      /* Noise / base */
+      .bg::before{content:'';position:absolute;inset:0;background:#030508}
+
       /* Orbs */
-      .orb {
-        position:absolute; border-radius:50%; pointer-events:none;
-        animation:orbPulse 20s ease-in-out infinite alternate;
-      }
-      .orb-1 { width:900px; height:700px; top:-20%; left:-15%; background:radial-gradient(circle at 40% 40%, rgba(240,185,11,0.14) 0%, transparent 60%); filter:blur(60px); animation-duration:16s; }
-      .orb-2 { width:700px; height:600px; bottom:-25%; right:-10%; background:radial-gradient(circle at 50% 50%, rgba(14,203,129,0.11) 0%, transparent 60%); filter:blur(70px); animation-duration:22s; animation-direction:alternate-reverse; }
-      .orb-3 { width:500px; height:400px; top:15%; right:20%; background:radial-gradient(circle at 50% 50%, rgba(41,98,255,0.09) 0%, transparent 60%); filter:blur(55px); animation-duration:18s; }
-      @keyframes orbPulse { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(35px,25px) scale(1.07)} }
+      .o{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+      .o1{width:800px;height:600px;top:-18%;left:-12%;background:radial-gradient(circle,rgba(240,185,11,.17) 0%,transparent 55%);animation:od 18s ease-in-out infinite alternate}
+      .o2{width:650px;height:550px;bottom:-20%;right:-8%;background:radial-gradient(circle,rgba(0,200,130,.11) 0%,transparent 55%);animation:od 24s ease-in-out infinite alternate-reverse}
+      .o3{width:450px;height:380px;top:25%;right:28%;background:radial-gradient(circle,rgba(41,98,255,.09) 0%,transparent 55%);animation:od 20s ease-in-out infinite alternate}
+      @keyframes od{0%{transform:translate(0,0) scale(1)}100%{transform:translate(40px,28px) scale(1.09)}}
 
       /* Dot grid */
-      .bg-dots {
-        position:absolute; inset:0;
-        background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
-        background-size: 36px 36px;
-        mask-image: radial-gradient(ellipse 90% 90% at center, rgba(0,0,0,0.4) 0%, transparent 70%);
-        -webkit-mask-image: radial-gradient(ellipse 90% 90% at center, rgba(0,0,0,0.4) 0%, transparent 70%);
+      .bg::after{
+        content:'';position:absolute;inset:0;
+        background-image:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1px);
+        background-size:40px 40px;
+        mask-image:radial-gradient(ellipse 75% 75% at 35% 50%,rgba(0,0,0,.35) 0%,transparent 70%);
+        -webkit-mask-image:radial-gradient(ellipse 75% 75% at 35% 50%,rgba(0,0,0,.35) 0%,transparent 70%)
       }
 
-      /* Chart lines decoration */
-      .bg-chart { position:absolute; inset:0; opacity:0.13; pointer-events:none; }
-      .bg-chart svg { width:100%; height:100%; }
+      /* Chart decoration */
+      .chart-deco{position:absolute;inset:0;opacity:.11;pointer-events:none}
+      .chart-deco svg{width:100%;height:100%}
 
-      /* ── Two-column layout ──────────────────────────────────────── */
-      .trex-layout {
-        position:relative; z-index:5;
-        width:100%; height:100%;
-        display:grid;
-        grid-template-columns: 1fr 480px;
-        align-items:stretch;
+      /* Vertical separator line */
+      .v-sep{
+        position:absolute;left:52%;top:8%;bottom:8%;width:1px;pointer-events:none;
+        background:linear-gradient(180deg,transparent,rgba(255,255,255,.06) 30%,rgba(255,255,255,.06) 70%,transparent)
       }
-      @media (max-width:900px) { .trex-layout { grid-template-columns:1fr; } .trex-left { display:none; } }
 
-      /* ── Left: Hero ─────────────────────────────────────────────── */
-      .trex-left {
-        display:flex; flex-direction:column; justify-content:center;
-        padding:60px 56px 60px 72px;
-        animation:leftIn 0.8s cubic-bezier(0.16,1,0.3,1);
+      /* ─── Layout ──────────────────────────────────────────────── */
+      .wrap{
+        position:relative;z-index:5;width:100%;height:100%;
+        display:grid;grid-template-columns:1fr 1fr;
+        align-items:center
       }
-      @keyframes leftIn { from{opacity:0;transform:translateX(-24px)} to{opacity:1;transform:none} }
 
-      /* Logo */
-      .trex-logo {
-        display:inline-flex; align-items:center; gap:14px; margin-bottom:32px;
+      /* ─── LEFT ────────────────────────────────────────────────── */
+      .left{
+        display:flex;flex-direction:column;justify-content:center;
+        padding:0 64px 0 80px;
+        animation:lIn .9s cubic-bezier(.16,1,.3,1) both
       }
-      .trex-logo-box {
-        width:56px; height:56px; border-radius:16px; flex-shrink:0;
-        background:linear-gradient(145deg,#f0b90b,#fcd535 55%,#c99108);
-        display:flex; align-items:center; justify-content:center;
-        box-shadow:0 0 0 1px rgba(255,255,255,0.15) inset, 0 10px 32px rgba(240,185,11,0.45), 0 0 70px rgba(240,185,11,0.12);
-        position:relative; overflow:hidden;
-      }
-      .trex-logo-box::after { content:''; position:absolute; inset:0; background:linear-gradient(125deg,rgba(255,255,255,0) 35%,rgba(255,255,255,0.4) 50%,rgba(255,255,255,0) 65%); animation:boxShimmer 4s ease-in-out infinite; }
-      @keyframes boxShimmer { 0%,100%{opacity:0} 50%{opacity:1} }
-      .trex-logo-box svg { width:30px; height:30px; stroke:#0b0e11; stroke-width:2.8; fill:none; stroke-linecap:round; stroke-linejoin:round; position:relative; z-index:1; }
+      @keyframes lIn{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
 
-      .trex-logo-name {
-        font-size:26px; font-weight:900; letter-spacing:-0.5px; line-height:1;
-        background:linear-gradient(130deg,#fff 0%,#f0e4c0 50%,#f0b90b 100%);
-        -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      /* Eyebrow */
+      .eyebrow{
+        display:inline-flex;align-items:center;gap:8px;
+        padding:5px 14px 5px 10px;border-radius:99px;
+        border:1px solid rgba(240,185,11,.2);
+        background:rgba(240,185,11,.06);
+        font-size:11px;font-weight:600;letter-spacing:.04em;color:#9a7a1a;
+        margin-bottom:28px;width:fit-content
       }
-      .trex-logo-tagline { font-size:11px; font-weight:500; color:#374151; letter-spacing:0.08em; text-transform:uppercase; margin-top:3px; }
+      .eyebrow-icon{
+        width:22px;height:22px;border-radius:7px;
+        background:linear-gradient(140deg,#f0b90b,#fcd535);
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 2px 8px rgba(240,185,11,.4)
+      }
+      .eyebrow-icon svg{width:13px;height:13px;stroke:#060810;stroke-width:2.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
 
       /* Headline */
-      .trex-headline {
-        font-size:52px; font-weight:900; line-height:1.05; letter-spacing:-2px;
-        margin-bottom:18px;
-      }
-      .trex-headline .line1 { color:#fff; display:block; }
-      .trex-headline .line2 {
-        display:block;
-        background:linear-gradient(115deg,#f0b90b 0%,#fcd535 40%,#0ecb81 100%);
-        -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      .h1{font-size:56px;line-height:1.02;letter-spacing:-2.5px;margin-bottom:20px}
+      .h1 .t{display:block;font-weight:300;color:rgba(255,255,255,.55);font-size:.75em;letter-spacing:-1px}
+      .h1 .b{
+        display:block;font-weight:900;
+        background:linear-gradient(120deg,#fff 0%,#f5e8c0 40%,#f0b90b 85%);
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text
       }
 
-      .trex-desc {
-        font-size:15px; font-weight:400; color:#4b5563; line-height:1.7;
-        max-width:400px; margin-bottom:36px;
-      }
+      /* Desc */
+      .desc{font-size:15px;font-weight:400;line-height:1.75;color:rgba(255,255,255,.28);max-width:380px;margin-bottom:40px}
 
       /* Stats */
-      .trex-stats {
-        display:flex; gap:28px; margin-bottom:40px;
-      }
-      .trex-stat { display:flex; flex-direction:column; gap:3px; }
-      .trex-stat-n { font-size:26px; font-weight:800; letter-spacing:-1px; }
-      .trex-stat-l { font-size:11px; font-weight:500; color:#374151; text-transform:uppercase; letter-spacing:0.06em; }
-      .s-gold { color:#f0b90b; text-shadow:0 0 20px rgba(240,185,11,0.4); }
-      .s-teal { color:#0ecb81; text-shadow:0 0 20px rgba(14,203,129,0.35); }
-      .s-blue { color:#60a5fa; text-shadow:0 0 20px rgba(96,165,250,0.3); }
-      .s-sep { width:1px; background:rgba(255,255,255,0.05); align-self:stretch; }
+      .stats{display:flex;align-items:center;gap:0;margin-bottom:44px}
+      .stat{padding:0 28px 0 0;margin-right:28px;border-right:1px solid rgba(255,255,255,.07)}
+      .stat:last-child{border:none;padding:0;margin:0}
+      .stat-n{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1}
+      .stat-l{font-size:10.5px;font-weight:500;color:rgba(255,255,255,.22);text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+      .c-gold{color:#f0b90b;text-shadow:0 0 24px rgba(240,185,11,.45)}
+      .c-teal{color:#0ecb81;text-shadow:0 0 24px rgba(14,203,129,.4)}
+      .c-blue{color:#60a5fa;text-shadow:0 0 24px rgba(96,165,250,.35)}
 
-      /* Feature list */
-      .trex-features { display:flex; flex-direction:column; gap:12px; }
-      .trex-feat {
-        display:flex; align-items:center; gap:12px;
-        font-size:13.5px; font-weight:500; color:#374151;
-        transition:color 0.2s;
-      }
-      .trex-feat-dot {
-        width:8px; height:8px; border-radius:50%; flex-shrink:0;
-        box-shadow:0 0 8px currentColor;
-      }
-      .fd-gold { background:#f0b90b; color:#f0b90b; }
-      .fd-teal { background:#0ecb81; color:#0ecb81; }
-      .fd-blue { background:#60a5fa; color:#60a5fa; }
-      .fd-rose { background:#f43f5e; color:#f43f5e; }
+      /* Features */
+      .feats{display:flex;flex-direction:column;gap:13px}
+      .feat{display:flex;align-items:center;gap:11px;font-size:13.5px;font-weight:400;color:rgba(255,255,255,.3)}
+      .fdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+      .fd-y{background:#f0b90b;box-shadow:0 0 8px rgba(240,185,11,.6)}
+      .fd-g{background:#0ecb81;box-shadow:0 0 8px rgba(14,203,129,.55)}
+      .fd-b{background:#60a5fa;box-shadow:0 0 8px rgba(96,165,250,.5)}
+      .fd-r{background:#f472b6;box-shadow:0 0 8px rgba(244,114,182,.5)}
 
-      /* ── Right: Card ────────────────────────────────────────────── */
-      .trex-right {
-        display:flex; align-items:center; justify-content:center;
-        padding:32px 40px 32px 16px;
-        animation:rightIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.1s backwards;
+      /* ─── RIGHT ───────────────────────────────────────────────── */
+      .right{
+        display:flex;align-items:center;justify-content:center;
+        padding:0 72px 0 48px;
+        animation:rIn .9s cubic-bezier(.16,1,.3,1) .12s both
       }
-      @keyframes rightIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+      @keyframes rIn{from{opacity:0;transform:translateX(24px) scale(.98)}to{opacity:1;transform:none}}
 
-      /* Card with gradient border */
-      .trex-card {
-        width:100%; max-width:400px;
-        background:linear-gradient(145deg,rgba(240,185,11,0.3),rgba(255,255,255,0.06) 35%,rgba(14,203,129,0.2) 70%,rgba(41,98,255,0.18));
-        border-radius:24px; padding:1.5px;
-        box-shadow:0 30px 80px rgba(0,0,0,0.8), 0 0 100px rgba(240,185,11,0.05);
+      /* Card */
+      .card{
+        width:100%;max-width:420px;
+        border-radius:28px;
+        /* gradient border */
+        padding:1.5px;
+        background:linear-gradient(145deg,rgba(240,185,11,.28),rgba(255,255,255,.05) 40%,rgba(0,200,130,.2) 72%,rgba(41,98,255,.18));
+        box-shadow:0 40px 100px rgba(0,0,0,.85),0 0 120px rgba(240,185,11,.04)
       }
-      .trex-card-body {
-        background:linear-gradient(160deg,rgba(9,12,22,0.99),rgba(5,7,15,0.99));
-        border-radius:23px; padding:28px 26px 24px;
+      .card-in{
+        background:rgba(6,8,18,.97);
+        border-radius:27px;
+        padding:32px 30px 28px;
+        position:relative;overflow:hidden
       }
-
-      /* Card label */
-      .card-label {
-        font-size:10px; font-weight:700; letter-spacing:0.14em;
-        text-transform:uppercase; color:#1e2433; margin-bottom:14px;
+      /* subtle inner glow top */
+      .card-in::before{
+        content:'';position:absolute;top:0;left:0;right:0;height:120px;
+        background:radial-gradient(ellipse 70% 100% at 50% -20%,rgba(240,185,11,.06),transparent);
+        pointer-events:none
       }
 
-      /* ── Mode cards ─────────────────────────────────────────────── */
-      .trex-modes { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
-
-      .trex-mode {
-        border-radius:16px; padding:1.5px; cursor:pointer;
-        background:rgba(255,255,255,0.04);
-        transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
-        user-select:none;
-      }
-      .trex-mode:hover { transform:translateY(-1px); }
-      .trex-mode-demo:hover { background:linear-gradient(135deg,rgba(240,185,11,0.4),rgba(240,185,11,0.08)); box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 20px rgba(240,185,11,0.1); }
-      .trex-mode-server:hover { background:linear-gradient(135deg,rgba(59,130,246,0.4),rgba(59,130,246,0.08)); box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 20px rgba(59,130,246,0.12); }
-      .trex-mode-demo.selected { background:linear-gradient(135deg,rgba(240,185,11,0.65),rgba(240,185,11,0.12)); box-shadow:0 0 0 1px rgba(240,185,11,0.15),0 10px 32px rgba(0,0,0,0.4),0 0 40px rgba(240,185,11,0.12); transform:translateY(-1px); }
-      .trex-mode-server.selected { background:linear-gradient(135deg,rgba(59,130,246,0.65),rgba(59,130,246,0.12)); box-shadow:0 0 0 1px rgba(59,130,246,0.15),0 10px 32px rgba(0,0,0,0.4),0 0 40px rgba(59,130,246,0.12); transform:translateY(-1px); }
-
-      .trex-mode-inner {
-        background:linear-gradient(155deg,rgba(8,11,20,0.99),rgba(5,7,14,0.99));
-        border-radius:14.5px; padding:14px 16px;
-        display:flex; align-items:center; gap:14px;
-        position:relative;
+      /* Card eyebrow */
+      .card-label{
+        font-size:10px;font-weight:700;letter-spacing:.14em;
+        text-transform:uppercase;color:rgba(255,255,255,.12);margin-bottom:20px
       }
 
-      .trex-mode-icon-wrap {
-        width:44px; height:44px; border-radius:12px; flex-shrink:0;
-        display:flex; align-items:center; justify-content:center;
-        transition:all 0.2s;
+      /* Mode cards */
+      .modes{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+
+      .mode{
+        border-radius:17px;padding:1.5px;cursor:pointer;
+        background:rgba(255,255,255,.04);
+        transition:all .22s cubic-bezier(.4,0,.2,1);
+        user-select:none;position:relative
       }
-      .trex-mode-demo .trex-mode-icon-wrap { background:rgba(240,185,11,0.08); }
-      .trex-mode-server .trex-mode-icon-wrap { background:rgba(59,130,246,0.08); }
-      .trex-mode-demo:hover .trex-mode-icon-wrap,
-      .trex-mode-demo.selected .trex-mode-icon-wrap { background:rgba(240,185,11,0.15); box-shadow:0 0 18px rgba(240,185,11,0.18); }
-      .trex-mode-server:hover .trex-mode-icon-wrap,
-      .trex-mode-server.selected .trex-mode-icon-wrap { background:rgba(59,130,246,0.15); box-shadow:0 0 18px rgba(59,130,246,0.2); }
-      .trex-mode-icon-wrap svg { width:22px; height:22px; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-      .trex-mode-demo .trex-mode-icon-wrap svg { stroke:#f0b90b; }
-      .trex-mode-server .trex-mode-icon-wrap svg { stroke:#60a5fa; }
+      .mode:hover{transform:translateY(-2px)}
+      .mode-d:hover{background:linear-gradient(135deg,rgba(240,185,11,.38),rgba(240,185,11,.06));box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 28px rgba(240,185,11,.1)}
+      .mode-s:hover{background:linear-gradient(135deg,rgba(59,130,246,.38),rgba(59,130,246,.06));box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 28px rgba(59,130,246,.12)}
+      .mode-d.sel{background:linear-gradient(135deg,rgba(240,185,11,.6),rgba(240,185,11,.1));box-shadow:0 0 0 1px rgba(240,185,11,.18),0 12px 36px rgba(0,0,0,.5),0 0 50px rgba(240,185,11,.12);transform:translateY(-1px)}
+      .mode-s.sel{background:linear-gradient(135deg,rgba(59,130,246,.6),rgba(59,130,246,.1));box-shadow:0 0 0 1px rgba(59,130,246,.18),0 12px 36px rgba(0,0,0,.5),0 0 50px rgba(59,130,246,.12);transform:translateY(-1px)}
 
-      .trex-mode-text { flex:1; min-width:0; }
-      .trex-mode-title { font-size:14px; font-weight:700; color:#e5e7eb; margin-bottom:2px; }
-      .trex-mode-desc { font-size:11.5px; color:#374151; }
-
-      .trex-mode-badge {
-        flex-shrink:0; padding:3px 9px; border-radius:99px;
-        font-size:9px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
+      .mode-in{
+        background:rgba(5,7,16,.98);border-radius:15.5px;
+        padding:16px 18px;
+        display:flex;align-items:center;gap:15px;position:relative
       }
-      .trex-mode-demo .trex-mode-badge { background:rgba(240,185,11,0.1); color:#a07b0a; border:1px solid rgba(240,185,11,0.18); }
-      .trex-mode-server .trex-mode-badge { background:rgba(59,130,246,0.1); color:#4478c4; border:1px solid rgba(59,130,246,0.2); }
 
-      /* Selected check */
-      .trex-mode-check {
-        position:absolute; top:10px; right:10px;
-        width:18px; height:18px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        opacity:0; transform:scale(0.3) rotate(-45deg);
-        transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1);
+      .mode-icon{
+        width:46px;height:46px;border-radius:13px;flex-shrink:0;
+        display:flex;align-items:center;justify-content:center;
+        transition:all .22s
       }
-      .trex-mode-demo .trex-mode-check { background:#f0b90b; }
-      .trex-mode-server .trex-mode-check { background:#3b82f6; }
-      .trex-mode.selected .trex-mode-check { opacity:1; transform:scale(1) rotate(0deg); }
-      .trex-mode-check svg { width:10px; height:10px; stroke:#05070e; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+      .mode-d .mode-icon{background:rgba(240,185,11,.07)}
+      .mode-s .mode-icon{background:rgba(59,130,246,.07)}
+      .mode-d:hover .mode-icon,.mode-d.sel .mode-icon{background:rgba(240,185,11,.13);box-shadow:0 0 20px rgba(240,185,11,.18)}
+      .mode-s:hover .mode-icon,.mode-s.sel .mode-icon{background:rgba(59,130,246,.13);box-shadow:0 0 20px rgba(59,130,246,.2)}
+      .mode-icon svg{width:22px;height:22px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+      .mode-d .mode-icon svg{stroke:#f0b90b}
+      .mode-s .mode-icon svg{stroke:#60a5fa}
 
-      /* ── URL field ──────────────────────────────────────────────── */
-      .trex-url-wrap { max-height:0; opacity:0; overflow:hidden; transition:max-height 0.3s ease,opacity 0.25s ease,margin 0.3s; margin-bottom:0; }
-      .trex-url-wrap.show { max-height:60px; opacity:1; margin-bottom:14px; }
+      .mode-txt{flex:1;min-width:0}
+      .mode-name{font-size:14.5px;font-weight:700;color:#e2e8f0;margin-bottom:3px;letter-spacing:-.2px}
+      .mode-sub{font-size:11.5px;color:rgba(255,255,255,.22)}
 
-      .trex-url-box {
-        display:flex; align-items:center; height:46px;
-        background:rgba(3,5,12,0.9); border:1.5px solid rgba(59,130,246,0.18); border-radius:12px;
-        overflow:hidden; transition:border-color 0.2s,box-shadow 0.2s;
+      .mode-pill{
+        flex-shrink:0;padding:3px 10px;border-radius:99px;
+        font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase
       }
-      .trex-url-box:focus-within { border-color:rgba(59,130,246,0.45); box-shadow:0 0 0 3px rgba(59,130,246,0.07); }
-      .trex-url-pfx { padding:0 12px; font-size:11px; font-weight:600; font-family:'JetBrains Mono',monospace; color:#1e2c46; border-right:1px solid rgba(59,130,246,0.1); display:flex; align-items:center; height:100%; background:rgba(59,130,246,0.04); white-space:nowrap; }
-      .trex-url-input { flex:1; background:transparent; border:none; outline:none; color:#94a3b8; padding:0 14px; font-size:13px; font-family:'JetBrains Mono',monospace; }
-      .trex-url-input::placeholder { color:#1a2234; }
+      .mode-d .mode-pill{background:rgba(240,185,11,.08);color:rgba(240,185,11,.55);border:1px solid rgba(240,185,11,.14)}
+      .mode-s .mode-pill{background:rgba(59,130,246,.08);color:rgba(59,130,246,.55);border:1px solid rgba(59,130,246,.14)}
 
-      /* ── Launch button ──────────────────────────────────────────── */
-      .trex-launch {
-        width:100%; height:50px; border:none; border-radius:13px;
-        font-size:14.5px; font-weight:700; letter-spacing:0.1px; cursor:pointer;
-        display:flex; align-items:center; justify-content:center; gap:8px;
-        transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
-        position:relative; overflow:hidden;
+      /* Check */
+      .chk{
+        position:absolute;top:11px;right:11px;width:19px;height:19px;
+        border-radius:50%;display:flex;align-items:center;justify-content:center;
+        opacity:0;transform:scale(.3) rotate(-40deg);
+        transition:all .22s cubic-bezier(.34,1.56,.64,1)
       }
-      .trex-launch.mode-none { background:rgba(255,255,255,0.03); border:1.5px dashed rgba(255,255,255,0.07); color:#1e2433; cursor:default; }
-      .trex-launch.mode-demo { background:linear-gradient(120deg,#c99108,#f0b90b 45%,#fcd535 75%,#d4a017); color:#06080e; box-shadow:0 5px 24px rgba(240,185,11,0.35),0 0 0 1px rgba(255,255,255,0.1) inset; }
-      .trex-launch.mode-server { background:linear-gradient(120deg,#1a40c0,#2563eb 45%,#3b82f6 75%,#1d4ed8); color:#fff; box-shadow:0 5px 24px rgba(59,130,246,0.3),0 0 0 1px rgba(255,255,255,0.08) inset; }
-      .trex-launch.mode-demo:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(240,185,11,0.48); }
-      .trex-launch.mode-server:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(59,130,246,0.4); }
-      .trex-launch:active { transform:translateY(0) !important; }
-      .trex-launch::before { content:''; position:absolute; top:0; left:-110%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent); transition:left 0.55s; }
-      .trex-launch:not(.mode-none):hover::before { left:110%; }
+      .mode-d .chk{background:#f0b90b}
+      .mode-s .chk{background:#3b82f6}
+      .mode.sel .chk{opacity:1;transform:scale(1) rotate(0)}
+      .chk svg{width:10px;height:10px;stroke:#04060e;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
 
-      /* ── Status / hint ──────────────────────────────────────────── */
-      #trex-status { display:none; align-items:center; justify-content:center; gap:10px; padding:8px; margin-top:6px; }
-      .status-spinner { width:14px; height:14px; border:2px solid rgba(59,130,246,0.15); border-top-color:#60a5fa; border-radius:50%; animation:spin 0.7s linear infinite; }
-      @keyframes spin { to{transform:rotate(360deg)} }
-      #trex-hint { text-align:center; font-size:11px; color:#0f1627; margin-top:9px; min-height:14px; transition:color 0.2s; }
+      /* URL */
+      .url-wrap{max-height:0;opacity:0;overflow:hidden;transition:max-height .3s ease,opacity .25s ease,margin .3s;margin-bottom:0}
+      .url-wrap.show{max-height:60px;opacity:1;margin-bottom:16px}
+      .url-box{
+        display:flex;align-items:center;height:46px;
+        background:rgba(2,4,10,.9);
+        border:1.5px solid rgba(59,130,246,.16);border-radius:13px;overflow:hidden;
+        transition:border-color .2s,box-shadow .2s
+      }
+      .url-box:focus-within{border-color:rgba(59,130,246,.4);box-shadow:0 0 0 3px rgba(59,130,246,.07)}
+      .url-pfx{padding:0 12px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;color:rgba(59,130,246,.3);border-right:1px solid rgba(59,130,246,.08);height:100%;display:flex;align-items:center;background:rgba(59,130,246,.03);white-space:nowrap;flex-shrink:0}
+      .url-in{flex:1;background:transparent;border:none;outline:none;color:#94a3b8;padding:0 14px;font-size:13px;font-family:'JetBrains Mono',monospace}
+      .url-in::placeholder{color:rgba(255,255,255,.08)}
 
-      /* ── Footer ─────────────────────────────────────────────────── */
-      .trex-footer { display:flex; align-items:center; justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.04); font-size:11px; color:#111827; }
-      .trex-footer-left { display:flex; align-items:center; gap:7px; }
-      .live-dot { width:6px; height:6px; border-radius:50%; background:#0ecb81; box-shadow:0 0 8px rgba(14,203,129,0.7); animation:ldot 2.5s ease-in-out infinite; }
-      @keyframes ldot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
-      .docs-link { color:#1e2433; text-decoration:none; transition:color 0.15s; cursor:pointer; }
-      .docs-link:hover { color:#f0b90b; }
+      /* Button */
+      .btn{
+        width:100%;height:52px;border:none;border-radius:14px;
+        font-size:15px;font-weight:700;letter-spacing:.05px;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;gap:8px;
+        transition:all .22s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden
+      }
+      .btn.n{background:rgba(255,255,255,.025);border:1.5px dashed rgba(255,255,255,.06);color:rgba(255,255,255,.12);cursor:default}
+      .btn.d{background:linear-gradient(118deg,#b8860b 0%,#f0b90b 38%,#fcd535 68%,#c99108 100%);color:#04060e;box-shadow:0 4px 24px rgba(240,185,11,.32),0 0 0 1px rgba(255,255,255,.1) inset}
+      .btn.s{background:linear-gradient(118deg,#1a3db5 0%,#2563eb 38%,#4285f4 68%,#1e40af 100%);color:#fff;box-shadow:0 4px 24px rgba(59,130,246,.28),0 0 0 1px rgba(255,255,255,.08) inset}
+      .btn.d:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(240,185,11,.46)}
+      .btn.s:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(59,130,246,.38)}
+      .btn:active{transform:translateY(0)!important}
+      .btn::before{content:'';position:absolute;top:0;left:-110%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.17),transparent);transition:left .55s}
+      .btn:not(.n):hover::before{left:110%}
 
-      /* ── Watermark ──────────────────────────────────────────────── */
-      .watermark { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); font-size:9px; font-weight:700; letter-spacing:0.3em; color:rgba(255,255,255,0.02); z-index:2; white-space:nowrap; text-transform:uppercase; pointer-events:none; }
+      /* Status / hint */
+      #st{display:none;align-items:center;justify-content:center;gap:10px;padding:8px;margin-top:5px}
+      .sp{width:14px;height:14px;border:2px solid rgba(59,130,246,.14);border-top-color:#60a5fa;border-radius:50%;animation:spin .7s linear infinite}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      #hint{text-align:center;font-size:11px;color:rgba(255,255,255,.1);margin-top:8px;min-height:14px;transition:color .2s}
+
+      /* Footer */
+      .footer{display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.04);font-size:11px}
+      .footer-l{display:flex;align-items:center;gap:7px;color:rgba(255,255,255,.15)}
+      .ld{width:6px;height:6px;border-radius:50%;background:#0ecb81;box-shadow:0 0 8px rgba(14,203,129,.7);animation:ldp 2.5s ease-in-out infinite}
+      @keyframes ldp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.78)}}
+      .dl{color:rgba(255,255,255,.15);text-decoration:none;transition:color .15s;cursor:pointer}
+      .dl:hover{color:#f0b90b}
     </style>
   </head>
   <body>
-    <div id="trex-loader">
+    <div id="L">
 
-      <!-- Background -->
+      <!-- BG -->
       <div class="bg">
-        <div class="bg-noise"></div>
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
-        <div class="bg-dots"></div>
-        <div class="bg-chart">
+        <div class="o o1"></div>
+        <div class="o o2"></div>
+        <div class="o o3"></div>
+        <div class="chart-deco">
           <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stop-color="#f0b90b" stop-opacity="0"/>
-                <stop offset="30%" stop-color="#f0b90b" stop-opacity="1"/>
-                <stop offset="80%" stop-color="#0ecb81" stop-opacity="0.7"/>
+                <stop offset="25%" stop-color="#f0b90b" stop-opacity="1"/>
+                <stop offset="75%" stop-color="#0ecb81" stop-opacity=".7"/>
                 <stop offset="100%" stop-color="#0ecb81" stop-opacity="0"/>
               </linearGradient>
-              <linearGradient id="lg1f" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#f0b90b" stop-opacity="0"/>
-                <stop offset="30%" stop-color="#f0b90b" stop-opacity="0.08"/>
-                <stop offset="80%" stop-color="#0ecb81" stop-opacity="0.05"/>
-                <stop offset="100%" stop-color="#0ecb81" stop-opacity="0"/>
-              </linearGradient>
-              <linearGradient id="lg2" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#2962ff" stop-opacity="0"/>
-                <stop offset="40%" stop-color="#2962ff" stop-opacity="0.5"/>
-                <stop offset="100%" stop-color="#2962ff" stop-opacity="0"/>
+              <linearGradient id="cf" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#f0b90b" stop-opacity=".07"/>
+                <stop offset="100%" stop-color="#f0b90b" stop-opacity="0"/>
               </linearGradient>
             </defs>
-            <polygon points="0,650 100,618 200,572 300,590 420,510 520,525 630,462 740,445 850,480 960,395 1060,358 1160,375 1260,305 1360,278 1440,248 1440,900 0,900" fill="url(#lg1f)"/>
-            <polyline points="0,650 100,618 200,572 300,590 420,510 520,525 630,462 740,445 850,480 960,395 1060,358 1160,375 1260,305 1360,278 1440,248" fill="none" stroke="url(#lg1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="0,730 150,710 300,685 450,700 600,655 750,670 900,630 1050,615 1200,590 1440,570" fill="none" stroke="url(#lg2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polygon points="0,660 120,628 240,580 360,598 480,516 600,532 700,468 800,448 900,485 1020,395 1130,355 1240,375 1340,308 1440,275 1440,900 0,900" fill="url(#cf)"/>
+            <polyline points="0,660 120,628 240,580 360,598 480,516 600,532 700,468 800,448 900,485 1020,395 1130,355 1240,375 1340,308 1440,275" fill="none" stroke="url(#cg)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
+        <div class="v-sep"></div>
       </div>
 
-      <!-- Two-column layout -->
-      <div class="trex-layout">
+      <!-- Layout -->
+      <div class="wrap">
 
-        <!-- Left: Hero ─────────────────────────────────────────────── -->
-        <div class="trex-left">
+        <!-- LEFT ─────────────────────────────────────────────────── -->
+        <div class="left">
 
-          <!-- Logo -->
-          <div class="trex-logo">
-            <div class="trex-logo-box">
+          <!-- Eyebrow -->
+          <div class="eyebrow">
+            <div class="eyebrow-icon">
               <svg viewBox="0 0 24 24"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="17,7 21,7 21,11"/></svg>
             </div>
-            <div>
-              <div class="trex-logo-name">TREX Terminal</div>
-              <div class="trex-logo-tagline">Advanced Chart Engine</div>
-            </div>
+            TREX Terminal &nbsp;·&nbsp; v1.0
           </div>
 
           <!-- Headline -->
-          <div class="trex-headline">
-            <span class="line1">Professional</span>
-            <span class="line2">Trading Terminal</span>
+          <div class="h1">
+            <span class="t">Professional</span>
+            <span class="b">Trading<br>Terminal</span>
           </div>
 
-          <p class="trex-desc">
-            TradingView-grade charting with real-time WebSocket feeds,
-            30+ drawing tools, advanced indicators, and built-in backtesting.
-          </p>
+          <!-- Desc -->
+          <p class="desc">TradingView-grade charting with real-time WebSocket feeds, 30+ drawing tools, multi-pane indicators, and built-in backtesting.</p>
 
           <!-- Stats -->
-          <div class="trex-stats">
-            <div class="trex-stat">
-              <span class="trex-stat-n s-gold">60fps</span>
-              <span class="trex-stat-l">Render Engine</span>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-n c-gold">60fps</div>
+              <div class="stat-l">Render Engine</div>
             </div>
-            <div class="s-sep"></div>
-            <div class="trex-stat">
-              <span class="trex-stat-n s-teal">30+</span>
-              <span class="trex-stat-l">Drawing Tools</span>
+            <div class="stat">
+              <div class="stat-n c-teal">30+</div>
+              <div class="stat-l">Drawing Tools</div>
             </div>
-            <div class="s-sep"></div>
-            <div class="trex-stat">
-              <span class="trex-stat-n s-blue">Live</span>
-              <span class="trex-stat-l">WebSocket Feed</span>
+            <div class="stat">
+              <div class="stat-n c-blue">WS</div>
+              <div class="stat-l">Live Feed</div>
             </div>
           </div>
 
           <!-- Features -->
-          <div class="trex-features">
-            <div class="trex-feat"><span class="trex-feat-dot fd-gold"></span>Multi-pane indicator layout with sub-charts</div>
-            <div class="trex-feat"><span class="trex-feat-dot fd-teal"></span>Real-time streaming &amp; historical data paging</div>
-            <div class="trex-feat"><span class="trex-feat-dot fd-blue"></span>Server-driven drawings &amp; custom indicator API</div>
-            <div class="trex-feat"><span class="trex-feat-dot fd-rose"></span>Built-in strategy backtester with PnL reports</div>
+          <div class="feats">
+            <div class="feat"><span class="fdot fd-y"></span>Multi-pane indicators with sub-charts</div>
+            <div class="feat"><span class="fdot fd-g"></span>Real-time streaming &amp; history paging</div>
+            <div class="feat"><span class="fdot fd-b"></span>Server-driven drawings &amp; custom API</div>
+            <div class="feat"><span class="fdot fd-r"></span>Strategy backtester with PnL analytics</div>
           </div>
 
         </div>
 
-        <!-- Right: Card ─────────────────────────────────────────────── -->
-        <div class="trex-right">
-          <div class="trex-card">
-            <div class="trex-card-body">
+        <!-- RIGHT ────────────────────────────────────────────────── -->
+        <div class="right">
+          <div class="card">
+            <div class="card-in">
 
               <div class="card-label">Select data source</div>
 
-              <div class="trex-modes" id="trex-modes">
+              <div class="modes" id="modes">
 
-                <!-- Demo -->
-                <div class="trex-mode trex-mode-demo" id="trex-mode-demo">
-                  <div class="trex-mode-inner">
-                    <div class="trex-mode-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
-                    <div class="trex-mode-icon-wrap">
-                      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="rgba(240,185,11,0.15)" stroke="#f0b90b"/></svg>
+                <div class="mode mode-d" id="md">
+                  <div class="mode-in">
+                    <div class="chk"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+                    <div class="mode-icon">
+                      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="rgba(240,185,11,.15)" stroke="#f0b90b"/></svg>
                     </div>
-                    <div class="trex-mode-text">
-                      <div class="trex-mode-title">Demo Mode</div>
-                      <div class="trex-mode-desc">Simulated live data, no setup</div>
+                    <div class="mode-txt">
+                      <div class="mode-name">Demo Mode</div>
+                      <div class="mode-sub">Simulated live data · No setup</div>
                     </div>
-                    <div class="trex-mode-badge">Free</div>
+                    <div class="mode-pill">Free</div>
                   </div>
                 </div>
 
-                <!-- Server -->
-                <div class="trex-mode trex-mode-server" id="trex-mode-server">
-                  <div class="trex-mode-inner">
-                    <div class="trex-mode-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
-                    <div class="trex-mode-icon-wrap">
+                <div class="mode mode-s" id="ms">
+                  <div class="mode-in">
+                    <div class="chk"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+                    <div class="mode-icon">
                       <svg viewBox="0 0 24 24">
-                        <rect x="2" y="3" width="20" height="7" rx="2" fill="rgba(59,130,246,0.12)" stroke="#60a5fa"/>
-                        <rect x="2" y="14" width="20" height="7" rx="2" fill="rgba(59,130,246,0.12)" stroke="#60a5fa"/>
+                        <rect x="2" y="3" width="20" height="7" rx="2" fill="rgba(59,130,246,.12)" stroke="#60a5fa"/>
+                        <rect x="2" y="14" width="20" height="7" rx="2" fill="rgba(59,130,246,.12)" stroke="#60a5fa"/>
                         <circle cx="6" cy="6.5" r="1.2" fill="#60a5fa" stroke="none"/>
                         <circle cx="6" cy="17.5" r="1.2" fill="#60a5fa" stroke="none"/>
                       </svg>
                     </div>
-                    <div class="trex-mode-text">
-                      <div class="trex-mode-title">Server Mode</div>
-                      <div class="trex-mode-desc">Connect your WebSocket backend</div>
+                    <div class="mode-txt">
+                      <div class="mode-name">Server Mode</div>
+                      <div class="mode-sub">WebSocket backend · Live feed</div>
                     </div>
-                    <div class="trex-mode-badge">Live</div>
+                    <div class="mode-pill">Live</div>
                   </div>
                 </div>
 
               </div>
 
-              <!-- URL input -->
-              <div class="trex-url-wrap" id="trex-url-wrap">
-                <div class="trex-url-box">
-                  <div class="trex-url-pfx">ws://</div>
-                  <input id="trex-ws-url" class="trex-url-input" type="text" placeholder="localhost:8765" value="localhost:8765" spellcheck="false" />
+              <div class="url-wrap" id="uw">
+                <div class="url-box">
+                  <div class="url-pfx">ws://</div>
+                  <input id="ui" class="url-in" type="text" placeholder="localhost:8765" value="localhost:8765" spellcheck="false"/>
                 </div>
               </div>
 
-              <!-- Launch -->
-              <button class="trex-launch mode-none" id="trex-launch-btn" disabled>
-                <span id="trex-launch-text">Select a mode to continue</span>
+              <button class="btn n" id="lb" disabled>
+                <span id="lt">Select a mode to continue</span>
               </button>
 
-              <div id="trex-status"></div>
-              <div id="trex-hint">Choose Demo for instant start or Server for live feed</div>
+              <div id="st"></div>
+              <div id="hint">Choose Demo for instant start · Server for live data</div>
 
-              <!-- Footer -->
-              <div class="trex-footer">
-                <div class="trex-footer-left">
-                  <div class="live-dot"></div>
-                  <span>v1.0 · Protocol v2</span>
-                </div>
-                <a class="docs-link" href="#" id="trex-docs-link" onclick="window.__trexAction='docs';return false;">📖 API Docs</a>
+              <div class="footer">
+                <div class="footer-l"><div class="ld"></div>v1.0 · Protocol v2</div>
+                <a class="dl" href="#" id="dl" onclick="window.__trexAction='docs';return false">📖 API Docs</a>
               </div>
 
             </div>
           </div>
         </div>
 
-      </div><!-- /.trex-layout -->
-
-      <div class="watermark">TREX TRADING TERMINAL</div>
+      </div>
     </div>
 
     <div id="root"></div>
 
     <script>
-      window.__trexAction = null;
-      window.__trexWsUrl  = null;
+      window.__trexAction=null;window.__trexWsUrl=null;
       (function(){
-        let sel = null;
-        const demo    = document.getElementById('trex-mode-demo');
-        const server  = document.getElementById('trex-mode-server');
-        const urlWrap = document.getElementById('trex-url-wrap');
-        const urlIn   = document.getElementById('trex-ws-url');
-        const btn     = document.getElementById('trex-launch-btn');
-        const btnTxt  = document.getElementById('trex-launch-text');
-        const hint    = document.getElementById('trex-hint');
-
-        function pick(mode){
-          sel = mode;
-          demo.classList.toggle('selected', mode==='demo');
-          server.classList.toggle('selected', mode==='server');
-          if(mode==='server'){
-            urlWrap.classList.add('show');
-            btn.className='trex-launch mode-server';
-            btnTxt.textContent='⚡  Connect to Server';
-            setTimeout(()=>urlIn.focus(),300);
+        var sel=null,md=document.getElementById('md'),ms=document.getElementById('ms'),
+            uw=document.getElementById('uw'),ui=document.getElementById('ui'),
+            lb=document.getElementById('lb'),lt=document.getElementById('lt');
+        function pick(m){
+          sel=m;
+          md.classList.toggle('sel',m==='demo');
+          ms.classList.toggle('sel',m==='server');
+          if(m==='server'){
+            uw.classList.add('show');
+            lb.className='btn s';lt.textContent='⚡  Connect to Server';
+            setTimeout(function(){ui.focus()},300);
           } else {
-            urlWrap.classList.remove('show');
-            btn.className='trex-launch mode-demo';
-            btnTxt.textContent='🚀  Launch Demo';
+            uw.classList.remove('show');
+            lb.className='btn d';lt.textContent='🚀  Launch Demo';
           }
-          btn.disabled=false;
-          if(hint) hint.style.color='';
+          lb.disabled=false;
         }
-
-        demo.addEventListener('click',()=>pick('demo'));
-        server.addEventListener('click',()=>pick('server'));
-        urlIn.addEventListener('keydown',e=>{ if(e.key==='Enter'&&sel==='server') btn.click(); });
-
-        btn.addEventListener('click',()=>{
-          if(!sel) return;
-          const raw = urlIn.value.trim()||'localhost:8765';
-          window.__trexWsUrl = /^wss?:\/\//.test(raw) ? raw : 'ws://'+raw;
-          window.__trexAction = sel;
-          btn.disabled=true;
-          btnTxt.textContent = sel==='demo' ? 'Loading…' : 'Connecting…';
+        md.addEventListener('click',function(){pick('demo')});
+        ms.addEventListener('click',function(){pick('server')});
+        ui.addEventListener('keydown',function(e){if(e.key==='Enter'&&sel==='server')lb.click()});
+        lb.addEventListener('click',function(){
+          if(!sel)return;
+          var raw=ui.value.trim()||'localhost:8765';
+          window.__trexWsUrl=/^wss?:\/\//.test(raw)?raw:'ws://'+raw;
+          window.__trexAction=sel;
+          lb.disabled=true;
+          lt.textContent=sel==='demo'?'Loading…':'Connecting…';
         });
       })();
     </script>
