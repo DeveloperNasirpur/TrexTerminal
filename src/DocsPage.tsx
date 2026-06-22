@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { IconArrowLeft } from "./icons";
 
 type Lang = "fa" | "en";
@@ -87,14 +87,37 @@ function highlight(code: string, lang?: string): ReactNode {
 }
 
 function Code({ children, lang }: { children: string; lang?: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(children).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
   return (
-    <div dir="ltr" className="my-4 overflow-hidden" style={{ background: "#0d1117", border: "1px solid #30363d", borderRadius: 8 }}>
+    <div dir="ltr" className="my-4 overflow-hidden" style={{ background: "#0d1117", border: "1px solid #30363d", borderRadius: 8, position: "relative" }}>
       {lang && (
         <div className="flex items-center gap-1.5 px-3.5 py-2" style={{ borderBottom: "1px solid #30363d", background: "#161b22" }}>
           <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
           <span className="ms-2 text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: "#8b949e" }}>{lang}</span>
+          {/* copy button in header */}
+          <button
+            type="button"
+            onClick={copy}
+            style={{
+              marginInlineStart: "auto",
+              display: "flex", alignItems: "center", gap: 4,
+              background: "none", border: "1px solid #30363d", borderRadius: 5,
+              cursor: "pointer", padding: "2px 8px",
+              fontSize: 10.5, fontWeight: 600,
+              color: copied ? "#28C840" : "#6b7280",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+          >
+            {copied ? "✓ Copied" : "Copy"}
+          </button>
         </div>
       )}
       <pre className="trex-scroll overflow-x-auto p-4 text-left font-mono text-[11.5px] leading-relaxed" style={{ color: GH.plain }}>{highlight(children, lang)}</pre>
@@ -1262,13 +1285,50 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
   const [l, setL] = useState<Lang>(lang);
   const fa = l === "fa";
   const [active, setActive] = useState<string>("intro");
+  const [search, setSearch] = useState("");
+  const [progress, setProgress] = useState(0);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+    setProgress(0);
   }, [active]);
 
-  const go = (id: string) => setActive(id);
+  // Track scroll progress
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const max = el.scrollHeight - el.clientHeight;
+      setProgress(max > 0 ? (el.scrollTop / max) * 100 : 0);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // "/" key focuses search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      const typing = t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable;
+      if (e.key === "/" && !typing) { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.key === "Escape" && document.activeElement === searchRef.current) { searchRef.current?.blur(); setSearch(""); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const go = useCallback((id: string) => { setActive(id); setSearch(""); }, []);
+
+  // Filter TOC items by search query
+  const allGroups = TOC_GROUPS(fa);
+  const filteredGroups = search.trim()
+    ? allGroups.map(grp => ({
+        ...grp,
+        items: grp.items.filter(t => t.id && t.label.toLowerCase().includes(search.toLowerCase())),
+      })).filter(grp => grp.items.length > 0)
+    : allGroups;
 
   const navItemStyle = (id: string) =>
     active === id
@@ -1277,6 +1337,10 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
 
   return (
     <div style={{ background: "#1c1f26", color: "#cdd2db", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", height: "100vh", overflow: "hidden" }} dir={fa ? "rtl" : "ltr"}>
+      {/* Reading progress bar */}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 200, background: "#1a1d24" }}>
+        <div style={{ height: "100%", background: "linear-gradient(90deg,#f5a623,#FF7847)", width: `${progress}%`, transition: "width 0.1s linear" }} />
+      </div>
 
       {/* ══ Navbar ══ */}
       <header style={{ position: "fixed", top: 0, left: 0, right: 0, height: NAVBAR_H, background: "#22252d", borderBottom: "1px solid #2e3340", display: "flex", alignItems: "center", gap: 12, padding: "0 20px", zIndex: 50 }}>
@@ -1293,11 +1357,19 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
           <span style={{ background: "rgba(245,166,35,0.15)", color: "#f5a623", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20, border: "1px solid rgba(245,166,35,0.3)" }}>Docs</span>
         </div>
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1c1f26", border: "1px solid #2e3340", borderRadius: 8, padding: "0 12px", height: 34, width: "min(320px,40vw)" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5c6070" strokeWidth="2"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <span style={{ fontSize: 12.5, color: "#5c6070" }}>{fa ? "جستجو…" : "Search..."}</span>
-            <div style={{ flex: 1 }} />
-            <kbd style={{ fontSize: 10, color: "#5c6070", background: "#22252d", border: "1px solid #2e3340", borderRadius: 4, padding: "1px 5px" }}>/</kbd>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1c1f26", border: `1px solid ${search ? "#f5a623" : "#2e3340"}`, borderRadius: 8, padding: "0 12px", height: 34, width: "min(360px,45vw)", transition: "border-color 0.15s" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={search ? "#f5a623" : "#5c6070"} strokeWidth="2"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={fa ? "جستجو در مستندات…" : "Search docs…"}
+              style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 12.5, color: "#cdd2db", fontFamily: "inherit", direction: fa ? "rtl" : "ltr" }}
+            />
+            {search
+              ? <button type="button" onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#5c6070", fontSize: 14, lineHeight: 1 }}>×</button>
+              : <kbd style={{ fontSize: 10, color: "#5c6070", background: "#22252d", border: "1px solid #2e3340", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>/</kbd>
+            }
           </div>
         </div>
         <div style={{ display: "flex", border: "1px solid #2e3340", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
@@ -1313,7 +1385,12 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
       {/* ══ Sidebar ══ */}
       <aside className="trex-scroll" style={{ position: "fixed", top: NAVBAR_H, [fa ? "right" : "left"]: 0, width: SIDEBAR_W, height: `calc(100vh - ${NAVBAR_H}px)`, background: "#22252d", borderInlineEnd: "1px solid #2e3340", overflowY: "auto", zIndex: 40, paddingBottom: 32 }}>
         <nav style={{ paddingTop: 8 }}>
-          {TOC_GROUPS(fa).map(grp => (
+          {filteredGroups.length === 0 && (
+            <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "#4b5263" }}>
+              {fa ? "نتیجه‌ای یافت نشد" : "No results found"}
+            </div>
+          )}
+          {filteredGroups.map(grp => (
             <div key={grp.group} style={{ marginBottom: 4 }}>
               {/* Group header — acts as parent folder */}
               <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#6b7280", padding: fa ? "10px 16px 4px 8px" : "10px 8px 4px 16px" }}>
@@ -1400,6 +1477,21 @@ export default function DocsPage({ lang = "fa", onBack }: { lang?: Lang; onBack:
                     style={{ borderRadius: 6, padding: "8px 18px", fontSize: 13, fontWeight: 600, border: primary ? "none" : "1px solid #3a3f4b", cursor: "pointer", background: primary ? "#f5a623" : "#22252d", color: primary ? "#1a1206" : "#cdd2db" }}>
                     {label as string}
                   </button>
+                ))}
+              </div>
+              {/* Stats cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 28 }}>
+                {[
+                  { num: "70+", label: fa ? "اندیکاتور" : "Indicators", color: "#f5a623", icon: "⚙" },
+                  { num: "35",  label: fa ? "الگوی کندل" : "Candle Patterns", color: "#60a5fa", icon: "🕯" },
+                  { num: "16",  label: fa ? "ابزار ترسیم" : "Drawing Tools", color: "#34d399", icon: "✏" },
+                  { num: "60",  label: fa ? "فریم در ثانیه" : "FPS Rendering", color: "#a78bfa", icon: "⚡" },
+                ].map(s => (
+                  <div key={s.num} style={{ background: "#22252d", border: "1px solid #2e3340", borderRadius: 10, padding: "14px 16px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, marginBottom: 2 }}>{s.icon}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1.1 }}>{s.num}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontWeight: 500 }}>{s.label}</div>
+                  </div>
                 ))}
               </div>
             </div>
