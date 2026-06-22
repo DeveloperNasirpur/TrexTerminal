@@ -1122,45 +1122,61 @@ function LeftBar(props: {
 
               {flyout === g.id && (
                 <div ref={flyoutRef} className="trex-lb-flyout absolute z-50" style={{ left: 52, top: 0 }}>
-                  {/* arrow */}
-                  <div className="trex-lb-flyout-arrow" style={{ borderRightColor: g.color + "44" }} />
+                  {/* colored top accent bar */}
+                  <div className="trex-lb-flyout-bar" style={{ background: `linear-gradient(90deg, ${g.color}, ${g.color}55)` }} />
+                  {/* left arrow connector */}
+                  <div className="trex-lb-flyout-arrow" style={{ borderRightColor: "#0f1424" }} />
                   {/* header */}
-                  <div className="trex-lb-flyout-header" style={{ color: g.color, borderBottomColor: g.color + "28" }}>
-                    <span className="trex-lb-flyout-dot" style={{ background: g.color, boxShadow: `0 0 6px ${g.color}` }} />
-                    {g.id === "pointer" ? "Pointer" : g.id === "lines" ? "Lines" : g.id === "fib" ? "Fibonacci" : g.id === "shapes" ? "Shapes" : g.id === "annotate" ? "Annotate" : "Position"}
+                  <div className="trex-lb-flyout-header">
+                    <span className="trex-lb-flyout-dot" style={{ background: g.color, boxShadow: `0 0 7px ${g.color}` }} />
+                    <span className="trex-lb-flyout-header-name" style={{ color: g.color }}>
+                      {g.id === "pointer" ? "Pointer" : g.id === "lines" ? "Lines" : g.id === "fib" ? "Fibonacci" : g.id === "shapes" ? "Shapes" : g.id === "annotate" ? "Annotate" : "Position"}
+                    </span>
+                    <span className="trex-lb-flyout-header-count">{g.tools.length}</span>
                   </div>
-                  {g.tools.map((t) => {
-                    const m = TOOL_META[t];
-                    const isFav = favorites.includes(t);
-                    const isActive = props.tool === t;
-                    return (
-                      <div key={t} className="group/mi flex items-center">
-                        <button
-                          type="button"
-                          onClick={() => pick(g.id, t)}
-                          className="trex-lb-flyout-item flex flex-1 items-center gap-2.5 px-3 py-[8px] text-left"
-                          style={isActive ? { color: g.color, background: g.glow.replace("0.28", "0.1") } : {}}
+                  {/* items */}
+                  <div className="trex-lb-flyout-list">
+                    {g.tools.map((t) => {
+                      const m = TOOL_META[t];
+                      const isFav = favorites.includes(t);
+                      const isActive = props.tool === t;
+                      return (
+                        <div
+                          key={t}
+                          className={cn("trex-lb-flyout-row", isActive && "is-active")}
+                          style={{
+                            "--row-color": g.color,
+                            "--row-bg": g.glow.replace("0.28", "0.09"),
+                            "--row-bg-hover": g.glow.replace("0.28", "0.14"),
+                            "--icon-bg": g.glow.replace("0.28", "0.18"),
+                          } as React.CSSProperties}
                         >
-                          <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center" style={{ color: isActive ? g.color : "#5A6478" }}>{m.icon}</span>
-                          <span className="flex-1 truncate text-[12.5px]" style={{ color: isActive ? g.color : "#B0B8C8", fontWeight: isActive ? 600 : 400 }}>{m.label}</span>
-                          {isActive
-                            ? <span className="h-[6px] w-[6px] rounded-full shrink-0" style={{ background: g.color, boxShadow: `0 0 5px ${g.color}` }} />
-                            : m.shortcut && <span className="text-[10px] text-[#3A4255] font-mono">{m.shortcut}</span>
-                          }
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
-                          onClick={(e) => { e.stopPropagation(); toggleFavorite(t); }}
-                          className={cn("mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors",
-                            isFav ? "text-[#FCD535]" : "text-[#2A3045] hover:text-[#6B7280]"
-                          )}
-                        >
-                          <span className="h-3.5 w-3.5"><IconStar filled={isFav} /></span>
-                        </button>
-                      </div>
-                    );
-                  })}
+                          <button
+                            type="button"
+                            onClick={() => pick(g.id, t)}
+                            className="trex-lb-flyout-item"
+                          >
+                            <span className="trex-lb-flyout-icon" style={{ color: isActive ? g.color : "#4A5570" }}>
+                              {m.icon}
+                            </span>
+                            <span className="trex-lb-flyout-label">{m.label}</span>
+                            {isActive
+                              ? <span className="trex-lb-flyout-activedot" style={{ background: g.color, boxShadow: `0 0 6px ${g.color}` }} />
+                              : m.shortcut && <span className="trex-lb-flyout-kbd">{m.shortcut}</span>
+                            }
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(t); }}
+                            className={cn("trex-lb-flyout-star", isFav && "is-fav")}
+                          >
+                            <span style={{ width: 14, height: 14, display: "flex" }}><IconStar filled={isFav} /></span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

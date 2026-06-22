@@ -311,58 +311,210 @@ body {
 
 /* ── LeftBar flyout menu ──────────────────────────────────────────── */
 .trex-lb-flyout {
-  min-width: 210px;
-  background: #0d111e;
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  min-width: 226px;
+  background: linear-gradient(180deg, #0f1424 0%, #0b0f1c 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  box-shadow:
+    0 16px 48px rgba(0,0,0,0.75),
+    0 4px 16px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(255,255,255,0.03);
   overflow: hidden;
-  animation: trex-lb-flyout-in 0.15s cubic-bezier(.16,1,.3,1) both;
+  animation: trex-lb-flyout-in 0.18s cubic-bezier(.16,1,.3,1) both;
 }
 @keyframes trex-lb-flyout-in {
-  from { opacity: 0; transform: translateX(-8px) scale(0.97); }
+  from { opacity: 0; transform: translateX(-10px) scale(0.96); }
   to   { opacity: 1; transform: none; }
 }
 
-/* left arrow connector */
+/* colored top accent bar */
+.trex-lb-flyout-bar {
+  height: 3px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* left arrow connector — two layers for border + fill */
 .trex-lb-flyout-arrow {
   position: absolute;
-  left: -7px; top: 14px;
+  left: -8px; top: 18px;
   width: 0; height: 0;
   border-top: 7px solid transparent;
   border-bottom: 7px solid transparent;
-  border-right: 7px solid rgba(255,255,255,0.09);
-  filter: drop-shadow(-2px 0 2px rgba(0,0,0,0.3));
+  border-right: 8px solid #0f1424;
+  filter: drop-shadow(-2px 0 3px rgba(0,0,0,0.5));
+}
+.trex-lb-flyout-arrow::before {
+  content: '';
+  position: absolute;
+  left: 1px; top: -8px;
+  width: 0; height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 9px solid rgba(255,255,255,0.08);
 }
 
 /* group header */
 .trex-lb-flyout-header {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 12px 8px;
-  font-size: 10px;
+  gap: 8px;
+  padding: 11px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.055);
+}
+.trex-lb-flyout-header-name {
+  flex: 1;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-bottom: 1px solid;
+}
+.trex-lb-flyout-header-count {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.06);
+  color: #5A6478;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .trex-lb-flyout-dot {
-  width: 6px; height: 6px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-/* menu item */
+/* items list */
+.trex-lb-flyout-list {
+  padding: 5px 0 6px;
+}
+
+/* menu item row */
+.trex-lb-flyout-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.trex-lb-flyout-row::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2.5px;
+  border-radius: 0 2px 2px 0;
+  background: transparent;
+  transition: background 0.15s;
+}
+.trex-lb-flyout-row.is-active::before {
+  background: var(--row-color, #60A5FA);
+}
+
+/* main tool button */
 .trex-lb-flyout-item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
   background: transparent;
   border: none;
   cursor: pointer;
-  width: 100%;
+  text-align: left;
   transition: background 0.12s;
+  min-width: 0;
 }
 .trex-lb-flyout-item:hover {
   background: rgba(255,255,255,0.05) !important;
+}
+.trex-lb-flyout-row.is-active .trex-lb-flyout-item {
+  background: var(--row-bg, rgba(96,165,250,0.08));
+}
+.trex-lb-flyout-row.is-active .trex-lb-flyout-item:hover {
+  background: var(--row-bg-hover, rgba(96,165,250,0.13)) !important;
+}
+
+/* icon wrapper */
+.trex-lb-flyout-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.trex-lb-flyout-row.is-active .trex-lb-flyout-icon {
+  background: var(--icon-bg, rgba(96,165,250,0.15));
+}
+
+/* label */
+.trex-lb-flyout-label {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #9BA5B8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.12s;
+}
+.trex-lb-flyout-item:hover .trex-lb-flyout-label {
+  color: #D0D8E8;
+}
+.trex-lb-flyout-row.is-active .trex-lb-flyout-label {
+  color: var(--row-color, #60A5FA);
+  font-weight: 600;
+}
+
+/* shortcut badge */
+.trex-lb-flyout-kbd {
+  font-size: 9.5px;
+  font-family: ui-monospace, monospace;
+  color: #3A4560;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  letter-spacing: 0;
+  transition: color 0.12s;
+}
+.trex-lb-flyout-item:hover .trex-lb-flyout-kbd {
+  color: #5A6680;
+  border-color: rgba(255,255,255,0.11);
+}
+
+/* active indicator dot (replaces shortcut when active) */
+.trex-lb-flyout-activedot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* star/favorite button */
+.trex-lb-flyout-star {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 36px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: #2A3045;
+}
+.trex-lb-flyout-row:hover .trex-lb-flyout-star,
+.trex-lb-flyout-star.is-fav {
+  opacity: 1;
+}
+.trex-lb-flyout-star.is-fav {
+  color: #FCD535;
+}
+.trex-lb-flyout-star:hover {
+  color: #FCD535 !important;
+  opacity: 1 !important;
 }
 
 /* bottom footer section */
