@@ -1065,18 +1065,15 @@ function LeftBar(props: {
   };
 
   return (
-    <div className="nb-leftbar relative z-30 flex w-[44px] shrink-0 flex-col items-center border-r border-[rgba(255,255,255,0.06)] bg-[#0D1120] py-1">
+    <div className="nb-leftbar relative z-30 flex w-[46px] shrink-0 flex-col items-center border-r bg-[#0D1120] pt-2 pb-1">
       {TOOL_GROUPS.map((g, gi) => {
         const current = lastUsed[g.id];
         const meta = TOOL_META[current];
         const activeInGroup = g.tools.includes(props.tool);
-        // TradingView separates the cursor group from the drawing tools
-        // (and forecasting/position tools) with thin dividers; draw one
-        // before each group that opens a new logical section.
         const dividerBefore = g.id === "lines" || g.id === "fib" || g.id === "position";
         return (
           <Fragment key={g.id}>
-            {dividerBefore && <div className="my-1 h-px w-5 mx-auto" style={{ background: "rgba(255,255,255,0.06)" }} />}
+            {dividerBefore && <div className="trex-lb-div" />}
             <div className="relative">
             <button
               type="button"
@@ -1086,10 +1083,10 @@ function LeftBar(props: {
               onClick={() => { props.onTool(current); setFlyout(null); }}
               onContextMenu={(e) => { e.preventDefault(); if (g.tools.length > 1) setFlyout(g.id); }}
               className={cn(
-                "relative flex h-[34px] w-[34px] items-center justify-center rounded-[4px] transition-all duration-150",
+                "trex-tool-btn relative flex h-[36px] w-[36px] items-center justify-center transition-all duration-150",
                 activeInGroup
                   ? "trex-tool-active"
-                  : "text-[#8892A4] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#C9D1E0]"
+                  : "text-[#6B7280] hover:text-[#C9D1E0]"
               )}
             >
               {meta.icon}
@@ -1098,9 +1095,9 @@ function LeftBar(props: {
                   role="button"
                   aria-label={`More ${g.id} tools`}
                   onClick={(e) => { e.stopPropagation(); setFlyout(flyout === g.id ? null : g.id); }}
-                  className="absolute bottom-0 right-0 flex h-[13px] w-[13px] items-end justify-end rounded-tl-[3px] hover:bg-[rgba(255,255,255,0.08)]"
+                  className="absolute bottom-[3px] right-[3px] flex h-[8px] w-[8px] items-end justify-end opacity-40 hover:opacity-80"
                 >
-                  <span className="mb-[2px] mr-[2px] h-0 w-0 border-b-[5px] border-l-[5px] border-b-[#9598A1] border-l-transparent" />
+                  <span className="h-0 w-0 border-b-[4px] border-l-[4px] border-b-[#9598A1] border-l-transparent" />
                 </span>
               )}
             </button>
@@ -1150,48 +1147,46 @@ function LeftBar(props: {
         );
       })}
 
-      <div className="my-1 h-px w-6 bg-[#2A2E39]" />
+      <div className="trex-lb-div" />
 
-      <div>
-        <IconBtn tip="Magnet mode (M)" tipPos="right" active={props.magnet} onClick={props.onToggleMagnet} className="h-[34px] w-[34px]">
+      <div className="trex-lb-magnet">
+        <IconBtn tip="Magnet mode (M)" tipPos="right" active={props.magnet} onClick={props.onToggleMagnet} className="h-[36px] w-[36px] !rounded-[7px]">
           <IconMagnet />
         </IconBtn>
       </div>
 
       <div className="flex-1" />
 
-      <div className="mb-1">
+      <div className="trex-lb-footer">
         <IconBtn
           tip={props.allLocked ? "Unlock all drawings" : "Lock all drawings"}
           tipPos="right"
           disabled={!props.hasDrawings}
           onClick={props.onLockAll}
-          className="h-[34px] w-[34px]"
+          className="h-[36px] w-[36px] !rounded-[7px]"
         >
           {props.allLocked ? <IconLock /> : <IconUnlock />}
         </IconBtn>
-      </div>
-      <div className="mb-1">
         <IconBtn
           tip={props.allHidden ? "Show all drawings" : "Hide all drawings"}
           tipPos="right"
           disabled={!props.hasDrawings}
           onClick={props.onHideAll}
-          className="h-[34px] w-[34px]"
+          className="h-[36px] w-[36px] !rounded-[7px]"
         >
           {props.allHidden ? <IconEyeOff /> : <IconEye />}
         </IconBtn>
+        <IconBtn
+          tip="Remove all drawings"
+          tipPos="right"
+          danger
+          disabled={!props.hasDrawings}
+          onClick={props.onClearAll}
+          className="h-[36px] w-[36px] !rounded-[7px]"
+        >
+          <IconTrash />
+        </IconBtn>
       </div>
-      <IconBtn
-        tip="Remove all drawings"
-        tipPos="right"
-        danger
-        disabled={!props.hasDrawings}
-        onClick={props.onClearAll}
-        className="h-[34px] w-[34px]"
-      >
-        <IconTrash />
-      </IconBtn>
     </div>
   );
 }
