@@ -6,114 +6,452 @@
     <title>Trex Trading Terminal — Advanced Chart Engine</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { height: 100%; width: 100%; overflow: hidden; background: #0b0e11; color: #eaecef; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { height: 100%; width: 100%; overflow: hidden; background: #060810; color: #eaecef; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
       #root { height: 100%; width: 100%; }
-      #trex-loader { position: fixed; inset: 0; z-index: 10000; overflow-y: auto; padding: 24px 16px; background: radial-gradient(ellipse at top left, rgba(240, 185, 11, 0.08), transparent 50%), radial-gradient(ellipse at bottom right, rgba(14, 203, 129, 0.06), transparent 50%), #0b0e11; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: opacity 0.5s ease; }
+
+      /* ── Loader shell ─────────────────────────────────────────── */
+      #trex-loader {
+        position: fixed; inset: 0; z-index: 10000;
+        display: flex; align-items: center; justify-content: center;
+        overflow-y: auto;
+        transition: opacity 0.5s ease;
+      }
       #trex-loader.fade-out { opacity: 0; pointer-events: none; }
-      #trex-loader::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(240, 185, 11, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(240, 185, 11, 0.04) 1px, transparent 1px); background-size: 50px 50px; mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%); -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%); animation: gridPulse 8s ease-in-out infinite; }
-      @keyframes gridPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-      .trex-card { position: relative; z-index: 2; margin: auto; width: 460px; max-width: 92vw; background: linear-gradient(145deg, rgba(30, 35, 41, 0.95), rgba(24, 26, 32, 0.95)); border: 1px solid rgba(240, 185, 11, 0.15); border-radius: 20px; padding: 40px 36px 32px; box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 0 60px rgba(240, 185, 11, 0.08); backdrop-filter: blur(20px); animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-      @keyframes cardIn { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      .trex-logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
-      .trex-logo-icon { width: 44px; height: 44px; background: linear-gradient(135deg, #f0b90b 0%, #fcd535 50%, #f0b90b 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(240, 185, 11, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset; position: relative; }
-      .trex-logo-icon::after { content: ''; position: absolute; inset: 0; border-radius: 12px; background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%); animation: shimmer 3s ease-in-out infinite; }
-      @keyframes shimmer { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
-      .trex-logo-icon svg { width: 26px; height: 26px; stroke: #0b0e11; stroke-width: 2.5; fill: none; }
-      .trex-logo-text { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(135deg, #f0b90b 0%, #fcd535 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-      .trex-tagline { text-align: center; color: #848e9c; font-size: 13px; margin-bottom: 28px; letter-spacing: 0.3px; }
-      .trex-tagline strong { color: #eaecef; font-weight: 600; }
-      .trex-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-      .trex-mode { position: relative; background: rgba(43, 49, 57, 0.5); border: 1.5px solid rgba(43, 47, 54, 0.8); border-radius: 14px; padding: 20px 16px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; overflow: hidden; }
-      .trex-mode::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent, rgba(240, 185, 11, 0.08)); opacity: 0; transition: opacity 0.2s; }
-      .trex-mode:hover { border-color: rgba(240, 185, 11, 0.5); background: rgba(43, 49, 57, 0.8); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
-      .trex-mode:hover::before { opacity: 1; }
-      .trex-mode.selected { border-color: #f0b90b; background: rgba(240, 185, 11, 0.08); box-shadow: 0 0 0 3px rgba(240, 185, 11, 0.15); }
-      .trex-mode-icon { width: 44px; height: 44px; margin: 0 auto 10px; background: rgba(11, 14, 17, 0.6); border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-      .trex-mode:hover .trex-mode-icon, .trex-mode.selected .trex-mode-icon { background: rgba(240, 185, 11, 0.15); }
-      .trex-mode-icon svg { width: 22px; height: 22px; stroke: #f0b90b; stroke-width: 2; fill: none; }
-      .trex-mode-title { font-size: 15px; font-weight: 700; color: #eaecef; margin-bottom: 4px; }
-      .trex-mode-desc { font-size: 11px; color: #848e9c; line-height: 1.4; }
-      .trex-url-wrap { max-height: 0; opacity: 0; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 0; }
-      .trex-url-wrap.show { max-height: 80px; opacity: 1; margin-bottom: 16px; }
-      .trex-url-input { width: 100%; height: 44px; background: rgba(11, 14, 17, 0.6); border: 1.5px solid rgba(43, 47, 54, 0.8); border-radius: 10px; color: #eaecef; padding: 0 14px; font-size: 13px; font-family: 'JetBrains Mono', monospace; transition: all 0.2s; outline: none; }
-      .trex-url-input:focus { border-color: #f0b90b; background: rgba(11, 14, 17, 0.8); box-shadow: 0 0 0 3px rgba(240, 185, 11, 0.15); }
-      .trex-url-input::placeholder { color: #5e6673; }
-      .trex-launch { width: 100%; height: 48px; background: linear-gradient(135deg, #f0b90b 0%, #fcd535 100%); border: none; border-radius: 12px; color: #0b0e11; font-size: 15px; font-weight: 700; letter-spacing: 0.3px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 6px 20px rgba(240, 185, 11, 0.3); }
-      .trex-launch:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(240, 185, 11, 0.45); }
+
+      /* ── Animated background layers ───────────────────────────── */
+      .bg-layer {
+        position: absolute; inset: 0; pointer-events: none;
+      }
+      /* deep base */
+      .bg-base {
+        background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(20,30,60,0.9) 0%, transparent 60%),
+                    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(10,25,20,0.7) 0%, transparent 55%),
+                    #060810;
+      }
+      /* gold orb top-left */
+      .bg-orb-gold {
+        background: radial-gradient(ellipse 600px 400px at -10% -5%, rgba(240,185,11,0.12) 0%, transparent 65%);
+        animation: orbDrift 12s ease-in-out infinite alternate;
+      }
+      /* teal orb bottom-right */
+      .bg-orb-teal {
+        background: radial-gradient(ellipse 500px 350px at 110% 110%, rgba(0,201,130,0.09) 0%, transparent 60%);
+        animation: orbDrift 16s ease-in-out infinite alternate-reverse;
+      }
+      /* blue orb mid */
+      .bg-orb-blue {
+        background: radial-gradient(ellipse 400px 300px at 60% 30%, rgba(41,98,255,0.07) 0%, transparent 55%);
+        animation: orbDrift 20s ease-in-out infinite alternate;
+      }
+      @keyframes orbDrift {
+        0%   { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(30px, 20px) scale(1.05); }
+      }
+      /* grid texture */
+      .bg-grid {
+        background-image:
+          linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(ellipse 70% 70% at center, #000 20%, transparent 70%);
+        -webkit-mask-image: radial-gradient(ellipse 70% 70% at center, #000 20%, transparent 70%);
+      }
+
+      /* ── Chart sparkline decoration ───────────────────────────── */
+      .bg-chart {
+        position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+        opacity: 0.07;
+      }
+      .bg-chart svg { width: 100%; height: 100%; }
+
+      /* ── Feature badges (top-right) ───────────────────────────── */
+      .trex-badges {
+        position: absolute; top: 28px; right: 28px;
+        display: flex; flex-direction: column; gap: 8px; z-index: 4;
+      }
+      .trex-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 14px 6px 10px;
+        background: rgba(8, 12, 24, 0.7);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 99px;
+        font-size: 11px; font-weight: 500; color: #6b7280;
+        backdrop-filter: blur(12px);
+        animation: badgeIn 0.7s cubic-bezier(0.16,1,0.3,1) backwards;
+      }
+      .trex-badge:nth-child(1) { animation-delay: 0.35s; }
+      .trex-badge:nth-child(2) { animation-delay: 0.50s; }
+      .trex-badge:nth-child(3) { animation-delay: 0.65s; }
+      .trex-badge:nth-child(4) { animation-delay: 0.80s; }
+      @keyframes badgeIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
+      .badge-dot {
+        width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+      }
+      .bd-gold  { background:#f0b90b; box-shadow:0 0 6px rgba(240,185,11,0.7); }
+      .bd-green { background:#0ecb81; box-shadow:0 0 6px rgba(14,203,129,0.7); }
+      .bd-blue  { background:#3b82f6; box-shadow:0 0 6px rgba(59,130,246,0.7); }
+      .bd-rose  { background:#f43f5e; box-shadow:0 0 6px rgba(244,63,94,0.7); }
+      @media (max-width: 680px) { .trex-badges { display:none; } }
+
+      /* ── Main card ────────────────────────────────────────────── */
+      .trex-card {
+        position: relative; z-index: 5;
+        width: 480px; max-width: 94vw;
+        background: linear-gradient(160deg, rgba(14,18,30,0.97) 0%, rgba(9,12,22,0.97) 100%);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 24px;
+        padding: 36px 32px 28px;
+        box-shadow:
+          0 0 0 1px rgba(240,185,11,0.06) inset,
+          0 40px 90px rgba(0,0,0,0.75),
+          0 0 80px rgba(240,185,11,0.04);
+        backdrop-filter: blur(24px);
+        animation: cardIn 0.65s cubic-bezier(0.16,1,0.3,1);
+      }
+      /* top gradient bar */
+      .trex-card::before {
+        content: '';
+        position: absolute; top: 0; left: 32px; right: 32px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(240,185,11,0.5), rgba(0,201,167,0.4), transparent);
+        border-radius: 99px;
+      }
+      @keyframes cardIn { from { opacity:0; transform:translateY(24px) scale(0.97); } to { opacity:1; transform:none; } }
+
+      /* ── Brand header ─────────────────────────────────────────── */
+      .trex-header {
+        display: flex; align-items: center; gap: 14px; margin-bottom: 6px;
+      }
+      .trex-logo-icon {
+        width: 46px; height: 46px; flex-shrink: 0;
+        background: linear-gradient(140deg, #f0b90b 0%, #fcd535 55%, #e8a800 100%);
+        border-radius: 13px;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 6px 20px rgba(240,185,11,0.4), 0 0 0 1px rgba(255,255,255,0.12) inset;
+        position: relative; overflow: hidden;
+      }
+      .trex-logo-icon::after {
+        content: '';
+        position: absolute; inset: 0; border-radius: 13px;
+        background: linear-gradient(130deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 60%);
+        animation: logoShimmer 4s ease-in-out infinite;
+      }
+      @keyframes logoShimmer { 0%,100%{opacity:0} 50%{opacity:1} }
+      .trex-logo-icon svg { width: 26px; height: 26px; stroke: #0b0e11; stroke-width: 2.8; fill: none; stroke-linecap: round; stroke-linejoin: round; position: relative; z-index: 1; }
+
+      .trex-brand { display: flex; flex-direction: column; }
+      .trex-brand-name {
+        font-size: 22px; font-weight: 900; letter-spacing: -0.3px; line-height: 1;
+        background: linear-gradient(130deg, #fff 0%, #f0e8c8 50%, #f0b90b 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      }
+      .trex-brand-sub {
+        font-size: 10.5px; font-weight: 500; color: #4b5563; letter-spacing: 0.06em;
+        text-transform: uppercase; margin-top: 2px;
+      }
+
+      /* ── Divider ──────────────────────────────────────────────── */
+      .trex-divider {
+        height: 1px; background: rgba(255,255,255,0.05);
+        margin: 20px 0;
+      }
+
+      /* ── Section label ────────────────────────────────────────── */
+      .trex-section-label {
+        font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+        text-transform: uppercase; color: #374151; margin-bottom: 10px;
+      }
+
+      /* ── Mode cards ───────────────────────────────────────────── */
+      .trex-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+
+      .trex-mode {
+        position: relative;
+        background: rgba(255,255,255,0.025);
+        border: 1.5px solid rgba(255,255,255,0.06);
+        border-radius: 16px;
+        padding: 18px 14px 16px;
+        cursor: pointer;
+        transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+        text-align: center; overflow: hidden;
+        user-select: none;
+      }
+      .trex-mode::after {
+        content: ''; position: absolute; inset: 0; border-radius: 15px;
+        opacity: 0; transition: opacity 0.22s;
+      }
+      .trex-mode-demo::after { background: linear-gradient(135deg, rgba(240,185,11,0.06), transparent 60%); }
+      .trex-mode-server::after { background: linear-gradient(135deg, rgba(59,130,246,0.07), transparent 60%); }
+
+      .trex-mode:hover { transform: translateY(-2px); }
+      .trex-mode-demo:hover { border-color: rgba(240,185,11,0.35); box-shadow: 0 8px 28px rgba(0,0,0,0.3), 0 0 20px rgba(240,185,11,0.08); }
+      .trex-mode-server:hover { border-color: rgba(59,130,246,0.35); box-shadow: 0 8px 28px rgba(0,0,0,0.3), 0 0 20px rgba(59,130,246,0.08); }
+      .trex-mode:hover::after { opacity: 1; }
+
+      .trex-mode.selected { transform: translateY(-1px); }
+      .trex-mode-demo.selected { border-color: rgba(240,185,11,0.55); background: rgba(240,185,11,0.06); box-shadow: 0 0 0 3px rgba(240,185,11,0.12), 0 10px 30px rgba(0,0,0,0.3); }
+      .trex-mode-server.selected { border-color: rgba(59,130,246,0.55); background: rgba(59,130,246,0.06); box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 10px 30px rgba(0,0,0,0.3); }
+
+      .trex-mode-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px 8px; border-radius: 99px;
+        font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; margin-bottom: 10px;
+      }
+      .trex-mode-demo .trex-mode-badge { background: rgba(240,185,11,0.12); color: #f0b90b; border: 1px solid rgba(240,185,11,0.2); }
+      .trex-mode-server .trex-mode-badge { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+
+      .trex-mode-icon {
+        width: 46px; height: 46px; margin: 0 auto 10px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.22s;
+      }
+      .trex-mode-demo .trex-mode-icon { background: rgba(240,185,11,0.08); }
+      .trex-mode-server .trex-mode-icon { background: rgba(59,130,246,0.08); }
+      .trex-mode-demo:hover .trex-mode-icon, .trex-mode-demo.selected .trex-mode-icon { background: rgba(240,185,11,0.14); }
+      .trex-mode-server:hover .trex-mode-icon, .trex-mode-server.selected .trex-mode-icon { background: rgba(59,130,246,0.14); }
+      .trex-mode-icon svg { width: 22px; height: 22px; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .trex-mode-demo .trex-mode-icon svg { stroke: #f0b90b; }
+      .trex-mode-server .trex-mode-icon svg { stroke: #60a5fa; }
+
+      .trex-mode-title { font-size: 14px; font-weight: 700; color: #e5e7eb; margin-bottom: 3px; }
+      .trex-mode-desc { font-size: 11px; color: #6b7280; line-height: 1.4; }
+
+      /* selected check */
+      .trex-mode-check {
+        position: absolute; top: 10px; right: 10px;
+        width: 18px; height: 18px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; transform: scale(0.5);
+        transition: all 0.18s cubic-bezier(0.34,1.56,0.64,1);
+      }
+      .trex-mode-demo .trex-mode-check { background: #f0b90b; }
+      .trex-mode-server .trex-mode-check { background: #3b82f6; }
+      .trex-mode.selected .trex-mode-check { opacity: 1; transform: scale(1); }
+      .trex-mode-check svg { width: 10px; height: 10px; stroke: #0b0e11; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* ── URL input ────────────────────────────────────────────── */
+      .trex-url-wrap {
+        max-height: 0; opacity: 0; overflow: hidden;
+        transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease, margin 0.3s;
+        margin-bottom: 0;
+      }
+      .trex-url-wrap.show { max-height: 60px; opacity: 1; margin-bottom: 12px; }
+      .trex-url-row { display: flex; align-items: center; gap: 0; }
+      .trex-url-prefix {
+        height: 44px; padding: 0 12px;
+        background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.07);
+        border-right: none; border-radius: 10px 0 0 10px;
+        font-size: 11px; font-weight: 600; color: #374151;
+        display: flex; align-items: center;
+        white-space: nowrap; font-family: 'JetBrains Mono', monospace;
+      }
+      .trex-url-input {
+        flex: 1; height: 44px;
+        background: rgba(8,12,24,0.6); border: 1.5px solid rgba(255,255,255,0.07);
+        border-radius: 0 10px 10px 0;
+        color: #e2e8f0; padding: 0 14px;
+        font-size: 13px; font-family: 'JetBrains Mono', monospace;
+        transition: all 0.2s; outline: none;
+      }
+      .trex-url-input:focus { border-color: rgba(59,130,246,0.5); background: rgba(8,12,24,0.9); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+      .trex-url-input::placeholder { color: #374151; }
+
+      /* ── Launch button ────────────────────────────────────────── */
+      .trex-launch {
+        width: 100%; height: 50px;
+        border: none; border-radius: 14px;
+        font-size: 14px; font-weight: 700; letter-spacing: 0.2px;
+        cursor: pointer;
+        position: relative; overflow: hidden;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+      }
+      .trex-launch.mode-none {
+        background: rgba(255,255,255,0.04);
+        border: 1.5px dashed rgba(255,255,255,0.1);
+        color: #374151; cursor: not-allowed;
+      }
+      .trex-launch.mode-demo {
+        background: linear-gradient(135deg, #f0b90b 0%, #fcd535 50%, #e8a800 100%);
+        color: #0b0e11;
+        box-shadow: 0 6px 22px rgba(240,185,11,0.32);
+      }
+      .trex-launch.mode-server {
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #1d4ed8 100%);
+        color: #fff;
+        box-shadow: 0 6px 22px rgba(59,130,246,0.28);
+      }
+      .trex-launch:not(:disabled):hover { transform: translateY(-1px); }
+      .trex-launch.mode-demo:hover { box-shadow: 0 10px 30px rgba(240,185,11,0.45); }
+      .trex-launch.mode-server:hover { box-shadow: 0 10px 30px rgba(59,130,246,0.38); }
       .trex-launch:active:not(:disabled) { transform: translateY(0); }
-      .trex-launch:disabled { opacity: 0.4; cursor: not-allowed; }
-      .trex-launch::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent); transition: left 0.5s; }
-      .trex-launch:hover::before { left: 100%; }
-      #trex-status { display: none; align-items: center; justify-content: center; gap: 10px; padding: 12px; margin-top: 4px; }
-      .status-spinner { width: 16px; height: 16px; border: 2.5px solid rgba(88, 166, 255, 0.2); border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+      /* shimmer sweep */
+      .trex-launch::before {
+        content: ''; position: absolute;
+        top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+        transition: left 0.55s;
+      }
+      .trex-launch:not(:disabled):hover::before { left: 100%; }
+
+      /* ── Status / hint ────────────────────────────────────────── */
+      #trex-status { display: none; align-items: center; justify-content: center; gap: 10px; padding: 10px; margin-top: 4px; }
+      .status-spinner { width: 15px; height: 15px; border: 2.5px solid rgba(59,130,246,0.2); border-top-color: #60a5fa; border-radius: 50%; animation: spin 0.75s linear infinite; }
       @keyframes spin { to { transform: rotate(360deg); } }
-      #trex-hint { text-align: center; font-size: 12px; color: #30363d; margin-top: 12px; min-height: 16px; transition: color 0.2s; }
-      .trex-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(43, 47, 54, 0.5); font-size: 11px; color: #5e6673; }
-      .trex-footer-left { display: flex; align-items: center; gap: 6px; }
-      .trex-footer-dot { width: 6px; height: 6px; border-radius: 50%; background: #0ecb81; box-shadow: 0 0 8px rgba(14, 203, 129, 0.6); animation: pulse 2s ease-in-out infinite; }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-      .trex-footer a { color: #848e9c; text-decoration: none; transition: color 0.15s; cursor: pointer; }
-      .trex-footer a:hover { color: #f0b90b; }
-      .trex-features { position: absolute; top: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
-      .trex-feature { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(15, 18, 26, 0.75); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; font-size: 11px; font-weight: 500; color: #848e9c; backdrop-filter: blur(12px); animation: featureIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-      .trex-feature:nth-child(1) { animation-delay: 0.3s; }
-      .trex-feature:nth-child(2) { animation-delay: 0.45s; }
-      .trex-feature:nth-child(3) { animation-delay: 0.6s; }
-      .trex-feature:nth-child(4) { animation-delay: 0.75s; }
-      @keyframes featureIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-      .trex-feature-dot { width: 6px; height: 6px; border-radius: 50%; background: #f0b90b; box-shadow: 0 0 6px rgba(240,185,11,0.6); flex-shrink: 0; }
-      .trex-feature-dot.green { background: #0ecb81; box-shadow: 0 0 6px rgba(14,203,129,0.6); }
-      .trex-feature-dot.blue { background: #2962FF; box-shadow: 0 0 6px rgba(41,98,255,0.6); }
-      .trex-feature-dot.red { background: #f23645; box-shadow: 0 0 6px rgba(242,54,69,0.6); }
-      @media (max-width: 640px) { .trex-features { display: none; } }
-      .trex-watermark { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #30363d; letter-spacing: 2px; z-index: 2; }
+      #trex-hint { text-align: center; font-size: 11.5px; color: #1f2937; margin-top: 10px; min-height: 16px; transition: color 0.2s; }
+
+      /* ── Footer ───────────────────────────────────────────────── */
+      .trex-footer {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-top: 20px; padding-top: 16px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        font-size: 11px; color: #374151;
+      }
+      .trex-footer-left { display: flex; align-items: center; gap: 7px; }
+      .trex-footer-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: #0ecb81; box-shadow: 0 0 8px rgba(14,203,129,0.6);
+        animation: pulseDot 2.5s ease-in-out infinite;
+      }
+      @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+      .trex-footer-link { color: #4b5563; text-decoration: none; transition: color 0.15s; cursor: pointer; }
+      .trex-footer-link:hover { color: #f0b90b; }
+
+      /* ── Watermark ────────────────────────────────────────────── */
+      .trex-watermark {
+        position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+        font-size: 9px; font-weight: 700; letter-spacing: 0.25em;
+        color: rgba(255,255,255,0.04); z-index: 2; white-space: nowrap;
+        text-transform: uppercase;
+      }
     </style>
   </head>
   <body>
     <div id="trex-loader">
-      <div class="trex-features">
-        <div class="trex-feature"><span class="trex-feature-dot"></span><span>60 FPS Rendering</span></div>
-        <div class="trex-feature"><span class="trex-feature-dot green"></span><span>Real-time WebSocket</span></div>
-        <div class="trex-feature"><span class="trex-feature-dot blue"></span><span>14 Drawing Tools</span></div>
-        <div class="trex-feature"><span class="trex-feature-dot red"></span><span>Advanced Backtesting</span></div>
+      <!-- Background layers -->
+      <div class="bg-layer bg-base"></div>
+      <div class="bg-layer bg-orb-gold"></div>
+      <div class="bg-layer bg-orb-teal"></div>
+      <div class="bg-layer bg-orb-blue"></div>
+      <div class="bg-layer bg-grid"></div>
+
+      <!-- Decorative chart sparkline in background -->
+      <div class="bg-chart">
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="0,600 80,580 160,540 240,560 320,480 400,500 480,440 560,420 640,460 720,380 800,340 880,360 960,300 1040,320 1120,260 1200,240 1280,200 1360,180 1440,160" fill="none" stroke="url(#spark-grad)" stroke-width="2"/>
+          <defs>
+            <linearGradient id="spark-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#f0b90b" stop-opacity="0"/>
+              <stop offset="40%" stop-color="#f0b90b" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#00c987" stop-opacity="0.5"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
+
+      <!-- Feature badges -->
+      <div class="trex-badges">
+        <div class="trex-badge"><span class="badge-dot bd-gold"></span>60 FPS Rendering</div>
+        <div class="trex-badge"><span class="badge-dot bd-green"></span>Real-time WebSocket</div>
+        <div class="trex-badge"><span class="badge-dot bd-blue"></span>30+ Drawing Tools</div>
+        <div class="trex-badge"><span class="badge-dot bd-rose"></span>Advanced Backtesting</div>
+      </div>
+
+      <!-- Main card -->
       <div class="trex-card">
-        <div class="trex-logo">
+        <!-- Brand -->
+        <div class="trex-header">
           <div class="trex-logo-icon">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="3,17 9,11 13,15 21,7" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17,7 21,7 21,11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <polyline points="3,17 9,11 13,15 21,7"/>
+              <polyline points="17,7 21,7 21,11"/>
+            </svg>
           </div>
-          <div class="trex-logo-text">TREX</div>
+          <div class="trex-brand">
+            <div class="trex-brand-name">TREX Terminal</div>
+            <div class="trex-brand-sub">Professional Chart Engine</div>
+          </div>
         </div>
-        <div class="trex-tagline">Professional <strong>Trading Terminal</strong> — Built for speed</div>
+
+        <div class="trex-divider"></div>
+
+        <!-- Mode selection -->
+        <div class="trex-section-label">Choose your data source</div>
         <div class="trex-modes" id="trex-modes">
-          <div class="trex-mode" data-mode="demo" id="trex-mode-demo">
-            <div class="trex-mode-icon"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="currentColor" fill-opacity="0.3"/></svg></div>
+          <!-- Demo -->
+          <div class="trex-mode trex-mode-demo" id="trex-mode-demo">
+            <div class="trex-mode-check">
+              <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+            </div>
+            <div class="trex-mode-badge">
+              <span style="width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 4px currentColor;"></span>
+              Instant
+            </div>
+            <div class="trex-mode-icon">
+              <svg viewBox="0 0 24 24" stroke="#f0b90b">
+                <polygon points="5,3 19,12 5,21" fill="rgba(240,185,11,0.18)"/>
+              </svg>
+            </div>
             <div class="trex-mode-title">Demo Mode</div>
-            <div class="trex-mode-desc">Explore with simulated live data</div>
+            <div class="trex-mode-desc">Simulated live data, no setup needed</div>
           </div>
-          <div class="trex-mode" data-mode="server" id="trex-mode-server">
-            <div class="trex-mode-icon"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div>
+
+          <!-- Server -->
+          <div class="trex-mode trex-mode-server" id="trex-mode-server">
+            <div class="trex-mode-check">
+              <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+            </div>
+            <div class="trex-mode-badge">
+              <span style="width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 4px currentColor;"></span>
+              Live
+            </div>
+            <div class="trex-mode-icon">
+              <svg viewBox="0 0 24 24" stroke="#60a5fa">
+                <rect x="2" y="3" width="20" height="7" rx="2" fill="rgba(59,130,246,0.12)"/>
+                <rect x="2" y="14" width="20" height="7" rx="2" fill="rgba(59,130,246,0.12)"/>
+                <circle cx="6" cy="6.5" r="1" fill="#60a5fa" stroke="none"/>
+                <circle cx="6" cy="17.5" r="1" fill="#60a5fa" stroke="none"/>
+              </svg>
+            </div>
             <div class="trex-mode-title">Server Mode</div>
-            <div class="trex-mode-desc">Connect to your WebSocket server</div>
+            <div class="trex-mode-desc">Connect to your WebSocket backend</div>
           </div>
         </div>
+
+        <!-- WebSocket URL (only when server selected) -->
         <div class="trex-url-wrap" id="trex-url-wrap">
-          <input id="trex-ws-url" class="trex-url-input" type="text" placeholder="ws://localhost:8765" value="ws://localhost:8765" spellcheck="false" />
+          <div class="trex-url-row">
+            <div class="trex-url-prefix">WS ://</div>
+            <input id="trex-ws-url" class="trex-url-input" type="text" placeholder="localhost:8765" value="localhost:8765" spellcheck="false" />
+          </div>
         </div>
-        <div id="trex-actions">
-          <button class="trex-launch" id="trex-launch-btn" disabled><span id="trex-launch-text">Select a mode to continue</span></button>
-        </div>
+
+        <!-- Launch -->
+        <button class="trex-launch mode-none" id="trex-launch-btn" disabled>
+          <span id="trex-launch-text">Select a mode above</span>
+        </button>
+
         <div id="trex-status"></div>
-        <div id="trex-hint">Choose a mode to get started</div>
+        <div id="trex-hint">High-performance terminal · TradingView-grade engine</div>
+
+        <!-- Footer -->
         <div class="trex-footer">
-          <div class="trex-footer-left"><div class="trex-footer-dot"></div><span>v1.0.0 · TradingView-grade Engine</span></div>
-          <a href="#" id="trex-docs-link" onclick="window.__trexAction='docs'; return false;">📖 API Docs</a>
+          <div class="trex-footer-left">
+            <div class="trex-footer-dot"></div>
+            <span>v1.0 · WebSocket Protocol</span>
+          </div>
+          <a class="trex-footer-link" href="#" id="trex-docs-link" onclick="window.__trexAction='docs'; return false;">
+            📖 API Docs
+          </a>
         </div>
       </div>
-      <div class="trex-watermark">TREX TERMINAL</div>
+
+      <div class="trex-watermark">TREX TRADING TERMINAL</div>
     </div>
 
     <div id="root"></div>
@@ -123,36 +461,46 @@
       window.__trexWsUrl = null;
       (function() {
         let selectedMode = null;
-        const modeDemo = document.getElementById('trex-mode-demo');
+        const modeDemo   = document.getElementById('trex-mode-demo');
         const modeServer = document.getElementById('trex-mode-server');
-        const urlWrap = document.getElementById('trex-url-wrap');
-        const urlInput = document.getElementById('trex-ws-url');
-        const launchBtn = document.getElementById('trex-launch-btn');
+        const urlWrap    = document.getElementById('trex-url-wrap');
+        const urlInput   = document.getElementById('trex-ws-url');
+        const launchBtn  = document.getElementById('trex-launch-btn');
         const launchText = document.getElementById('trex-launch-text');
 
         function selectMode(mode) {
           selectedMode = mode;
           modeDemo.classList.toggle('selected', mode === 'demo');
           modeServer.classList.toggle('selected', mode === 'server');
+
           if (mode === 'server') {
             urlWrap.classList.add('show');
-            launchText.textContent = '🔌 Connect to Server';
-            setTimeout(() => urlInput.focus(), 300);
+            launchBtn.className = 'trex-launch mode-server';
+            launchText.textContent = '⚡ Connect to Server';
+            setTimeout(() => urlInput.focus(), 280);
           } else {
             urlWrap.classList.remove('show');
+            launchBtn.className = 'trex-launch mode-demo';
             launchText.textContent = '🚀 Launch Demo';
           }
           launchBtn.disabled = false;
         }
+
         modeDemo.addEventListener('click', () => selectMode('demo'));
         modeServer.addEventListener('click', () => selectMode('server'));
-        urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && selectedMode === 'server') { launchBtn.click(); } });
+        urlInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && selectedMode === 'server') launchBtn.click();
+        });
+
         launchBtn.addEventListener('click', () => {
           if (!selectedMode) return;
+          const rawUrl = urlInput.value.trim() || 'localhost:8765';
+          const wsUrl = rawUrl.startsWith('ws://') || rawUrl.startsWith('wss://')
+            ? rawUrl : 'ws://' + rawUrl;
           window.__trexAction = selectedMode;
-          window.__trexWsUrl = urlInput.value.trim() || 'ws://localhost:8765';
+          window.__trexWsUrl = wsUrl;
           launchBtn.disabled = true;
-          launchText.textContent = selectedMode === 'demo' ? 'Loading demo...' : 'Connecting...';
+          launchText.textContent = selectedMode === 'demo' ? 'Loading…' : 'Connecting…';
         });
       })();
     </script>

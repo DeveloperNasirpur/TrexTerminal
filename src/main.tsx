@@ -85,8 +85,7 @@ function Router() {
     }
     if (action === "server") {
       if (pollTimerRef.current) { cancelAnimationFrame(pollTimerRef.current); pollTimerRef.current = null; }
-      const urlInput = document.getElementById("trex-ws-url") as HTMLInputElement | null;
-      const url = urlInput?.value?.trim() || "ws://localhost:8765";
+      const url = window.__trexWsUrl || "ws://localhost:8765";
       window.__trexWsUrl = url;
       setLoaderStatus("connecting", `Connecting to ${url}...`);
 
