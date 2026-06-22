@@ -354,6 +354,120 @@ export function calcVWAP(candles: OHLC[]): PointData[] {
   return result;
 }
 
+export function calcCCI(candles: OHLC[], period: number = 20): PointData[] {
+  const result: PointData[] = [];
+  for (let i = period - 1; i < candles.length; i++) {
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += (candles[j].high + candles[j].low + candles[j].close) / 3;
+    const mean = sum / period;
+    let mad = 0;
+    for (let j = i - period + 1; j <= i; j++) mad += Math.abs((candles[j].high + candles[j].low + candles[j].close) / 3 - mean);
+    mad /= period;
+    const tp = (candles[i].high + candles[i].low + candles[i].close) / 3;
+    result.push({ time: candles[i].time, value: mad === 0 ? 0 : (tp - mean) / (0.015 * mad) });
+  }
+  return result;
+}
+
+export function calcWilliamsR(candles: OHLC[], period: number = 14): PointData[] {
+  const result: PointData[] = [];
+  for (let i = period - 1; i < candles.length; i++) {
+    let hh = -Infinity, ll = Infinity;
+    for (let j = i - period + 1; j <= i; j++) {
+      if (candles[j].high > hh) hh = candles[j].high;
+      if (candles[j].low < ll) ll = candles[j].low;
+    }
+    const range = hh - ll;
+    result.push({ time: candles[i].time, value: range === 0 ? -50 : ((hh - candles[i].close) / range) * -100 });
+  }
+  return result;
+}
+
+export function calcOBV(candles: OHLC[]): PointData[] {
+  const result: PointData[] = [];
+  let obv = 0;
+  for (let i = 0; i < candles.length; i++) {
+    if (i > 0) {
+      const v = candles[i].volume ?? 0;
+      if (candles[i].close > candles[i - 1].close) obv += v;
+      else if (candles[i].close < candles[i - 1].close) obv -= v;
+    }
+    result.push({ time: candles[i].time, value: obv });
+  }
+  return result;
+}
+
+export function calcMomentum(candles: OHLC[], period: number = 10): PointData[] {
+  const result: PointData[] = [];
+  for (let i = period; i < candles.length; i++) {
+    result.push({ time: candles[i].time, value: candles[i].close - candles[i - period].close });
+  }
+  return result;
+}
+
+export function calcDonchian(candles: OHLC[], period: number = 20): { upper: PointData[]; mid: PointData[]; lower: PointData[] } {
+  const upper: PointData[] = [], mid: PointData[] = [], lower: PointData[] = [];
+  for (let i = period - 1; i < candles.length; i++) {
+    let hh = -Infinity, ll = Infinity;
+    for (let j = i - period + 1; j <= i; j++) {
+      if (candles[j].high > hh) hh = candles[j].high;
+      if (candles[j].low < ll) ll = candles[j].low;
+    }
+    upper.push({ time: candles[i].time, value: hh });
+    lower.push({ time: candles[i].time, value: ll });
+    mid.push({ time: candles[i].time, value: (hh + ll) / 2 });
+  }
+  return { upper, mid, lower };
+}
+
+export function calcADX(candles: OHLC[], period: number = 14): { adx: PointData[]; pdi: PointData[]; mdi: PointData[] } {
+  const adx: PointData[] = [], pdi: PointData[] = [], mdi: PointData[] = [];
+  if (candles.length < period + 1) return { adx, pdi, mdi };
+  let smoothTR = 0, smoothPDM = 0, smoothMDM = 0;
+  for (let i = 1; i <= period; i++) {
+    const c = candles[i], p = candles[i - 1];
+    const tr = Math.max(c.high - c.low, Math.abs(c.high - p.close), Math.abs(c.low - p.close));
+    const pdm = Math.max(c.high - p.high, 0);
+    const mdm = Math.max(p.low - c.low, 0);
+    smoothTR += tr; smoothPDM += pdm; smoothMDM += mdm;
+  }
+  let smoothDX = 0;
+  const dxArr: number[] = [];
+  for (let i = period + 1; i < candles.length; i++) {
+    const c = candles[i], p = candles[i - 1];
+    const tr = Math.max(c.high - c.low, Math.abs(c.high - p.close), Math.abs(c.low - p.close));
+    const pdm = Math.max(c.high - p.high, 0);
+    const mdm = Math.max(p.low - c.low, 0);
+    smoothTR = smoothTR - smoothTR / period + tr;
+    smoothPDM = smoothPDM - smoothPDM / period + pdm;
+    smoothMDM = smoothMDM - smoothMDM / period + mdm;
+    const diP = smoothTR === 0 ? 0 : (smoothPDM / smoothTR) * 100;
+    const diM = smoothTR === 0 ? 0 : (smoothMDM / smoothTR) * 100;
+    const dx = diP + diM === 0 ? 0 : (Math.abs(diP - diM) / (diP + diM)) * 100;
+    dxArr.push(dx);
+    pdi.push({ time: candles[i].time, value: diP });
+    mdi.push({ time: candles[i].time, value: diM });
+    if (dxArr.length < period) continue;
+    if (dxArr.length === period) {
+      smoothDX = dxArr.reduce((a, b) => a + b, 0) / period;
+      adx.push({ time: candles[i].time, value: smoothDX });
+    } else {
+      smoothDX = (smoothDX * (period - 1) + dx) / period;
+      adx.push({ time: candles[i].time, value: smoothDX });
+    }
+  }
+  return { adx, pdi, mdi };
+}
+
+export function calcROC(candles: OHLC[], period: number = 12): PointData[] {
+  const result: PointData[] = [];
+  for (let i = period; i < candles.length; i++) {
+    const prev = candles[i - period].close;
+    result.push({ time: candles[i].time, value: prev === 0 ? 0 : ((candles[i].close - prev) / prev) * 100 });
+  }
+  return result;
+}
+
 // ── Generic calc engine (Indicator Builder recipes) ─────────────
 
 function smaArr(src: number[], period: number): (number | null)[] {
@@ -564,6 +678,91 @@ export const INDICATOR_REGISTRY: IndicatorSpec[] = [
     id: "atr", label: "ATR (14)", group: "Volatility", search: "atr average true range volatility 14",
     makeDefs: () => [subLine("atr", "ATR (14)", "atr_pane", "#B71C1C", { lineWidth: 2, digits: 4 })],
     compute: (c) => ({ atr: calcATR(c, 14) }),
+  },
+  {
+    id: "ema200", label: "EMA 200", group: "Overlay", search: "ema exponential moving average 200 trend",
+    makeDefs: () => [mainOverlay("ema200", "EMA 200", "#F06292", { lineWidth: 2 })],
+    compute: (c) => ({ ema200: calcEMA(c, 200) }),
+  },
+  {
+    id: "cci", label: "CCI (20)", group: "Oscillator", search: "cci commodity channel index 20 oscillator",
+    makeDefs: () => [
+      subLine("cci", "CCI (20)", "cci_pane", "#00BCD4", {
+        lineWidth: 2,
+        levels: [
+          { value: 100, color: "#EF5350", lineStyle: 2, label: "+100" },
+          { value: 0, color: "#454560", lineStyle: 2, label: "" },
+          { value: -100, color: "#26A69A", lineStyle: 2, label: "-100" },
+        ],
+      }),
+    ],
+    compute: (c) => ({ cci: calcCCI(c, 20) }),
+  },
+  {
+    id: "williams_r", label: "Williams %R (14)", group: "Oscillator", search: "williams percent r wr oscillator 14",
+    makeDefs: () => [
+      subLine("williams_r", "Williams %R", "wr_pane", "#FF7043", {
+        lineWidth: 2,
+        levels: [
+          { value: -20, color: "#EF5350", lineStyle: 2, label: "-20" },
+          { value: -50, color: "#454560", lineStyle: 2, label: "" },
+          { value: -80, color: "#26A69A", lineStyle: 2, label: "-80" },
+        ],
+      }),
+    ],
+    compute: (c) => ({ williams_r: calcWilliamsR(c, 14) }),
+  },
+  {
+    id: "obv", label: "OBV", group: "Volume", search: "obv on balance volume",
+    makeDefs: () => [subLine("obv", "OBV", "obv_pane", "#7E57C2", { lineWidth: 2 })],
+    compute: (c) => ({ obv: calcOBV(c) }),
+  },
+  {
+    id: "momentum", label: "Momentum (10)", group: "Oscillator", search: "momentum mom rate of change 10",
+    makeDefs: () => [
+      subLine("momentum", "Momentum (10)", "mom_pane", "#66BB6A", {
+        lineWidth: 2,
+        levels: [{ value: 0, color: "#454560", lineStyle: 2, label: "" }],
+      }),
+    ],
+    compute: (c) => ({ momentum: calcMomentum(c, 10) }),
+  },
+  {
+    id: "donchian", label: "Donchian Channel (20)", group: "Volatility", search: "donchian channel breakout 20",
+    makeDefs: () => [
+      mainOverlay("dc_upper", "DC Upper", "rgba(255,167,38,0.55)", { paneId: "dc", lineStyle: 2 }),
+      mainOverlay("dc_mid", "DC Mid", "rgba(255,167,38,0.3)", { paneId: "dc", lineStyle: 1 }),
+      mainOverlay("dc_lower", "DC Lower", "rgba(255,167,38,0.55)", { paneId: "dc", lineStyle: 2 }),
+    ],
+    compute: (c) => {
+      const d = calcDonchian(c, 20);
+      return { dc_upper: d.upper, dc_mid: d.mid, dc_lower: d.lower };
+    },
+  },
+  {
+    id: "adx", label: "ADX (14)", group: "Oscillator", search: "adx average directional index trend strength 14",
+    makeDefs: () => [
+      subLine("adx", "ADX", "adx_pane", "#FFCA28", {
+        lineWidth: 2,
+        levels: [{ value: 25, color: "#454560", lineStyle: 2, label: "25" }],
+      }),
+      subLine("adx_pdi", "+DI", "adx_pane", "#26A69A"),
+      subLine("adx_mdi", "-DI", "adx_pane", "#EF5350"),
+    ],
+    compute: (c) => {
+      const a = calcADX(c, 14);
+      return { adx: a.adx, adx_pdi: a.pdi, adx_mdi: a.mdi };
+    },
+  },
+  {
+    id: "roc", label: "ROC (12)", group: "Oscillator", search: "roc rate of change momentum 12",
+    makeDefs: () => [
+      subLine("roc", "ROC (12)", "roc_pane", "#26C6DA", {
+        lineWidth: 2,
+        levels: [{ value: 0, color: "#454560", lineStyle: 2, label: "" }],
+      }),
+    ],
+    compute: (c) => ({ roc: calcROC(c, 12) }),
   },
 ];
 

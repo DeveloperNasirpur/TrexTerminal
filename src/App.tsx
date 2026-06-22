@@ -1814,7 +1814,7 @@ function IndicatorsModal(props: {
         if (!specs.length) return null;
         return (
           <div key={g} className="mb-2">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">{g}</div>
+            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]"><span style={{ width: 7, height: 7, borderRadius: "50%", background: ({ Overlay: "#26A69A", Oscillator: "#AB47BC", Volatility: "#FF9800", Volume: "#42A5F5" } as Record<string,string>)[g], display: "inline-block", flexShrink: 0 }} />{g}<span style={{ marginInlineStart: "auto", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>{specs.length}</span></div>
             {specs.map((s) => {
               const on = props.activeIds.includes(s.id);
               return (
