@@ -125,6 +125,18 @@ import {
 const cn = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
+// Inject keyframes needed by the skeleton/connecting overlay (must be present
+// even before BtPanel mounts, so defined here rather than in BtPanel's style tag).
+if (typeof document !== "undefined" && !document.getElementById("trex-app-anim")) {
+  const s = document.createElement("style");
+  s.id = "trex-app-anim";
+  s.textContent = `
+    @keyframes bt-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes bt-shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+  `;
+  document.head.appendChild(s);
+}
+
 /** Locale-proof "1,234.56" formatter — never throws inside chart callbacks. */
 const fmtNum = (v: number, digits = 2) => {
   if (!Number.isFinite(v)) return "—";
@@ -2674,7 +2686,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
       saveWorkspace({ symbol, timeframe, chartType, settings, favorites, layout, compareSymbols, wsUrl: settings.wsUrl, lastMode: mode as "demo" | "server" });
     }, 400);
     return () => window.clearTimeout(id);
-  }, [symbol, timeframe, chartType, settings, favorites, layout, compareSymbols]);
+  }, [symbol, timeframe, chartType, settings, favorites, layout, compareSymbols, mode]);
 
   const [hint, setHint] = useState("");
   const [selection, setSelection] = useState<SelectionMeta | null>(null);

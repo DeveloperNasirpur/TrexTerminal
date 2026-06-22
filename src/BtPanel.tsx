@@ -363,12 +363,20 @@ function useSort<T>(items: T[], defaultCol: string, cols: Record<string, (a: T) 
   const [col, setCol] = useState<string | null>(null);
   const [dir, setDir] = useState<SortDir>(null);
 
+  const colRef = useRef<string | null>(null);
+  const dirRef = useRef<SortDir>(null);
+  colRef.current = col;
+  dirRef.current = dir;
+
   const toggle = useCallback((c: string) => {
-    setCol(prev => {
-      if (prev !== c) { setDir("desc"); return c; }
-      setDir(d => d === "desc" ? "asc" : d === "asc" ? null : "desc");
-      return c;
-    });
+    if (colRef.current !== c) {
+      setCol(c);
+      setDir("desc");
+    } else {
+      const next: SortDir = dirRef.current === "desc" ? "asc" : dirRef.current === "asc" ? null : "desc";
+      setDir(next);
+      if (next === null) setCol(null);
+    }
   }, []);
 
   const sorted = useMemo(() => {
