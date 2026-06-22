@@ -8,11 +8,11 @@
 // Authoring stays on a 24-unit viewBox; only the rendered size and
 // stroke weight change so every glyph carries TV's optical weight.
 const s = {
-  width: 20,
-  height: 20,
+  width: 22,
+  height: 22,
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 1.4,
+  strokeWidth: 1.5,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
   // Icons are decorative — the surrounding button carries the accessible
