@@ -264,7 +264,7 @@
         <div class="o o3"></div>
         <div class="o o4"></div>
         <div class="chart-deco">
-          <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" pointer-events="none" style="pointer-events:none">
             <defs>
               <!-- price area gradient -->
               <linearGradient id="areag" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -411,14 +411,20 @@
               points="255,530 340,505 470,468 595,408 715,348 840,298 965,258 1095,215 1270,172 1400,138"
               fill="none" stroke="#f0b90b" stroke-width="1.2" stroke-opacity=".25" stroke-dasharray="none" stroke-linecap="round" stroke-linejoin="round"/>
 
-            <!-- ── Fade edges so it blends into bg ── -->
-            <rect x="0" y="0" width="160" height="900" fill="url(#fade-l)"/>
-            <rect x="1280" y="0" width="160" height="900" fill="url(#fade-r)"/>
+            <!-- ── Fade: cover left half completely, fade right edge, top/bottom ── -->
+            <!-- Left half solid cover (no chart behind text) -->
+            <rect x="0" y="0" width="800" height="900" fill="url(#fade-left-half)"/>
+            <!-- Right edge fade -->
+            <rect x="1320" y="0" width="120" height="900" fill="url(#fade-r)"/>
+            <!-- Top fade -->
             <rect x="0" y="0" width="1440" height="120" fill="url(#fade-t)"/>
+            <!-- Bottom fade -->
             <rect x="0" y="760" width="1440" height="140" fill="url(#fade-b)"/>
             <defs>
-              <linearGradient id="fade-l" x1="0%" y1="0%" x2="100%" y2="0%">
+              <!-- covers full left half, fades to transparent around center -->
+              <linearGradient id="fade-left-half" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stop-color="#0d1117" stop-opacity="1"/>
+                <stop offset="65%" stop-color="#0d1117" stop-opacity="1"/>
                 <stop offset="100%" stop-color="#0d1117" stop-opacity="0"/>
               </linearGradient>
               <linearGradient id="fade-r" x1="0%" y1="0%" x2="100%" y2="0%">
