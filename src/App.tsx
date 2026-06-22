@@ -418,13 +418,13 @@ const TOOL_META: Record<DrawingTool, ToolMeta> = {
 };
 
 /** Left-rail groups — each remembers the last-used tool (TV behavior). */
-const TOOL_GROUPS: { id: string; tools: DrawingTool[] }[] = [
-  { id: "pointer",  tools: ["cursor", "crosshair"] },
-  { id: "lines",    tools: ["trendline", "ray", "extended", "horizontal", "vertical", "polyline", "arrow"] },
-  { id: "fib",      tools: ["fibRetracement", "fibExtension"] },
-  { id: "shapes",   tools: ["rectangle", "ellipse", "parallelChannel"] },
-  { id: "annotate", tools: ["text", "measure"] },
-  { id: "position", tools: ["longPosition", "shortPosition"] },
+const TOOL_GROUPS: { id: string; tools: DrawingTool[]; color: string; glow: string }[] = [
+  { id: "pointer",  tools: ["cursor", "crosshair"],                                                    color: "#94A3B8", glow: "rgba(148,163,184,0.25)" },
+  { id: "lines",    tools: ["trendline", "ray", "extended", "horizontal", "vertical", "polyline", "arrow"], color: "#60A5FA", glow: "rgba(96,165,250,0.28)" },
+  { id: "fib",      tools: ["fibRetracement", "fibExtension"],                                          color: "#FBBF24", glow: "rgba(251,191,36,0.28)" },
+  { id: "shapes",   tools: ["rectangle", "ellipse", "parallelChannel"],                                 color: "#34D399", glow: "rgba(52,211,153,0.28)" },
+  { id: "annotate", tools: ["text", "measure"],                                                         color: "#C084FC", glow: "rgba(192,132,252,0.28)" },
+  { id: "position", tools: ["longPosition", "shortPosition"],                                           color: "#F87171", glow: "rgba(248,113,113,0.28)" },
 ];
 
 const CHART_TYPE_ICON: Record<ChartType, ReactNode> = {
@@ -1065,7 +1065,7 @@ function LeftBar(props: {
   };
 
   return (
-    <div className="nb-leftbar relative z-30 flex w-[46px] shrink-0 flex-col items-center border-r bg-[#0D1120] pt-2 pb-1">
+    <div className="nb-leftbar relative z-30 flex w-[52px] shrink-0 flex-col items-center border-r bg-[#0D1120] pt-2 pb-1">
       {TOOL_GROUPS.map((g, gi) => {
         const current = lastUsed[g.id];
         const meta = TOOL_META[current];
@@ -1073,75 +1073,87 @@ function LeftBar(props: {
         const dividerBefore = g.id === "lines" || g.id === "fib" || g.id === "position";
         return (
           <Fragment key={g.id}>
-            {dividerBefore && <div className="trex-lb-div" />}
-            <div className="relative">
-            <button
-              type="button"
-              data-tip={meta.label + (meta.shortcut ? ` (${meta.shortcut})` : "")}
-              data-tip-pos="right"
-              aria-label={meta.label}
-              onClick={() => { props.onTool(current); setFlyout(null); }}
-              onContextMenu={(e) => { e.preventDefault(); if (g.tools.length > 1) setFlyout(g.id); }}
-              className={cn(
-                "trex-tool-btn relative flex h-[36px] w-[36px] items-center justify-center transition-all duration-150",
-                activeInGroup
-                  ? "trex-tool-active"
-                  : "text-[#6B7280] hover:text-[#C9D1E0]"
-              )}
-            >
-              {meta.icon}
-              {g.tools.length > 1 && (
-                <span
-                  role="button"
-                  aria-label={`More ${g.id} tools`}
-                  onClick={(e) => { e.stopPropagation(); setFlyout(flyout === g.id ? null : g.id); }}
-                  className="absolute bottom-[3px] right-[3px] flex h-[8px] w-[8px] items-end justify-end opacity-40 hover:opacity-80"
-                >
-                  <span className="h-0 w-0 border-b-[4px] border-l-[4px] border-b-[#9598A1] border-l-transparent" />
-                </span>
-              )}
-            </button>
-
-            {flyout === g.id && (
-              <div
-                ref={flyoutRef}
-                className="trex-menu absolute left-[40px] z-50 min-w-[200px] rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl shadow-black/50"
-                style={{ top: Math.min(0, -gi * 4) }}
-              >
-                {g.tools.map((t) => {
-                  const m = TOOL_META[t];
-                  const isFav = favorites.includes(t);
-                  return (
-                    <div key={t} className="group/mi flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => pick(g.id, t)}
-                        className={cn(
-                          "flex flex-1 items-center gap-3 px-3 py-[7px] text-left text-[12.5px]",
-                          "text-[#D1D4DC] transition-colors hover:bg-[#2A2E39]",
-                          props.tool === t && "text-[#2962FF]"
-                        )}
-                      >
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center opacity-80">{m.icon}</span>
-                        <span className="flex-1 truncate">{m.label}</span>
-                        {m.shortcut && <span className="text-[11px] text-[#787B86]">{m.shortcut}</span>}
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(t); }}
-                        className={cn(
-                          "mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors hover:bg-[#363A45]",
-                          isFav ? "text-[#FCD535] opacity-100" : "text-[#787B86] opacity-50 hover:opacity-100"
-                        )}
-                      >
-                        <span className="h-3.5 w-3.5"><IconStar filled={isFav} /></span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+            {dividerBefore && (
+              <div className="trex-lb-div" style={{ "--lb-color": g.color } as React.CSSProperties} />
             )}
+            <div className="relative">
+              <button
+                type="button"
+                data-tip={meta.label + (meta.shortcut ? ` (${meta.shortcut})` : "")}
+                data-tip-pos="right"
+                aria-label={meta.label}
+                onClick={() => { props.onTool(current); setFlyout(null); }}
+                onContextMenu={(e) => { e.preventDefault(); if (g.tools.length > 1) setFlyout(g.id); }}
+                style={activeInGroup ? {
+                  color: g.color,
+                  background: `linear-gradient(135deg, ${g.glow.replace("0.28","0.18")} 0%, ${g.glow.replace("0.28","0.08")} 100%)`,
+                  boxShadow: `inset 2.5px 0 0 ${g.color}, 0 0 0 1px ${g.glow.replace("0.28","0.22")}, 0 0 18px ${g.glow}`,
+                } : { color: "#5A6478" }}
+                className={cn(
+                  "trex-tool-btn relative flex h-[38px] w-[40px] items-center justify-center transition-all duration-150 rounded-[8px]",
+                  !activeInGroup && "hover:bg-[rgba(255,255,255,0.07)]"
+                )}
+                onMouseEnter={e => { if (!activeInGroup) (e.currentTarget as HTMLElement).style.color = g.color; }}
+                onMouseLeave={e => { if (!activeInGroup) (e.currentTarget as HTMLElement).style.color = "#5A6478"; }}
+              >
+                {/* active pulse dot */}
+                {activeInGroup && (
+                  <span className="trex-lb-pulse" style={{ background: g.color }} />
+                )}
+                {meta.icon}
+                {g.tools.length > 1 && (
+                  <span
+                    role="button"
+                    aria-label={`More ${g.id} tools`}
+                    onClick={(e) => { e.stopPropagation(); setFlyout(flyout === g.id ? null : g.id); }}
+                    className="absolute bottom-[3px] right-[3px] flex h-[8px] w-[8px] items-end justify-end opacity-30 hover:opacity-70"
+                  >
+                    <span className="h-0 w-0 border-b-[4px] border-l-[4px] border-b-[#9598A1] border-l-transparent" />
+                  </span>
+                )}
+              </button>
+
+              {flyout === g.id && (
+                <div
+                  ref={flyoutRef}
+                  className="trex-menu absolute left-[44px] z-50 min-w-[200px] rounded-md border border-[rgba(255,255,255,0.08)] bg-[#111827] py-1 shadow-xl shadow-black/50"
+                  style={{ top: Math.min(0, -gi * 4) }}
+                >
+                  {g.tools.map((t) => {
+                    const m = TOOL_META[t];
+                    const isFav = favorites.includes(t);
+                    return (
+                      <div key={t} className="group/mi flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => pick(g.id, t)}
+                          className={cn(
+                            "flex flex-1 items-center gap-3 px-3 py-[7px] text-left text-[12.5px]",
+                            "text-[#D1D4DC] transition-colors hover:bg-[#2A2E39]",
+                            props.tool === t && "font-semibold"
+                          )}
+                          style={props.tool === t ? { color: g.color } : {}}
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center opacity-75" style={props.tool === t ? { color: g.color } : {}}>{m.icon}</span>
+                          <span className="flex-1 truncate">{m.label}</span>
+                          {m.shortcut && <span className="text-[11px] text-[#787B86]">{m.shortcut}</span>}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(t); }}
+                          className={cn(
+                            "mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors hover:bg-[#363A45]",
+                            isFav ? "text-[#FCD535] opacity-100" : "text-[#787B86] opacity-50 hover:opacity-100"
+                          )}
+                        >
+                          <span className="h-3.5 w-3.5"><IconStar filled={isFav} /></span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </Fragment>
         );
@@ -1150,7 +1162,7 @@ function LeftBar(props: {
       <div className="trex-lb-div" />
 
       <div className="trex-lb-magnet">
-        <IconBtn tip="Magnet mode (M)" tipPos="right" active={props.magnet} onClick={props.onToggleMagnet} className="h-[36px] w-[36px] !rounded-[7px]">
+        <IconBtn tip="Magnet mode (M)" tipPos="right" active={props.magnet} onClick={props.onToggleMagnet} className="h-[38px] w-[40px] !rounded-[8px]">
           <IconMagnet />
         </IconBtn>
       </div>
@@ -1158,32 +1170,13 @@ function LeftBar(props: {
       <div className="flex-1" />
 
       <div className="trex-lb-footer">
-        <IconBtn
-          tip={props.allLocked ? "Unlock all drawings" : "Lock all drawings"}
-          tipPos="right"
-          disabled={!props.hasDrawings}
-          onClick={props.onLockAll}
-          className="h-[36px] w-[36px] !rounded-[7px]"
-        >
+        <IconBtn tip={props.allLocked ? "Unlock all drawings" : "Lock all drawings"} tipPos="right" disabled={!props.hasDrawings} onClick={props.onLockAll} className="h-[38px] w-[40px] !rounded-[8px]">
           {props.allLocked ? <IconLock /> : <IconUnlock />}
         </IconBtn>
-        <IconBtn
-          tip={props.allHidden ? "Show all drawings" : "Hide all drawings"}
-          tipPos="right"
-          disabled={!props.hasDrawings}
-          onClick={props.onHideAll}
-          className="h-[36px] w-[36px] !rounded-[7px]"
-        >
+        <IconBtn tip={props.allHidden ? "Show all drawings" : "Hide all drawings"} tipPos="right" disabled={!props.hasDrawings} onClick={props.onHideAll} className="h-[38px] w-[40px] !rounded-[8px]">
           {props.allHidden ? <IconEyeOff /> : <IconEye />}
         </IconBtn>
-        <IconBtn
-          tip="Remove all drawings"
-          tipPos="right"
-          danger
-          disabled={!props.hasDrawings}
-          onClick={props.onClearAll}
-          className="h-[36px] w-[36px] !rounded-[7px]"
-        >
+        <IconBtn tip="Remove all drawings" tipPos="right" danger disabled={!props.hasDrawings} onClick={props.onClearAll} className="h-[38px] w-[40px] !rounded-[8px]">
           <IconTrash />
         </IconBtn>
       </div>
