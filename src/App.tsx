@@ -89,6 +89,7 @@ import {
 import {
   type WSMessage,
   type ChartSettings,
+  type CandleStyle,
   type ChartType,
   type DrawingTool,
   type DrawingStyle,
@@ -102,6 +103,7 @@ import {
   type OHLC,
   type PointData,
   DEFAULT_SETTINGS,
+  CANDLE_THEMES,
   DRAWING_COLORS,
   TIMEFRAMES,
   CHART_TYPES,
@@ -1563,8 +1565,57 @@ function ChartSettingsDialog(props: {
 }) {
   const s = props.settings;
   const set = (patch: Partial<ChartSettings>) => props.onChange({ ...s, ...patch });
+  const candleStyles: { id: CandleStyle; label: string; preview: string }[] = [
+    { id: "solid",       label: "Solid",        preview: "filled body" },
+    { id: "hollow",      label: "Hollow Up",    preview: "hollow bull / solid bear" },
+    { id: "hollow-all",  label: "Hollow All",   preview: "hollow both sides" },
+  ];
   return (
-    <Modal open={props.open} onClose={props.onClose} title="Chart settings" width={420}>
+    <Modal open={props.open} onClose={props.onClose} title="Chart settings" width={440}>
+      {/* ── Color themes ─────────────────────────────────────── */}
+      <div className="mb-3">
+        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Color themes</div>
+        <div className="flex gap-2 flex-wrap">
+          {CANDLE_THEMES.map((t) => {
+            const active = s.candleUpColor === t.up && s.candleDownColor === t.down;
+            return (
+              <button key={t.label} type="button"
+                onClick={() => set({ candleUpColor: t.up, candleDownColor: t.down, backgroundColor: t.bg, gridColor: t.grid })}
+                className="flex flex-col items-center gap-1 rounded-lg border px-3 py-2 text-[11px] transition-colors"
+                style={{ borderColor: active ? "#2962FF" : "#2A2E39", background: active ? "rgba(41,98,255,0.08)" : "#1E222D", color: active ? "#2962FF" : "#B2B5BE" }}
+              >
+                <span className="flex gap-1">
+                  <span style={{ width: 10, height: 16, borderRadius: 2, background: t.up, display: "inline-block" }} />
+                  <span style={{ width: 10, height: 16, borderRadius: 2, background: t.down, display: "inline-block" }} />
+                </span>
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Candle style ─────────────────────────────────────── */}
+      <div className="mb-3">
+        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#787B86]">Candle style</div>
+        <div className="flex gap-2">
+          {candleStyles.map((cs) => {
+            const active = (s.candleStyle ?? "solid") === cs.id;
+            return (
+              <button key={cs.id} type="button"
+                onClick={() => set({ candleStyle: cs.id })}
+                className="flex flex-1 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-[11px] transition-colors"
+                style={{ borderColor: active ? "#2962FF" : "#2A2E39", background: active ? "rgba(41,98,255,0.08)" : "#1E222D", color: active ? "#2962FF" : "#B2B5BE" }}
+              >
+                <CandleStylePreview style={cs.id} up={s.candleUpColor} down={s.candleDownColor} />
+                {cs.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Manual colors ────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-x-4">
         <Field label="Up color">
           <div className="flex items-center gap-2">
@@ -1594,6 +1645,31 @@ function ChartSettingsDialog(props: {
         <Toggle label="Show crosshair" checked={s.showCrosshair} onChange={(v) => set({ showCrosshair: v })} />
       </div>
     </Modal>
+  );
+}
+
+function CandleStylePreview({ style, up, down }: { style: CandleStyle; up: string; down: string }) {
+  const W = 28, H = 32;
+  const candles = [
+    { x: 5,  o: 22, c: 10, h: 7,  l: 26, bull: true  },
+    { x: 14, o: 12, c: 24, h: 8,  l: 28, bull: false },
+    { x: 23, o: 20, c: 10, h: 6,  l: 29, bull: true  },
+  ];
+  return (
+    <svg width={W} height={H} style={{ display: "block" }}>
+      {candles.map((c, i) => {
+        const color = c.bull ? up : down;
+        const top = Math.min(c.o, c.c), bot = Math.max(c.o, c.c), bh = Math.max(bot - top, 2);
+        const hollow = style === "hollow-all" || (style === "hollow" && c.bull);
+        return (
+          <g key={i}>
+            <line x1={c.x} y1={c.h} x2={c.x} y2={c.l} stroke={color} strokeWidth={1} strokeOpacity={0.7} />
+            <rect x={c.x - 3} y={top} width={6} height={bh} rx={0.5}
+              fill={hollow ? "none" : color} stroke={color} strokeWidth={hollow ? 1 : 0} />
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 

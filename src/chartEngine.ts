@@ -52,6 +52,7 @@ import type {
   DrawingStyle,
   DrawingTool,
   ChartSettings,
+  CandleStyle,
   ChartType,
   FibLevel,
   PositionData,
@@ -365,10 +366,28 @@ export class ChartEngine {
 
   /* ════════════════════════ series creation ═══════════════════════ */
 
+  private candleOpts(up: string, down: string, style: CandleStyle) {
+    // Wick colors slightly softer than body for cleaner look
+    const wickUp = this.hexA(up, 0.75);
+    const wickDown = this.hexA(down, 0.75);
+    switch (style) {
+      case "hollow":
+        // Bullish = hollow body (transparent fill, colored border); bearish = solid
+        return { upColor: "rgba(0,0,0,0)", downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown };
+      case "hollow-all":
+        // Both directions hollow — only border + wick visible
+        return { upColor: "rgba(0,0,0,0)", downColor: "rgba(0,0,0,0)", borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown };
+      case "solid":
+      default:
+        return { upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: wickUp, wickDownColor: wickDown };
+    }
+  }
+
   private createMainSeries(type: ChartType): AnySeries {
     const s = this.settings;
     const up = s.candleUpColor;
     const down = s.candleDownColor;
+    const style: CandleStyle = s.candleStyle ?? "solid";
     let series: AnySeries;
     switch (type) {
       case "bars":
@@ -392,11 +411,7 @@ export class ChartEngine {
       case "heikin":
       case "candles":
       default:
-        series = this.chart.addSeries(CandlestickSeries, {
-          upColor: up, downColor: down,
-          wickUpColor: up, wickDownColor: down,
-          borderUpColor: up, borderDownColor: down,
-        }, 0);
+        series = this.chart.addSeries(CandlestickSeries, this.candleOpts(up, down, style), 0);
         break;
     }
     series.applyOptions({
@@ -750,11 +765,7 @@ export class ChartEngine {
       },
     });
     if (this.chartType === "candles" || this.chartType === "heikin") {
-      this.mainSeries.applyOptions({
-        upColor: next.candleUpColor, downColor: next.candleDownColor,
-        wickUpColor: next.candleUpColor, wickDownColor: next.candleDownColor,
-        borderUpColor: next.candleUpColor, borderDownColor: next.candleDownColor,
-      });
+      this.mainSeries.applyOptions(this.candleOpts(next.candleUpColor, next.candleDownColor, next.candleStyle ?? "solid"));
     } else if (this.chartType === "bars") {
       this.mainSeries.applyOptions({ upColor: next.candleUpColor, downColor: next.candleDownColor });
     }

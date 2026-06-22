@@ -260,6 +260,8 @@ export const DEFAULT_DRAWING_STYLE: DrawingStyle = {
 
 export type ConnectionMode = "demo" | "server";
 
+export type CandleStyle = "solid" | "hollow" | "hollow-all";
+
 export interface ChartSettings {
   wsUrl: string;
   mode: ConnectionMode;
@@ -272,6 +274,7 @@ export interface ChartSettings {
   candleDownColor: string;
   backgroundColor: string;
   gridColor: string;
+  candleStyle: CandleStyle;
 }
 
 // Exact TradingView dark theme palette.
@@ -287,7 +290,24 @@ export const DEFAULT_SETTINGS: ChartSettings = {
   candleDownColor: "#F23645",
   backgroundColor: "#131722",
   gridColor: "rgba(42, 46, 57, 0.55)",
+  candleStyle: "solid",
 };
+
+export interface CandleTheme {
+  label: string;
+  up: string;
+  down: string;
+  bg: string;
+  grid: string;
+}
+
+export const CANDLE_THEMES: CandleTheme[] = [
+  { label: "Classic",  up: "#089981", down: "#F23645", bg: "#131722", grid: "rgba(42,46,57,0.55)" },
+  { label: "Midnight", up: "#00C9A7", down: "#FF6B8A", bg: "#0B0F1A", grid: "rgba(30,40,65,0.7)" },
+  { label: "Neon",     up: "#00FFB3", down: "#FF3366", bg: "#0D0D1A", grid: "rgba(0,255,179,0.08)" },
+  { label: "Gold",     up: "#F5A623", down: "#8B5CF6", bg: "#0F1117", grid: "rgba(245,166,35,0.1)" },
+  { label: "Ice",      up: "#60A5FA", down: "#F87171", bg: "#0A1628", grid: "rgba(96,165,250,0.12)" },
+];
 
 export const DRAWING_COLORS = [
   "#2962FF", "#F23645", "#089981", "#FF9800", "#9C27B0",
