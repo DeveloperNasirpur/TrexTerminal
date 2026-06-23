@@ -81,6 +81,11 @@ export interface BtResult {
   avg_loss: number;
   max_drawdown_usdt: number;
   max_drawdown_pct: number;
+  sharpe_ratio?: number;
+  avg_bars?: number;
+  max_consecutive_wins?: number;
+  max_consecutive_losses?: number;
+  recovery_factor?: number;
   equity_curve: number[];
 }
 
@@ -987,6 +992,13 @@ function ResultsTab({ result }: { result: BtResult }) {
           ["Avg Loss",       `-$${fmt(Math.abs(result.avg_loss))}`,    C.short],
           ["Largest Win",    `+$${fmt(result.largest_win)}`,           C.long],
           ["Largest Loss",   `-$${fmt(Math.abs(result.largest_loss))}`, C.short],
+          ...(result.max_consecutive_wins != null ? [
+            ["Max Consec. Wins",   String(result.max_consecutive_wins),  C.long],
+            ["Max Consec. Losses", String(result.max_consecutive_losses ?? 0), C.short],
+          ] as [string,string,string][] : []),
+          ...(result.avg_bars != null ? [
+            ["Avg Duration",  `${result.avg_bars} bars`, C.text2],
+          ] as [string,string,string][] : []),
         ] as [string,string,string][]).map(([label, val, color]) => (
           <div key={label} className="bt-stat" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 7 }}>
             <span style={{ fontSize: 11, color: C.muted }}>{label}</span>
@@ -1013,6 +1025,12 @@ function ResultsTab({ result }: { result: BtResult }) {
           ["Gross Loss",      `-$${fmt(Math.abs(result.gross_loss))}`,  C.short],
           ["Initial Balance", `$${fmt(result.initial_balance)}`,        C.text2],
           ["Final Balance",   `$${fmt(result.final_balance)}`,          isProfit ? C.long : C.short],
+          ...(result.sharpe_ratio != null ? [
+            ["Sharpe Ratio",     fmt(result.sharpe_ratio, 2),           result.sharpe_ratio >= 1 ? C.long : result.sharpe_ratio >= 0 ? C.text2 : C.short],
+          ] as [string,string,string][] : []),
+          ...(result.recovery_factor != null ? [
+            ["Recovery Factor",  fmt(result.recovery_factor, 2),        result.recovery_factor >= 1 ? C.long : C.text2],
+          ] as [string,string,string][] : []),
         ] as [string,string,string][]).map(([label, val, color]) => (
           <div key={label} className="bt-stat" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 7 }}>
             <span style={{ fontSize: 11, color: C.muted }}>{label}</span>
@@ -1187,6 +1205,9 @@ export const BtPanel = memo(function BtPanel({ state, result, progress, onHeight
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted }}>
               <span className="bt-dot-pulse" style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: C.accent, boxShadow: `0 0 8px ${C.accent}` }} />
               {progress!.pct >= 100 ? "Finalizing…" : `Running ${progress!.pct.toFixed(1)}%`}
+              {state.trade_history.length > 0 && progress!.pct < 100 && (
+                <span style={{ color: C.border3, fontSize: 10 }}>· {state.trade_history.length} trades</span>
+              )}
             </div>
           )}
           {onClose && (

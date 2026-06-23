@@ -247,6 +247,8 @@ export class DemoBt {
   private history: SimHistory[] = [];
   private idSeq = 1;
   private equityCurve: number[] = [10000];
+  // Global price drift so entries vary realistically over the simulation
+  private prices: Record<string, number> = {};
 
   constructor(onMsg: (msg: WSMessage) => void) {
     this.onMsg = onMsg;
@@ -254,7 +256,7 @@ export class DemoBt {
 
   start(): void {
     this.stopped = false;
-    // Phase 1: progress bar (0→100 over ~8s)
+    for (const s of SIM_SYMBOLS) this.prices[s.sym] = s.price;
     this.runProgress();
   }
 
@@ -297,6 +299,7 @@ export class DemoBt {
       this.send({ type: "bt_progress", current: Math.round(current), total, pct } as any);
 
       // Occasionally place/fill/close trades during progress
+      this.driftPrices();
       if (Math.random() < 0.18) this.placePendingOrder();
       if (this.orders.length > 0 && Math.random() < 0.40) this.fillOrder();
       if (this.positions.length > 0 && Math.random() < 0.20) this.closePosition();
@@ -309,6 +312,12 @@ export class DemoBt {
         this.after(300, () => this.finishBacktest());
       }
     });
+  }
+
+  private driftPrices(): void {
+    for (const s of SIM_SYMBOLS) {
+      this.prices[s.sym] = (this.prices[s.sym] ?? s.price) * (1 + rand(-s.vol * 0.06, s.vol * 0.06));
+    }
   }
 
   private tickPrices(): void {
@@ -329,7 +338,7 @@ export class DemoBt {
     const sym = SIM_SYMBOLS[Math.floor(Math.random() * SIM_SYMBOLS.length)];
     const side: "LONG" | "SHORT" = Math.random() < 0.6 ? "LONG" : "SHORT";
     const type: "LIMIT" | "MARKET" = Math.random() < 0.5 ? "LIMIT" : "MARKET";
-    const price = sym.price * rand(0.99, 1.01);
+    const price = (this.prices[sym.sym] ?? sym.price) * rand(0.998, 1.002);
     const margin = [200, 300, 500, 800][Math.floor(Math.random() * 4)];
     const leverage = [5, 10, 15, 20][Math.floor(Math.random() * 4)];
 
@@ -455,9 +464,13 @@ export class DemoBt {
     const grossLoss   = Math.abs(losses.reduce((s, h) => s + h.pnl_usdt, 0));
     const totalTrades = this.history.length;
     const winRate = totalTrades > 0 ? wins.length / totalTrades : 0;
+    const avgBars = totalTrades > 0 ? Math.round(this.history.reduce((s, h) => s + h.bars, 0) / totalTrades) : 0;
 
-    // Generate a smooth equity curve (200 points) ending at final balance
     const curve = this.buildEquityCurve();
+    const maxDD = this.computeMaxDrawdown(curve);
+    const [maxConsecWins, maxConsecLosses] = this.computeConsecutive();
+    const sharpe = this.computeSharpe();
+    const recoveryFactor = maxDD > 0 ? Math.abs(this.balance - 10000) / maxDD : 0;
 
     this.send({
       type: "bt_result",
@@ -478,8 +491,13 @@ export class DemoBt {
       largest_loss: losses.length > 0 ? Math.min(...losses.map(h => h.pnl_usdt)) : 0,
       avg_win: wins.length > 0 ? grossProfit / wins.length : 0,
       avg_loss: losses.length > 0 ? grossLoss / losses.length : 0,
-      max_drawdown_usdt: this.computeMaxDrawdown(curve),
-      max_drawdown_pct:  this.computeMaxDrawdown(curve) / 10000 * 100,
+      max_drawdown_usdt: maxDD,
+      max_drawdown_pct:  maxDD / 10000 * 100,
+      sharpe_ratio: sharpe,
+      avg_bars: avgBars,
+      max_consecutive_wins: maxConsecWins,
+      max_consecutive_losses: maxConsecLosses,
+      recovery_factor: recoveryFactor,
       equity_curve: curve,
     } as any);
 
@@ -490,14 +508,28 @@ export class DemoBt {
   private buildEquityCurve(): number[] {
     const raw = [...this.equityCurve];
     if (raw.length < 2) return [10000, this.balance];
-    // Resample to ~120 points for a smooth chart
-    const N = 120;
+
+    // Expand with noisy intermediate points between each trade-close
+    const expanded: number[] = [raw[0]];
+    for (let i = 1; i < raw.length; i++) {
+      const from = raw[i - 1], to = raw[i];
+      const amp = Math.abs(to - from) * 0.25 + Math.abs(to) * 0.003;
+      for (let j = 1; j <= 5; j++) {
+        const t = j / 6;
+        const interp = from + (to - from) * t;
+        expanded.push(interp + rand(-amp, amp));
+      }
+      expanded.push(to);
+    }
+
+    // Resample to 160 points
+    const N = 160;
     const out: number[] = [];
     for (let i = 0; i < N; i++) {
-      const idx = (i / (N - 1)) * (raw.length - 1);
+      const idx = (i / (N - 1)) * (expanded.length - 1);
       const lo = Math.floor(idx), hi = Math.ceil(idx);
       const t = idx - lo;
-      out.push(raw[lo] + (raw[hi] - raw[lo]) * t);
+      out.push(expanded[lo] + (expanded[hi] - expanded[lo]) * t);
     }
     return out;
   }
@@ -510,5 +542,23 @@ export class DemoBt {
       if (dd > maxDD) maxDD = dd;
     }
     return maxDD;
+  }
+
+  private computeConsecutive(): [number, number] {
+    let maxW = 0, maxL = 0, curW = 0, curL = 0;
+    for (const h of [...this.history].reverse()) {
+      if (h.pnl_usdt > 0) { curW++; curL = 0; maxW = Math.max(maxW, curW); }
+      else                 { curL++; curW = 0; maxL = Math.max(maxL, curL); }
+    }
+    return [maxW, maxL];
+  }
+
+  private computeSharpe(): number {
+    if (this.history.length < 3) return 0;
+    const returns = this.history.map(h => h.pnl_pct / 100);
+    const mean = returns.reduce((s, r) => s + r, 0) / returns.length;
+    const variance = returns.reduce((s, r) => s + (r - mean) ** 2, 0) / returns.length;
+    const std = Math.sqrt(variance);
+    return std > 0 ? parseFloat((mean / std).toFixed(3)) : 0;
   }
 }
