@@ -199,6 +199,7 @@ interface SimOrder {
   type: "LIMIT" | "MARKET";
   entry: number;
   usdt: number;
+  leverage: number;
   stop_price: number | null;
   take_profit: number | null;
   placed_time: string;
@@ -209,6 +210,7 @@ interface SimHistory {
   symbol: string;
   side: "LONG" | "SHORT";
   entry: number;
+  exit_price: number;
   margin: number;
   leverage: number;
   pnl_usdt: number;
@@ -216,6 +218,7 @@ interface SimHistory {
   state: string;
   open_time: string;
   close_time: string;
+  bars: number;
 }
 
 const SIM_SYMBOLS = [
@@ -337,6 +340,7 @@ export class DemoBt {
       type,
       entry: price,
       usdt: margin,
+      leverage,
       stop_price: side === "LONG" ? price * rand(0.95, 0.98) : price * rand(1.02, 1.05),
       take_profit: side === "LONG" ? price * rand(1.03, 1.08) : price * rand(0.92, 0.97),
       placed_time: fmtDate(new Date()),
@@ -353,7 +357,7 @@ export class DemoBt {
     if (!sym) return;
     // Don't open if insufficient available balance
     if (ord.usdt > this.available_balance) return;
-    const leverage = [5, 10, 15, 20][Math.floor(Math.random() * 4)];
+    const leverage = ord.leverage;
     const margin = Math.min(ord.usdt, this.available_balance);
     const entry = ord.entry * rand(0.999, 1.001);
 
@@ -402,6 +406,7 @@ export class DemoBt {
       symbol: pos.symbol,
       side: pos.side,
       entry: pos.entry,
+      exit_price: pos.mark,
       margin: pos.margin,
       leverage: pos.leverage,
       pnl_usdt: pnl,
@@ -409,6 +414,7 @@ export class DemoBt {
       state,
       open_time: pos.open_time,
       close_time: fmtDate(new Date()),
+      bars: pos.bars,
     });
 
     if (this.history.length > 20) this.history.pop();

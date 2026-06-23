@@ -41,6 +41,7 @@ export interface BtHistoryEntry {
   symbol: string;
   side: "LONG" | "SHORT";
   entry: number;
+  exit_price?: number;
   margin: number;
   leverage: number;
   pnl_usdt: number;
@@ -48,6 +49,7 @@ export interface BtHistoryEntry {
   state: string;
   open_time: string | null;
   close_time: string | null;
+  bars?: number;
 }
 
 export interface BtState {
@@ -403,7 +405,7 @@ function useSort<T>(items: T[], defaultCol: string, cols: Record<string, (a: T) 
 
 const GRID_POS  = "3px 120px 76px 64px 100px 100px 90px 70px 130px 88px 90px 90px 1fr";
 const GRID_ORD  = "3px 130px 76px 76px 110px 110px 100px 100px 1fr";
-const GRID_HIST = "40px 3px 120px 76px 64px 100px 70px 140px 88px 1fr 140px";
+const GRID_HIST = "40px 3px 120px 76px 64px 110px 70px 140px 88px 1fr 50px 140px";
 
 // ── Positions Tab ──────────────────────────────────────────────────
 
@@ -661,9 +663,10 @@ function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
 
   const exportCsv = () => downloadCsv("trade_history.csv", sorted.map((p, i) => [
     String(sorted.length - i), p.symbol, p.side, String(p.leverage),
-    fmt(p.entry, 4), fmt(p.margin), fmt(p.pnl_usdt), fmt(p.pnl_pct) + "%",
-    p.state, p.open_time ?? "", p.close_time ?? "",
-  ]), ["#","Symbol","Side","Lev","Entry","Margin","PnL USDT","ROE%","State","Opened","Closed"]);
+    fmt(p.entry, 4), p.exit_price != null ? fmt(p.exit_price, 4) : "",
+    fmt(p.margin), fmt(p.pnl_usdt), fmt(p.pnl_pct) + "%",
+    p.state, p.bars != null ? String(p.bars) : "", p.open_time ?? "", p.close_time ?? "",
+  ]), ["#","Symbol","Side","Lev","Entry","Exit","Margin","PnL USDT","ROE%","State","Bars","Opened","Closed"]);
 
   const TH = ({ label, col }: { label: string; col: string }) => (
     <SortTH label={label} col={col} sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
@@ -743,11 +746,12 @@ function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
               <TH label="SYMBOL" col="symbol" />
               <TH label="SIDE"   col="side" />
               <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>LEV</span>
-              <TH label="ENTRY"  col="entry" />
+              <TH label="ENTRY / EXIT" col="entry" />
               <TH label="MARGIN" col="margin" />
               <TH label="REALIZED PnL" col="pnl" />
               <TH label="ROE %" col="roe" />
               <TH label="OPENED" col="opened" />
+              <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>BARS</span>
               <TH label="CLOSED" col="closed" />
             </div>
 
@@ -772,7 +776,15 @@ function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
                   <span style={{ fontWeight: 700, color: C.text, fontSize: 12 }}>{p.symbol}</span>
                   <span><SidePill side={p.side} /></span>
                   <span><LevBadge lev={p.leverage} /></span>
-                  <span style={{ color: C.text2, fontFeatureSettings: '"tnum"', fontSize: 12 }}>{fmt(p.entry, 4)}</span>
+                  {/* Entry → Exit */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ color: C.text2, fontFeatureSettings: '"tnum"', fontSize: 11 }}>{fmt(p.entry, 4)}</span>
+                    {p.exit_price != null && (
+                      <span style={{ color: isWin ? C.long : C.short, fontFeatureSettings: '"tnum"', fontSize: 11 }}>
+                        {fmt(p.exit_price, 4)}
+                      </span>
+                    )}
+                  </div>
                   <span style={{ color: C.text2, fontFeatureSettings: '"tnum"', fontSize: 12 }}>${fmt(p.margin)}</span>
                   {/* PnL card */}
                   <div style={{
@@ -790,6 +802,10 @@ function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
                     {sign(p.pnl_pct)}{fmt(p.pnl_pct, 2)}%
                   </span>
                   <span style={{ color: C.muted, fontSize: 10 }}>{ts(p.open_time)}</span>
+                  {/* Bars */}
+                  <span style={{ color: C.border3, fontSize: 10, fontFeatureSettings: '"tnum"' }}>
+                    {p.bars != null ? `${p.bars}` : "—"}
+                  </span>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ color: C.muted, fontSize: 10 }}>{ts(p.close_time)}</span>
                     <StatePill state={p.state} />
@@ -807,17 +823,17 @@ function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
 // ── Assets Tab ─────────────────────────────────────────────────────
 
 function AssetsTab({ state }: { state: BtState }) {
-  const freeMargin  = state.balance - state.margin_used;
-  const marginRatio = state.balance > 0 ? (state.margin_used / state.balance) * 100 : 0;
+  // state.balance = available_balance (margin already deducted), state.equity = total equity
+  const marginRatio = state.equity > 0 ? (state.margin_used / state.equity) * 100 : 0;
 
   const cards = [
     {
-      label: "Wallet Balance", value: state.balance, sub: "Available funds",
+      label: "Available Balance", value: state.balance, sub: "Free capital (margin deducted)",
       color: C.text,
       icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="12" rx="2" stroke={C.accent} strokeWidth="1.5"/><path d="M14 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" fill={C.accent}/><path d="M2 8h16" stroke={C.accent} strokeWidth="1.5"/></svg>,
     },
     {
-      label: "Margin Used", value: state.margin_used, sub: `${fmt(marginRatio, 1)}% of balance`,
+      label: "Margin Used", value: state.margin_used, sub: `${fmt(marginRatio, 1)}% of equity`,
       color: C.text2,
       icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#a78bfa" strokeWidth="1.5"/><path d="M10 6v4l3 2" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round"/></svg>,
       bar: { value: marginRatio, color: "#a78bfa" },
@@ -830,7 +846,7 @@ function AssetsTab({ state }: { state: BtState }) {
     },
     {
       label: "Total Equity", value: state.equity,
-      sub: `Free margin $${fmt(freeMargin)}`,
+      sub: `Available $${fmt(state.balance)}`,
       color: state.equity >= state.balance ? C.long : C.short,
       icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L12.5 7.5H18L13.5 11L15.5 17L10 13.5L4.5 17L6.5 11L2 7.5H7.5Z" stroke={C.accent} strokeWidth="1.5" strokeLinejoin="round"/></svg>,
     },
