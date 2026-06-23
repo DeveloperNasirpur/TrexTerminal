@@ -223,6 +223,10 @@ export class ChartEngine {
   private btPriceLines: IPriceLine[] = [];
   private btMarkersPlugin: ISeriesMarkersPluginApi<Time> | null = null;
   private btMarkersCache: SeriesMarker<Time>[] = [];
+  private btPositionsData: Array<{
+    entry: number; side: "LONG" | "SHORT"; symbol: string;
+    take_profit: number | null; stop_price: number | null; liquidy: number | null;
+  }> = [];
 
   /* drawings */
   private drawings: Drawing[] = [];
@@ -774,6 +778,8 @@ export class ChartEngine {
     this.chart.removeSeries(this.mainSeries as ISeriesApi<any>);
     this.chartType = type;
     this.mainSeries = this.createMainSeries(type);
+    // Re-apply price lines on the new series
+    if (this.btPositionsData.length) this._applyBtPriceLines();
     // Re-attach markers if any were active
     if (this.btMarkersCache.length) {
       this.btMarkersPlugin = createSeriesMarkers(this.mainSeries);
@@ -1490,32 +1496,41 @@ export class ChartEngine {
 
   /** Show entry / TP / SL / liquidation price lines for open positions. */
   setBtPriceLines(positions: Array<{
-    entry: number; side: "LONG" | "SHORT";
+    entry: number; side: "LONG" | "SHORT"; symbol: string;
     take_profit: number | null; stop_price: number | null; liquidy: number | null;
   }>): void {
+    this.btPositionsData = positions;
+    this._applyBtPriceLines();
+  }
+
+  private _applyBtPriceLines(): void {
     for (const pl of this.btPriceLines) { try { this.mainSeries.removePriceLine(pl); } catch {} }
     this.btPriceLines = [];
-    for (const pos of positions) {
+    for (const pos of this.btPositionsData) {
       const long = pos.side === "LONG";
+      const sym  = pos.symbol ? ` ${pos.symbol}` : "";
       this.btPriceLines.push(this.mainSeries.createPriceLine({
         price: pos.entry, color: long ? "#00d4a3" : "#ff4d6d",
-        lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true,
-        title: long ? "▲ LONG" : "▼ SHORT",
+        lineWidth: 2, lineStyle: LineStyle.Solid, axisLabelVisible: true,
+        title: long ? `▲ LONG${sym}` : `▼ SHORT${sym}`,
       }));
       if (pos.take_profit != null)
         this.btPriceLines.push(this.mainSeries.createPriceLine({
           price: pos.take_profit, color: "#22d3ee",
-          lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "TP",
+          lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true,
+          title: `TP${sym}`,
         }));
       if (pos.stop_price != null)
         this.btPriceLines.push(this.mainSeries.createPriceLine({
           price: pos.stop_price, color: "#fb923c",
-          lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "SL",
+          lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true,
+          title: `SL${sym}`,
         }));
       if (pos.liquidy != null)
         this.btPriceLines.push(this.mainSeries.createPriceLine({
           price: pos.liquidy, color: "#ef4444",
-          lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: false, title: "LIQ",
+          lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true,
+          title: `LIQ${sym}`,
         }));
     }
   }
@@ -1539,29 +1554,42 @@ export class ChartEngine {
     const span = Math.min(this.candles.length - 1, Math.max(n * 4, 60));
     const startIdx = Math.max(0, this.candles.length - 1 - span);
 
-    // Build unique-time markers: bucket multiple trades on the same bar
-    const byIdx = new Map<number, typeof chrono>();
+    // Assign each trade an ideal candle index, then resolve collisions by
+    // nudging duplicates to the nearest free adjacent candle index.
+    const usedIdx = new Set<number>();
+    const assignments: Array<{ idx: number; trade: (typeof chrono)[0] }> = [];
     for (let i = 0; i < n; i++) {
-      const idx = Math.min(this.candles.length - 1, Math.round(startIdx + (i / Math.max(n - 1, 1)) * span));
-      if (!byIdx.has(idx)) byIdx.set(idx, []);
-      byIdx.get(idx)!.push(chrono[i]);
+      let ideal = Math.min(this.candles.length - 1, Math.round(startIdx + (i / Math.max(n - 1, 1)) * span));
+      // Search outward for a free slot (max ±n steps)
+      let offset = 0;
+      while (usedIdx.has(ideal + offset) || usedIdx.has(ideal - offset)) {
+        offset++;
+        if (offset > n) break;
+      }
+      const resolved = usedIdx.has(ideal)
+        ? (ideal + offset < this.candles.length ? ideal + offset : ideal - offset)
+        : ideal;
+      const clamped = Math.max(0, Math.min(this.candles.length - 1, resolved));
+      usedIdx.add(clamped);
+      assignments.push({ idx: clamped, trade: chrono[i] });
     }
 
     const markers: SeriesMarker<Time>[] = [];
-    for (const [idx, trades] of byIdx) {
+    for (const { idx, trade: t } of assignments) {
       const candle = this.candles[idx];
-      for (const t of trades) {
-        const long = t.side === "LONG";
-        const win  = t.pnl_usdt >= 0;
-        markers.push({
-          time:     candle.time,
-          position: long ? "belowBar" : "aboveBar",
-          color:    win ? "#00d4a3" : "#ff4d6d",
-          shape:    long ? "arrowUp" : "arrowDown",
-          text:     `${win ? "+" : ""}${t.pnl_usdt.toFixed(0)}$`,
-          size:     1,
-        } as SeriesMarker<Time>);
-      }
+      const long   = t.side === "LONG";
+      const win    = t.pnl_usdt >= 0;
+      const absP   = Math.abs(t.pnl_usdt);
+      const size   = absP > 500 ? 2 : absP > 150 ? 1.5 : 1;
+      const sign   = win ? "+" : "-";
+      markers.push({
+        time:     candle.time,
+        position: long ? "belowBar" : "aboveBar",
+        color:    win ? "#00d4a3" : "#ff4d6d",
+        shape:    long ? "arrowUp" : "arrowDown",
+        text:     `${sign}$${absP.toFixed(0)}`,
+        size,
+      } as SeriesMarker<Time>);
     }
     markers.sort((a, b) => num(a.time) - num(b.time));
     this.btMarkersCache = markers;
@@ -1572,6 +1600,7 @@ export class ChartEngine {
   clearBtOverlay(): void {
     for (const pl of this.btPriceLines) { try { this.mainSeries.removePriceLine(pl); } catch {} }
     this.btPriceLines = [];
+    this.btPositionsData = [];
     if (this.btMarkersPlugin) {
       try { this.btMarkersPlugin.setMarkers([]); } catch {}
     }

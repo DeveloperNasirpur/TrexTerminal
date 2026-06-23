@@ -3367,19 +3367,22 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           orders:         m.orders         ?? [],
           trade_history:  m.trade_history  ?? [],
         });
-        // Update price lines for open positions
+        // Update price lines for open positions (filter to current chart symbol)
+        const curSym = symbolRef.current;
+        const visiblePositions = (m.positions ?? []).filter((p: any) => !p.symbol || p.symbol === curSym);
         engineRef.current?.setBtPriceLines(
-          (m.positions ?? []).map((p: any) => ({
-            entry: p.entry, side: p.side,
+          visiblePositions.map((p: any) => ({
+            entry: p.entry, side: p.side, symbol: p.symbol ?? "",
             take_profit: p.take_profit ?? null,
             stop_price:  p.stop_price  ?? null,
             liquidy:     p.liquidy     ?? null,
           }))
         );
-        // Update trade entry/exit markers for closed trades
-        if ((m.trade_history ?? []).length > 0) {
+        // Update trade entry/exit markers for closed trades (filter to current symbol)
+        const visibleHistory = (m.trade_history ?? []).filter((h: any) => !h.symbol || h.symbol === curSym);
+        if (visibleHistory.length > 0) {
           engineRef.current?.setBtMarkers(
-            (m.trade_history ?? []).map((h: any) => ({
+            visibleHistory.map((h: any) => ({
               side: h.side, pnl_usdt: h.pnl_usdt ?? 0,
               entry: h.entry, exit_price: h.exit_price,
             }))
@@ -3418,6 +3421,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           equity_curve:      Array.isArray(m.equity_curve) ? m.equity_curve : [],
         });
         setBtProgress(p => p ? { ...p, pct: 100 } : null);
+        // Fit chart so all markers are visible after backtest completes
+        setTimeout(() => engineRef.current?.fitContent(), 120);
         break;
       }
 
