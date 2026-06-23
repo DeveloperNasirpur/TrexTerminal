@@ -1607,6 +1607,53 @@ export class ChartEngine {
     this.btMarkersCache = [];
   }
 
+  /**
+   * Navigate the chart to a specific trade and highlight it with price lines.
+   * Called when the user clicks the Show button on a trade row in BtPanel.
+   */
+  showBtTrade(payload: {
+    open_ts?: number; close_ts?: number;
+    entry: number; exit_price?: number;
+    side: "LONG" | "SHORT"; symbol: string;
+    take_profit?: number | null; stop_price?: number | null; liquidy?: number | null;
+  }): void {
+    if (!this.candles.length) return;
+
+    // Find candle closest to open_ts
+    const targetTs = payload.open_ts ?? 0;
+    let bestIdx = 0;
+    if (targetTs > 0) {
+      let minDiff = Infinity;
+      for (let i = 0; i < this.candles.length; i++) {
+        const diff = Math.abs(num(this.candles[i].time) - targetTs);
+        if (diff < minDiff) { minDiff = diff; bestIdx = i; }
+      }
+    } else {
+      bestIdx = Math.max(0, this.candles.length - 20);
+    }
+
+    // Set visible range: 20 candles before open, 30 candles after
+    const padding = 20;
+    const fromIdx = Math.max(0, bestIdx - padding);
+    const toIdx   = Math.min(this.candles.length - 1, bestIdx + 30);
+    this.chart.timeScale().setVisibleRange({
+      from: this.candles[fromIdx].time as any,
+      to:   this.candles[toIdx].time as any,
+    });
+
+    // Show highlighted price lines for this specific trade
+    const positions: Parameters<typeof this.setBtPriceLines>[0] = [{
+      entry:       payload.entry,
+      side:        payload.side,
+      symbol:      payload.symbol,
+      take_profit: payload.take_profit ?? null,
+      stop_price:  payload.stop_price  ?? null,
+      liquidy:     payload.liquidy     ?? null,
+    }];
+    this.setBtPriceLines(positions);
+    this.requestRedraw();
+  }
+
   /** Place a horizontal line at an explicit container y (context menu). */
   addHorizontalAt(y: number): void {
     const infos = this.getPaneInfos();

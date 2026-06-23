@@ -21,6 +21,7 @@ export interface BtPosition {
   take_profit: number | null;
   liquidy: number | null;
   open_time: string | null;
+  open_ts?: number;
   bars: number;
 }
 
@@ -34,6 +35,7 @@ export interface BtOrder {
   stop_price: number | null;
   take_profit: number | null;
   placed_time: string | null;
+  placed_ts?: number;
 }
 
 export interface BtHistoryEntry {
@@ -48,8 +50,23 @@ export interface BtHistoryEntry {
   pnl_pct: number;
   state: string;
   open_time: string | null;
+  open_ts?: number;
   close_time: string | null;
+  close_ts?: number;
   bars?: number;
+}
+
+/** Payload sent to the chart engine when the user clicks Show on a trade row. */
+export interface ShowTradePayload {
+  open_ts?: number;
+  close_ts?: number;
+  entry: number;
+  exit_price?: number;
+  side: "LONG" | "SHORT";
+  symbol: string;
+  take_profit?: number | null;
+  stop_price?: number | null;
+  liquidy?: number | null;
 }
 
 export interface BtState {
@@ -408,13 +425,49 @@ function useSort<T>(items: T[], defaultCol: string, cols: Record<string, (a: T) 
 
 // ── Grid header row ────────────────────────────────────────────────
 
-const GRID_POS  = "3px 120px 76px 64px 100px 100px 90px 70px 130px 88px 90px 90px 1fr";
-const GRID_ORD  = "3px 130px 76px 76px 110px 110px 100px 100px 1fr";
-const GRID_HIST = "40px 3px 120px 76px 64px 110px 70px 140px 88px 1fr 50px 140px";
+const GRID_POS  = "3px 120px 76px 64px 100px 100px 90px 70px 130px 88px 90px 90px 1fr 30px";
+const GRID_ORD  = "3px 130px 76px 76px 110px 110px 100px 100px 1fr 30px";
+const GRID_HIST = "40px 3px 120px 76px 64px 110px 70px 140px 88px 1fr 50px 140px 30px";
+
+// ── Show button ─────────────────────────────────────────────────────
+
+function ShowBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      title="Show on chart"
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        width: 22, height: 22, borderRadius: 4,
+        border: `1px solid ${C.border2}`,
+        background: C.bg4, cursor: "pointer", color: C.text2,
+        flexShrink: 0, transition: "background 0.1s, color 0.1s, border-color 0.1s",
+        padding: 0,
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLButtonElement).style.background = C.bg5;
+        (e.currentTarget as HTMLButtonElement).style.color = C.accent;
+        (e.currentTarget as HTMLButtonElement).style.borderColor = C.accent + "60";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLButtonElement).style.background = C.bg4;
+        (e.currentTarget as HTMLButtonElement).style.color = C.text2;
+        (e.currentTarget as HTMLButtonElement).style.borderColor = C.border2;
+      }}
+    >
+      {/* eye icon */}
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+        <path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+      </svg>
+    </button>
+  );
+}
 
 // ── Positions Tab ──────────────────────────────────────────────────
 
-function PositionsTab({ positions }: { positions: BtPosition[] }) {
+function PositionsTab({ positions, onShowTrade }: { positions: BtPosition[]; onShowTrade?: (p: ShowTradePayload) => void }) {
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() =>
@@ -481,6 +534,7 @@ function PositionsTab({ positions }: { positions: BtPosition[] }) {
               <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>TAKE PROFIT</span>
               <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>STOP LOSS</span>
               <TH label="OPENED / BARS" col="bars" />
+              <span />
             </div>
 
             {sorted.map((p) => {
@@ -530,6 +584,9 @@ function PositionsTab({ positions }: { positions: BtPosition[] }) {
                   <span style={{ color: C.muted, fontSize: 10 }}>
                     {ts(p.open_time)} <span style={{ color: C.border3, fontSize: 9 }}>{p.bars}b</span>
                   </span>
+                  {onShowTrade
+                    ? <ShowBtn onClick={() => onShowTrade({ open_ts: p.open_ts, entry: p.entry, side: p.side, symbol: p.symbol, take_profit: p.take_profit, stop_price: p.stop_price, liquidy: p.liquidy })} />
+                    : <span />}
                 </div>
               );
             })}
@@ -542,7 +599,7 @@ function PositionsTab({ positions }: { positions: BtPosition[] }) {
 
 // ── Orders Tab ─────────────────────────────────────────────────────
 
-function OrdersTab({ orders }: { orders: BtOrder[] }) {
+function OrdersTab({ orders, onShowTrade }: { orders: BtOrder[]; onShowTrade?: (p: ShowTradePayload) => void }) {
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() =>
@@ -599,6 +656,7 @@ function OrdersTab({ orders }: { orders: BtOrder[] }) {
               <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>TAKE PROFIT</span>
               <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>STOP LOSS</span>
               <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>PLACED</span>
+              <span />
             </div>
 
             {sorted.map(o => {
@@ -626,6 +684,9 @@ function OrdersTab({ orders }: { orders: BtOrder[] }) {
                     {o.stop_price != null ? fmt(o.stop_price, 4) : "—"}
                   </span>
                   <span style={{ color: C.muted, fontSize: 10 }}>{ts(o.placed_time)}</span>
+                  {onShowTrade
+                    ? <ShowBtn onClick={() => onShowTrade({ open_ts: o.placed_ts, entry: o.entry, side: o.side, symbol: o.symbol, take_profit: o.take_profit, stop_price: o.stop_price })} />
+                    : <span />}
                 </div>
               );
             })}
@@ -640,7 +701,7 @@ function OrdersTab({ orders }: { orders: BtOrder[] }) {
 
 type HistFilter = "all" | "win" | "loss";
 
-function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
+function TradeHistoryTab({ history, onShowTrade }: { history: BtHistoryEntry[]; onShowTrade?: (p: ShowTradePayload) => void }) {
   const [q,      setQ]      = useState("");
   const [filter, setFilter] = useState<HistFilter>("all");
 
@@ -758,6 +819,7 @@ function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
               <TH label="OPENED" col="opened" />
               <span style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "0.08em" }}>BARS</span>
               <TH label="CLOSED" col="closed" />
+              <span />
             </div>
 
             {sorted.map((p, i) => {
@@ -815,6 +877,9 @@ function TradeHistoryTab({ history }: { history: BtHistoryEntry[] }) {
                     <span style={{ color: C.muted, fontSize: 10 }}>{ts(p.close_time)}</span>
                     <StatePill state={p.state} />
                   </div>
+                  {onShowTrade
+                    ? <ShowBtn onClick={() => onShowTrade({ open_ts: p.open_ts, close_ts: p.close_ts, entry: p.entry, exit_price: p.exit_price, side: p.side, symbol: p.symbol })} />
+                    : <span />}
                 </div>
               );
             })}
@@ -934,7 +999,7 @@ function EquityCurve({ curve, initial }: { curve: number[]; initial: number }) {
 
 // ── Results Tab ────────────────────────────────────────────────────
 
-function ResultsTab({ result }: { result: BtResult }) {
+function ResultsTab({ result, csvData, csvFilename }: { result: BtResult; csvData?: string | null; csvFilename?: string }) {
   const isProfit = result.return_pct >= 0;
   const returnColor = isProfit ? C.long : C.short;
   // win_rate is stored as a fraction (0–1); convert to percentage for display
@@ -1037,6 +1102,34 @@ function ResultsTab({ result }: { result: BtResult }) {
             <span style={{ fontSize: 13, fontWeight: 700, color, fontFeatureSettings: '"tnum"' }}>{val}</span>
           </div>
         ))}
+
+        {/* CSV Download */}
+        {csvData && (
+          <button
+            className="bt-export-btn"
+            onClick={() => {
+              const blob = new Blob([csvData], { type: "text/csv" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = csvFilename ?? "backtest.csv";
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "9px 16px", borderRadius: 7, fontSize: 12, fontWeight: 600,
+              background: C.bg4, color: C.text2,
+              border: `1px solid ${C.border2}`, cursor: "pointer",
+              marginTop: 4,
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v7M3 6l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M1 10h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+            Download Backtest CSV
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1064,11 +1157,14 @@ interface Props {
   onHeightChange?: (h: number) => void;
   onTabChange?: (t: string) => void;
   onClose?: () => void;
+  onShowTrade?: (payload: ShowTradePayload) => void;
+  csvData?: string | null;
+  csvFilename?: string;
   initialHeight?: number;
   initialTab?: string;
 }
 
-export const BtPanel = memo(function BtPanel({ state, result, progress, onHeightChange, onTabChange, onClose, initialHeight, initialTab }: Props) {
+export const BtPanel = memo(function BtPanel({ state, result, progress, onHeightChange, onTabChange, onClose, onShowTrade, csvData, csvFilename, initialHeight, initialTab }: Props) {
   const [tab, setTab]       = useState<Tab>((initialTab as Tab) ?? "positions");
   const [height, setHeight] = useState(initialHeight ?? 280);
   const dragging            = useRef(false);
@@ -1229,11 +1325,11 @@ export const BtPanel = memo(function BtPanel({ state, result, progress, onHeight
 
       {/* Content */}
       <div className="bt-scrollbar" style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
-        {tab === "positions" && <PositionsTab positions={state.positions} />}
-        {tab === "orders"    && <OrdersTab orders={state.orders} />}
-        {tab === "history"   && <TradeHistoryTab history={state.trade_history} />}
+        {tab === "positions" && <PositionsTab positions={state.positions} onShowTrade={onShowTrade} />}
+        {tab === "orders"    && <OrdersTab orders={state.orders} onShowTrade={onShowTrade} />}
+        {tab === "history"   && <TradeHistoryTab history={state.trade_history} onShowTrade={onShowTrade} />}
         {tab === "assets"    && <AssetsTab state={state} />}
-        {tab === "results"   && result && <ResultsTab result={result} />}
+        {tab === "results"   && result && <ResultsTab result={result} csvData={csvData} csvFilename={csvFilename} />}
       </div>
     </div>
   );

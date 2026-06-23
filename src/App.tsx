@@ -57,7 +57,7 @@ import {
   type PaneLayoutEntry,
 } from "./chartEngine";
 import { WSClient } from "./wsClient";
-import { BtPanel, type BtState, type BtResult } from "./BtPanel";
+import { BtPanel, type BtState, type BtResult, type ShowTradePayload } from "./BtPanel";
 import {
   makeHello,
   PROTOCOL_VERSION,
@@ -3009,6 +3009,8 @@ export default function App({ initialMode }: { initialMode: string | null }) {
   const [btState, setBtState] = useState<BtState | null>(null);
   const [btResult, setBtResult] = useState<BtResult | null>(null);
   const [btProgress, setBtProgress] = useState<{ current: number; total: number; pct: number } | null>(null);
+  const [btCsvData, setBtCsvData] = useState<string | null>(null);
+  const [btCsvFilename, setBtCsvFilename] = useState<string>("backtest.csv");
   // One-time load of the saved workspace (UI prefs only — never market data).
   const savedRef = useRef<Partial<WorkspaceState> | null>(null);
   if (savedRef.current === null) savedRef.current = loadWorkspace() ?? {};
@@ -3423,6 +3425,15 @@ export default function App({ initialMode }: { initialMode: string | null }) {
         setBtProgress(p => p ? { ...p, pct: 100 } : null);
         // Fit chart so all markers are visible after backtest completes
         setTimeout(() => engineRef.current?.fitContent(), 120);
+        break;
+      }
+
+      case "bt_csv": {
+        const m = msg as any;
+        if (m.csv) {
+          setBtCsvData(m.csv);
+          if (m.filename) setBtCsvFilename(m.filename);
+        }
         break;
       }
 
@@ -4236,7 +4247,15 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           state={btState ?? { balance: 0, margin_used: 0, unrealized_pnl: 0, equity: 0, positions: [], orders: [], trade_history: [] }}
           result={btResult}
           progress={btProgress}
-          onClose={() => { demoBtRef.current?.stop(); demoBtRef.current = null; setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null); engineRef.current?.clearBtOverlay(); }}
+          csvData={btCsvData}
+          csvFilename={btCsvFilename}
+          onClose={() => {
+            demoBtRef.current?.stop(); demoBtRef.current = null;
+            setBtPlayback(null); setBtState(null); setBtResult(null);
+            setBtProgress(null); setBtCsvData(null);
+            engineRef.current?.clearBtOverlay();
+          }}
+          onShowTrade={(payload) => engineRef.current?.showBtTrade(payload)}
           initialHeight={(() => { try { const h = Number(localStorage.getItem("trex.bt.height")); return h > 0 ? h : undefined; } catch { return undefined; } })()}
           initialTab={(() => { try { return localStorage.getItem("trex.bt.tab") ?? undefined; } catch { return undefined; } })()}
         />

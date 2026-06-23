@@ -189,6 +189,7 @@ interface SimPosition {
   take_profit: number | null;
   liquidy: number | null;
   open_time: string;
+  open_ts: number;
   bars: number;
 }
 
@@ -203,6 +204,7 @@ interface SimOrder {
   stop_price: number | null;
   take_profit: number | null;
   placed_time: string;
+  placed_ts: number;
 }
 
 interface SimHistory {
@@ -217,7 +219,9 @@ interface SimHistory {
   pnl_pct: number;
   state: string;
   open_time: string;
+  open_ts: number;
   close_time: string;
+  close_ts: number;
   bars: number;
 }
 
@@ -249,13 +253,20 @@ export class DemoBt {
   private equityCurve: number[] = [10000];
   // Global price drift so entries vary realistically over the simulation
   private prices: Record<string, number> = {};
+  // Full log of every event (order placed/filled, position opened/closed) for CSV export
+  private csvLog: string[][] = [];
+  private strategy = "DemoStrategy";
+  private btSymbol = "BTCUSDT";
 
   constructor(onMsg: (msg: WSMessage) => void) {
     this.onMsg = onMsg;
   }
 
-  start(): void {
+  start(strategy?: string, symbol?: string): void {
     this.stopped = false;
+    this.csvLog = [];
+    if (strategy) this.strategy = strategy;
+    if (symbol)   this.btSymbol = symbol;
     for (const s of SIM_SYMBOLS) this.prices[s.sym] = s.price;
     this.runProgress();
   }
@@ -353,7 +364,11 @@ export class DemoBt {
       stop_price: side === "LONG" ? price * rand(0.95, 0.98) : price * rand(1.02, 1.05),
       take_profit: side === "LONG" ? price * rand(1.03, 1.08) : price * rand(0.92, 0.97),
       placed_time: fmtDate(new Date()),
+      placed_ts: Math.floor(Date.now() / 1000),
     });
+    this.csvLog.push([this.strategy, this.btSymbol, sym.sym, "ORDER", side, type,
+      price.toFixed(4), String(margin), String(leverage),
+      "", "", "", fmtDate(new Date()), ""]);
 
     // cap orders list
     if (this.orders.length > 4) this.orders.shift();
@@ -388,8 +403,12 @@ export class DemoBt {
       take_profit: ord.take_profit,
       liquidy: ord.side === "LONG" ? entry * (1 - 1 / leverage * 0.9) : entry * (1 + 1 / leverage * 0.9),
       open_time: fmtDate(new Date()),
+      open_ts: Math.floor(Date.now() / 1000),
       bars: 1,
     });
+    this.csvLog.push([this.strategy, this.btSymbol, ord.symbol, "POSITION_OPEN", ord.side, "",
+      entry.toFixed(4), margin.toFixed(2), String(leverage),
+      "", "", "", fmtDate(new Date()), ""]);
 
     if (this.positions.length > 3) this.closePosition();
   }
@@ -410,6 +429,7 @@ export class DemoBt {
       ? (Math.random() < 0.7 ? "TP" : "TRIGGERED")
       : (Math.random() < 0.5 ? "STOPPED" : "SL");
 
+    const closeTs = Math.floor(Date.now() / 1000);
     this.history.unshift({
       id: this.idSeq++,
       symbol: pos.symbol,
@@ -422,9 +442,15 @@ export class DemoBt {
       pnl_pct: pos.pnl_pct,
       state,
       open_time: pos.open_time,
+      open_ts: pos.open_ts,
       close_time: fmtDate(new Date()),
+      close_ts: closeTs,
       bars: pos.bars,
     });
+    this.csvLog.push([this.strategy, this.btSymbol, pos.symbol, "POSITION_CLOSE", pos.side, state,
+      pos.entry.toFixed(4), pos.margin.toFixed(2), String(pos.leverage),
+      pos.mark.toFixed(4), pnl.toFixed(2), pos.pnl_pct.toFixed(2) + "%",
+      pos.open_time, fmtDate(new Date())]);
 
     if (this.history.length > 20) this.history.pop();
   }
@@ -499,6 +525,17 @@ export class DemoBt {
       max_consecutive_losses: maxConsecLosses,
       recovery_factor: recoveryFactor,
       equity_curve: curve,
+    } as any);
+
+    // Emit full CSV log to client for download
+    const csvHeaders = ["strategy","bt_symbol","symbol","event","side","result",
+      "entry","exit","margin","leverage","pnl_usdt","pnl_pct","bars","open_time","close_time"];
+    const csvLines = [csvHeaders, ...this.csvLog]
+      .map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    this.send({
+      type: "bt_csv",
+      csv: csvLines,
+      filename: `backtest_${this.strategy}_${this.btSymbol}.csv`,
     } as any);
 
     // Signal playback ended (keeps result visible)
