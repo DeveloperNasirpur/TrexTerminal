@@ -3347,9 +3347,11 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           setBtState(null);
           setBtProgress(null);
           // keep btResult visible so user can review after backtest ends
+          engineRef.current?.clearBtOverlay();
         } else {
           setBtPlayback({ active: true, paused: !!m.paused, speed: typeof m.speed === "number" ? m.speed : 1 });
           setBtResult(null);
+          engineRef.current?.clearBtOverlay();
         }
         break;
       }
@@ -3365,6 +3367,24 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           orders:         m.orders         ?? [],
           trade_history:  m.trade_history  ?? [],
         });
+        // Update price lines for open positions
+        engineRef.current?.setBtPriceLines(
+          (m.positions ?? []).map((p: any) => ({
+            entry: p.entry, side: p.side,
+            take_profit: p.take_profit ?? null,
+            stop_price:  p.stop_price  ?? null,
+            liquidy:     p.liquidy     ?? null,
+          }))
+        );
+        // Update trade entry/exit markers for closed trades
+        if ((m.trade_history ?? []).length > 0) {
+          engineRef.current?.setBtMarkers(
+            (m.trade_history ?? []).map((h: any) => ({
+              side: h.side, pnl_usdt: h.pnl_usdt ?? 0,
+              entry: h.entry, exit_price: h.exit_price,
+            }))
+          );
+        }
         break;
       }
 
@@ -4211,7 +4231,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           state={btState ?? { balance: 0, margin_used: 0, unrealized_pnl: 0, equity: 0, positions: [], orders: [], trade_history: [] }}
           result={btResult}
           progress={btProgress}
-          onClose={() => { demoBtRef.current?.stop(); demoBtRef.current = null; setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null); }}
+          onClose={() => { demoBtRef.current?.stop(); demoBtRef.current = null; setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null); engineRef.current?.clearBtOverlay(); }}
           initialHeight={(() => { try { const h = Number(localStorage.getItem("trex.bt.height")); return h > 0 ? h : undefined; } catch { return undefined; } })()}
           initialTab={(() => { try { return localStorage.getItem("trex.bt.tab") ?? undefined; } catch { return undefined; } })()}
         />

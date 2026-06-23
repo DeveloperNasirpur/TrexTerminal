@@ -27,6 +27,7 @@
 
 import {
   createChart,
+  createSeriesMarkers,
   CandlestickSeries,
   BarSeries,
   LineSeries,
@@ -39,6 +40,8 @@ import {
   type IChartApi,
   type ISeriesApi,
   type IPriceLine,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
   type Time,
   type MouseEventParams,
 } from "lightweight-charts";
@@ -215,6 +218,11 @@ export class ChartEngine {
 
   /* settings */
   private settings: ChartSettings;
+
+  /* backtest overlay */
+  private btPriceLines: IPriceLine[] = [];
+  private btMarkersPlugin: ISeriesMarkersPluginApi<Time> | null = null;
+  private btMarkersCache: SeriesMarker<Time>[] = [];
 
   /* drawings */
   private drawings: Drawing[] = [];
@@ -757,9 +765,20 @@ export class ChartEngine {
 
   setChartType(type: ChartType): void {
     if (type === this.chartType) return;
+    // Detach bt markers plugin before the series it's attached to is removed
+    if (this.btMarkersPlugin) {
+      try { this.btMarkersPlugin.detach(); } catch {}
+      this.btMarkersPlugin = null;
+    }
+    this.btPriceLines = []; // old series is gone; price lines go with it
     this.chart.removeSeries(this.mainSeries as ISeriesApi<any>);
     this.chartType = type;
     this.mainSeries = this.createMainSeries(type);
+    // Re-attach markers if any were active
+    if (this.btMarkersCache.length) {
+      this.btMarkersPlugin = createSeriesMarkers(this.mainSeries);
+      this.btMarkersPlugin.setMarkers(this.btMarkersCache);
+    }
     this.applyAllData();
     this.requestRedraw();
   }
@@ -1466,6 +1485,98 @@ export class ChartEngine {
   hasDrawings(): boolean { return this.drawings.length > 0; }
   allLocked(): boolean { return this.drawings.length > 0 && this.drawings.every((d) => d.locked); }
   allHidden(): boolean { return this.drawings.length > 0 && this.drawings.every((d) => !d.visible); }
+
+  // ── Backtest chart overlay ─────────────────────────────────────────
+
+  /** Show entry / TP / SL / liquidation price lines for open positions. */
+  setBtPriceLines(positions: Array<{
+    entry: number; side: "LONG" | "SHORT";
+    take_profit: number | null; stop_price: number | null; liquidy: number | null;
+  }>): void {
+    for (const pl of this.btPriceLines) { try { this.mainSeries.removePriceLine(pl); } catch {} }
+    this.btPriceLines = [];
+    for (const pos of positions) {
+      const long = pos.side === "LONG";
+      this.btPriceLines.push(this.mainSeries.createPriceLine({
+        price: pos.entry, color: long ? "#00d4a3" : "#ff4d6d",
+        lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true,
+        title: long ? "▲ LONG" : "▼ SHORT",
+      }));
+      if (pos.take_profit != null)
+        this.btPriceLines.push(this.mainSeries.createPriceLine({
+          price: pos.take_profit, color: "#22d3ee",
+          lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "TP",
+        }));
+      if (pos.stop_price != null)
+        this.btPriceLines.push(this.mainSeries.createPriceLine({
+          price: pos.stop_price, color: "#fb923c",
+          lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "SL",
+        }));
+      if (pos.liquidy != null)
+        this.btPriceLines.push(this.mainSeries.createPriceLine({
+          price: pos.liquidy, color: "#ef4444",
+          lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: false, title: "LIQ",
+        }));
+    }
+  }
+
+  /** Place buy/sell arrow markers for closed backtest trades. */
+  setBtMarkers(history: Array<{
+    side: string; pnl_usdt: number; entry: number; exit_price?: number;
+  }>): void {
+    if (!this.btMarkersPlugin) {
+      this.btMarkersPlugin = createSeriesMarkers(this.mainSeries);
+    }
+    if (!history.length || !this.candles.length) {
+      this.btMarkersPlugin.setMarkers([]);
+      this.btMarkersCache = [];
+      return;
+    }
+
+    // history arrives newest-first; reverse to chronological for placement
+    const chrono = [...history].reverse();
+    const n = chrono.length;
+    const span = Math.min(this.candles.length - 1, Math.max(n * 4, 60));
+    const startIdx = Math.max(0, this.candles.length - 1 - span);
+
+    // Build unique-time markers: bucket multiple trades on the same bar
+    const byIdx = new Map<number, typeof chrono>();
+    for (let i = 0; i < n; i++) {
+      const idx = Math.min(this.candles.length - 1, Math.round(startIdx + (i / Math.max(n - 1, 1)) * span));
+      if (!byIdx.has(idx)) byIdx.set(idx, []);
+      byIdx.get(idx)!.push(chrono[i]);
+    }
+
+    const markers: SeriesMarker<Time>[] = [];
+    for (const [idx, trades] of byIdx) {
+      const candle = this.candles[idx];
+      for (const t of trades) {
+        const long = t.side === "LONG";
+        const win  = t.pnl_usdt >= 0;
+        markers.push({
+          time:     candle.time,
+          position: long ? "belowBar" : "aboveBar",
+          color:    win ? "#00d4a3" : "#ff4d6d",
+          shape:    long ? "arrowUp" : "arrowDown",
+          text:     `${win ? "+" : ""}${t.pnl_usdt.toFixed(0)}$`,
+          size:     1,
+        } as SeriesMarker<Time>);
+      }
+    }
+    markers.sort((a, b) => num(a.time) - num(b.time));
+    this.btMarkersCache = markers;
+    this.btMarkersPlugin.setMarkers(markers);
+  }
+
+  /** Remove all backtest price lines and trade markers. */
+  clearBtOverlay(): void {
+    for (const pl of this.btPriceLines) { try { this.mainSeries.removePriceLine(pl); } catch {} }
+    this.btPriceLines = [];
+    if (this.btMarkersPlugin) {
+      try { this.btMarkersPlugin.setMarkers([]); } catch {}
+    }
+    this.btMarkersCache = [];
+  }
 
   /** Place a horizontal line at an explicit container y (context menu). */
   addHorizontalAt(y: number): void {
@@ -2841,6 +2952,7 @@ export class ChartEngine {
     this.container.removeEventListener("contextmenu", this.hContextMenu, true);
     try { this.chart.unsubscribeCrosshairMove(this.hCrosshair); } catch { /* already gone */ }
     try { this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.hRange); } catch { /* already gone */ }
+    if (this.btMarkersPlugin) { try { this.btMarkersPlugin.detach(); } catch {} }
     try { this.overlay.remove(); } catch { /* noop */ }
     try { this.chart.remove(); } catch { /* already removed */ }
   }
