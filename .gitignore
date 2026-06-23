@@ -13,7 +13,14 @@ npm-debug.log*
 .vscode/
 .idea/
 
-# Python
-__pycache__/
-*.py[cod]
+# Python — این مخزن فقط وب است
+*.py
+*.pyc
 *.pyo
+__pycache__/
+pyproject.toml
+*.egg-info/
+.venv/
+venv/
+trex-sdk/
+trex-sdk.zip

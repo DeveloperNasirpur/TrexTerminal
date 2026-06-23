@@ -1,1 +1,0 @@
-# trex.indic/oscillator
