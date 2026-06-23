@@ -4211,6 +4211,7 @@ export default function App({ initialMode }: { initialMode: string | null }) {
           state={btState ?? { balance: 0, margin_used: 0, unrealized_pnl: 0, equity: 0, positions: [], orders: [], trade_history: [] }}
           result={btResult}
           progress={btProgress}
+          onClose={() => { demoBtRef.current?.stop(); demoBtRef.current = null; setBtPlayback(null); setBtState(null); setBtResult(null); setBtProgress(null); }}
           initialHeight={(() => { try { const h = Number(localStorage.getItem("trex.bt.height")); return h > 0 ? h : undefined; } catch { return undefined; } })()}
           initialTab={(() => { try { return localStorage.getItem("trex.bt.tab") ?? undefined; } catch { return undefined; } })()}
         />

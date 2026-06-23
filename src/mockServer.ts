@@ -232,11 +232,13 @@ function fmtDate(d: Date): string {
 
 export class DemoBt {
   private onMsg: (msg: WSMessage) => void;
-  private timers: ReturnType<typeof setInterval | typeof setTimeout>[] = [];
+  private intervals: ReturnType<typeof setInterval>[] = [];
+  private timeouts: ReturnType<typeof setTimeout>[] = [];
   private stopped = false;
 
-  // sim state
+  // sim state — available_balance tracks free capital (balance minus open margins)
   private balance = 10000;
+  private available_balance = 10000;
   private positions: SimPosition[] = [];
   private orders: SimOrder[] = [];
   private history: SimHistory[] = [];
@@ -255,8 +257,10 @@ export class DemoBt {
 
   stop(): void {
     this.stopped = true;
-    for (const t of this.timers) { try { clearInterval(t as ReturnType<typeof setInterval>); clearTimeout(t as ReturnType<typeof setTimeout>); } catch {} }
-    this.timers = [];
+    for (const t of this.intervals) { try { clearInterval(t); } catch {} }
+    for (const t of this.timeouts) { try { clearTimeout(t); } catch {} }
+    this.intervals = [];
+    this.timeouts = [];
   }
 
   private send(msg: WSMessage) {
@@ -266,12 +270,12 @@ export class DemoBt {
   private after(ms: number, fn: () => void) {
     if (this.stopped) return;
     const t = setTimeout(() => { if (!this.stopped) fn(); }, ms);
-    this.timers.push(t);
+    this.timeouts.push(t);
   }
 
   private every(ms: number, fn: () => void): ReturnType<typeof setInterval> {
     const t = setInterval(() => { if (!this.stopped) fn(); }, ms);
-    this.timers.push(t);
+    this.intervals.push(t);
     return t;
   }
 
@@ -347,9 +351,14 @@ export class DemoBt {
     if (!ord) return;
     const sym = SIM_SYMBOLS.find(s => s.sym === ord.symbol);
     if (!sym) return;
+    // Don't open if insufficient available balance
+    if (ord.usdt > this.available_balance) return;
     const leverage = [5, 10, 15, 20][Math.floor(Math.random() * 4)];
-    const margin = ord.usdt;
+    const margin = Math.min(ord.usdt, this.available_balance);
     const entry = ord.entry * rand(0.999, 1.001);
+
+    // Deduct margin from available balance when position opens
+    this.available_balance -= margin;
 
     this.positions.push({
       id: this.idSeq++,
@@ -379,7 +388,9 @@ export class DemoBt {
     if (idx !== -1) this.positions.splice(idx, 1);
 
     const pnl = pos.pnl_usdt;
-    this.balance += pos.margin + pnl;
+    // Restore margin + realized PnL to both available and total balance
+    this.available_balance += pos.margin + pnl;
+    this.balance += pnl;
     this.equityCurve.push(this.balance);
 
     const state = pnl > 0
@@ -408,7 +419,7 @@ export class DemoBt {
     const marginUsed = this.positions.reduce((s, p) => s + p.margin, 0);
     this.send({
       type: "bt_state",
-      balance: this.balance,
+      balance: this.available_balance,
       margin_used: marginUsed,
       unrealized_pnl: unrealized,
       equity: this.balance + unrealized,
@@ -419,10 +430,13 @@ export class DemoBt {
   }
 
   private finishBacktest(): void {
-    // Close all open positions
+    // Close all open positions and cancel pending orders
     for (const p of [...this.positions]) this.closePosition(p);
     this.positions = [];
+    // Cancel pending orders — return reserved margin
     this.orders = [];
+    // available_balance should now equal balance (all positions closed)
+    this.available_balance = this.balance;
     this.emitState();
 
     // Emit final progress

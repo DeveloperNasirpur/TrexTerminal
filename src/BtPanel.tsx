@@ -234,14 +234,18 @@ function StatePill({ state }: { state: string }) {
   const map: Record<string, [string, string]> = {
     TRIGGERED:          [C.long,    C.longDim],
     TRIGGERED_BY_CLOSE: [C.long,    C.longDim],
+    TP:                 [C.long,    C.longDim],
     STOPPED:            [C.short,   C.shortDim],
     STOPPED_BY_CLOSE:   [C.short,   C.shortDim],
+    SL:                 [C.short,   C.shortDim],
     LIQUID:             ["#f59e0b", "#f59e0b15"],
     OPEN:               [C.text2,   "transparent"],
   };
   const [color, bg] = map[state] ?? [C.muted, "transparent"];
   const label = state === "TRIGGERED_BY_CLOSE" ? "TP ✓"
               : state === "STOPPED_BY_CLOSE"   ? "SL ✓"
+              : state === "TP"                 ? "TP ✓"
+              : state === "SL"                 ? "SL ✗"
               : state.replace(/_/g, " ");
   return (
     <span style={{
@@ -912,7 +916,8 @@ function EquityCurve({ curve, initial }: { curve: number[]; initial: number }) {
 function ResultsTab({ result }: { result: BtResult }) {
   const isProfit = result.return_pct >= 0;
   const returnColor = isProfit ? C.long : C.short;
-  const winPct = Math.min(100, Math.max(0, result.win_rate));
+  // win_rate is stored as a fraction (0–1); convert to percentage for display
+  const winPct = Math.min(100, Math.max(0, result.win_rate * 100));
 
   return (
     <div className="bt-scrollbar" style={{ padding: "16px 20px", overflowY: "auto", display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
@@ -949,7 +954,7 @@ function ResultsTab({ result }: { result: BtResult }) {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 9, padding: "14px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 11, color: C.text2 }}>Win Rate</span>
-            <span style={{ fontSize: 16, fontWeight: 800, color: C.text, fontFeatureSettings: '"tnum"' }}>{fmt(result.win_rate, 1)}%</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: C.text, fontFeatureSettings: '"tnum"' }}>{fmt(result.win_rate * 100, 1)}%</span>
           </div>
           <div style={{ position: "relative", height: 6, borderRadius: 3, background: C.shortDim, overflow: "hidden" }}>
             <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${winPct}%`, background: `linear-gradient(90deg, ${C.long}, ${C.tp})`, borderRadius: 3, transition: "width 0.8s cubic-bezier(.4,0,.2,1)" }} />
@@ -1024,11 +1029,12 @@ interface Props {
   progress?: { current: number; total: number; pct: number } | null;
   onHeightChange?: (h: number) => void;
   onTabChange?: (t: string) => void;
+  onClose?: () => void;
   initialHeight?: number;
   initialTab?: string;
 }
 
-export const BtPanel = memo(function BtPanel({ state, result, progress, onHeightChange, onTabChange, initialHeight, initialTab }: Props) {
+export const BtPanel = memo(function BtPanel({ state, result, progress, onHeightChange, onTabChange, onClose, initialHeight, initialTab }: Props) {
   const [tab, setTab]       = useState<Tab>((initialTab as Tab) ?? "positions");
   const [height, setHeight] = useState(initialHeight ?? 280);
   const dragging            = useRef(false);
@@ -1081,7 +1087,8 @@ export const BtPanel = memo(function BtPanel({ state, result, progress, onHeight
 
   const posCount = state.positions.length;
   const ordCount = state.orders.length;
-  const isRunning = progress != null && progress.pct < 100;
+  // Keep progress visible until results arrive (pct hits 100 ~300ms before bt_result)
+  const isRunning = progress != null && (progress.pct < 100 || !result);
 
   return (
     <div style={{
@@ -1097,10 +1104,14 @@ export const BtPanel = memo(function BtPanel({ state, result, progress, onHeight
       {/* Drag handle */}
       <div
         onMouseDown={onDragStart}
-        style={{ height: 4, cursor: "row-resize", position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }}
-        onMouseEnter={e => (e.currentTarget.style.background = C.accent + "50")}
-        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-      />
+        style={{ height: 8, cursor: "row-resize", position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center" }}
+        onMouseEnter={e => { (e.currentTarget.style.background = C.border + "80"); (e.currentTarget.querySelector(".bt-grip") as HTMLElement | null)?.style && ((e.currentTarget.querySelector(".bt-grip") as HTMLElement).style.opacity = "1"); }}
+        onMouseLeave={e => { (e.currentTarget.style.background = "transparent"); (e.currentTarget.querySelector(".bt-grip") as HTMLElement | null)?.style && ((e.currentTarget.querySelector(".bt-grip") as HTMLElement).style.opacity = "0.35"); }}
+      >
+        <div className="bt-grip" style={{ display: "flex", gap: 3, pointerEvents: "none", opacity: 0.35, transition: "opacity 0.15s" }}>
+          {[0,1,2,3,4].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: "50%", background: C.text2 }} />)}
+        </div>
+      </div>
 
       {/* Progress bar */}
       {isRunning && (
@@ -1155,13 +1166,28 @@ export const BtPanel = memo(function BtPanel({ state, result, progress, onHeight
           );
         })}
 
-        {/* Running indicator */}
-        {isRunning && (
-          <div style={{ marginLeft: "auto", marginRight: 14, display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: C.muted }}>
-            <span className="bt-dot-pulse" style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: C.accent, boxShadow: `0 0 8px ${C.accent}` }} />
-            Running {progress!.pct.toFixed(1)}%
-          </div>
-        )}
+        <div style={{ marginLeft: "auto", marginRight: 6, display: "flex", alignItems: "center", gap: 8 }}>
+          {isRunning && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted }}>
+              <span className="bt-dot-pulse" style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: C.accent, boxShadow: `0 0 8px ${C.accent}` }} />
+              {progress!.pct >= 100 ? "Finalizing…" : `Running ${progress!.pct.toFixed(1)}%`}
+            </div>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              title="Close backtest panel"
+              style={{
+                width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center",
+                background: "transparent", border: `1px solid ${C.border2}`, borderRadius: 4,
+                cursor: "pointer", color: C.muted, fontSize: 13, lineHeight: 1,
+                transition: "all 0.12s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.shortDim; (e.currentTarget as HTMLButtonElement).style.color = C.short; (e.currentTarget as HTMLButtonElement).style.borderColor = C.short + "40"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = C.muted; (e.currentTarget as HTMLButtonElement).style.borderColor = C.border2; }}
+            >×</button>
+          )}
+        </div>
       </div>
 
       {/* Content */}
